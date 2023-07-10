@@ -35,6 +35,7 @@ public class CryFile : Dictionary<int, ICryChunk> {
 
             for (var i = 0; i < chunkCount; i++) {
                 ICryChunk chunk = (headers[i].Header.Type, headers[i].Header.Version) switch {
+                    // Geometry
                     (ChunkType.MtlName, 0x800) => new MtlNameChunk(),
                     (ChunkType.CompiledBones, 0x800) => new CompiledBonesChunk(),
                     (ChunkType.CompiledPhysicalBones, 0x800) => new CompiledPhysicalBonesChunk(),
@@ -45,10 +46,15 @@ public class CryFile : Dictionary<int, ICryChunk> {
                     (ChunkType.CompiledExt2IntMap, 0x800) => new CompiledExtToIntMapChunk(),
                     (ChunkType.BonesBoxes, 0x801) => new BonesBoxesChunk(),
                     (ChunkType.ExportFlags, 1) => new ExportFlagsChunk(),
+                    (ChunkType.MeshPhysicsData, 0x800) => new MeshPhysicsDataChunk(),
                     (ChunkType.MeshSubsets, 0x800) => new MeshSubsetsChunk(),
                     (ChunkType.DataStream, 0x800) => new DataChunk(),
                     (ChunkType.Mesh, 0x800) => new MeshChunk(),
                     (ChunkType.Node, 0x823) => new NodeChunk(),
+                    
+                    // Animation
+                    (ChunkType.Controller, 0x905) => new ControllerChunk(),
+                    
                     _ => throw new NotSupportedException(headers[i].ToString()),
                 };
                 reader.BaseStream.Position = headers[i].Header.Offset;

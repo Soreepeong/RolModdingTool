@@ -34,7 +34,7 @@ public static class BinaryReaderExtensions {
         if (buf.Length != length)
             throw new IOException($"Padding is {length} b; read {buf.Length} b");
 
-        if (buf.IndexOfAnyExcept((byte)0) != -1)
+        if (buf.IndexOfAnyExcept((byte) 0) != -1)
             throw new IOException(errorMessage ?? "Padding is not empty");
     }
 
@@ -43,7 +43,7 @@ public static class BinaryReaderExtensions {
         buf = buf[..reader.Read(buf)];
         if (length != buf.Length)
             throw new IOException($"Incomplete read; expected {length} b, read {buf.Length}");
-        
+
         var i = buf.IndexOf((byte) 0);
         if (i >= 0)
             buf = buf[..i];
@@ -99,4 +99,49 @@ public static class BinaryReaderExtensions {
 
     public static void ReadInto<T>(this BinaryReader reader, out T value) where T : unmanaged, Enum
         => value = reader.ReadEnum<T>();
+
+    public static void ReadIntoSpan(this BinaryReader reader, Span<byte> value) {
+        for (var i = 0; i < value.Length; i++) reader.ReadInto(out value[i]);
+    }
+
+    public static void ReadIntoSpan(this BinaryReader reader, Span<sbyte> value) {
+        for (var i = 0; i < value.Length; i++) reader.ReadInto(out value[i]);
+    }
+
+    public static void ReadIntoSpan(this BinaryReader reader, Span<ushort> value) {
+        for (var i = 0; i < value.Length; i++) reader.ReadInto(out value[i]);
+    }
+
+    public static void ReadIntoSpan(this BinaryReader reader, Span<short> value) {
+        for (var i = 0; i < value.Length; i++) reader.ReadInto(out value[i]);
+    }
+
+    public static void ReadIntoSpan(this BinaryReader reader, Span<uint> value) {
+        for (var i = 0; i < value.Length; i++) reader.ReadInto(out value[i]);
+    }
+
+    public static void ReadIntoSpan(this BinaryReader reader, Span<int> value) {
+        for (var i = 0; i < value.Length; i++) reader.ReadInto(out value[i]);
+    }
+
+    public static void ReadIntoSpan(this BinaryReader reader, Span<ulong> value) {
+        for (var i = 0; i < value.Length; i++) reader.ReadInto(out value[i]);
+    }
+
+    public static void ReadIntoSpan(this BinaryReader reader, Span<long> value) {
+        for (var i = 0; i < value.Length; i++) reader.ReadInto(out value[i]);
+    }
+
+    public static void ReadIntoSpan(this BinaryReader reader, Span<float> value) {
+        for (var i = 0; i < value.Length; i++) reader.ReadInto(out value[i]);
+    }
+
+    public static void ReadIntoSpan(this BinaryReader reader, Span<double> value) {
+        for (var i = 0; i < value.Length; i++) reader.ReadInto(out value[i]);
+    }
+
+    public static void ReadIntoSpan<T>(this BinaryReader reader, Span<T> value) where T : unmanaged, Enum {
+        for (var i = 0; i < value.Length; i++)
+            reader.ReadInto(out value[i]);
+    }
 }

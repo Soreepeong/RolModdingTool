@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.ObjectPool;
+using WiiUStreamTool.FileFormat.CryEngine;
 using WiiUStreamTool.Util;
 using WiiUStreamTool.Util.BinaryRW;
 
@@ -243,9 +244,9 @@ public static class WiiUStream {
 
             if (maxRepeatedSequenceLength >= 3 &&
                 maxRepeatedSequenceLength >=
-                (asisLen == 0 ? 0 : CryBinaryPrimitives.CountCryIntBytes(asisLen, false)) +
-                CryBinaryPrimitives.CountCryIntBytes(maxRepeatedSequenceLength - 3, true) +
-                CryBinaryPrimitives.CountCryIntBytes(lookbackOffset, false)) {
+                (asisLen == 0 ? 0 : CryBinaryExtensions.CountCryIntBytes(asisLen, false)) +
+                CryBinaryExtensions.CountCryIntBytes(maxRepeatedSequenceLength - 3, true) +
+                CryBinaryExtensions.CountCryIntBytes(lookbackOffset, false)) {
                 if (asisLen != 0) {
                     target.WriteCryIntWithFlag(asisLen, false);
                     target.Write(source.Slice(asisBegin, asisLen));

@@ -198,7 +198,13 @@ public static class Program {
             var testfile = new CryFile();
             var inBytes = File.ReadAllBytes(
                 // @"Z:\ROL\0005000010175B00\content\Sonic_Crytek\Levels\level05_sunkenruins\animations\characters\5_minibosses\metal_sonic\metal_sonic.dba"
-                @"Z:\ROL\0005000010175B00\content\Sonic_Crytek\Levels\level05_sunkenruins\objects\characters\5_minibosses\metal_sonic\metal_sonic.chr"
+                // @"Z:\ROL\0005000010175B00\content\Sonic_Crytek\Levels\level05_sunkenruins\objects\characters\5_minibosses\metal_sonic\metal_sonic.chr"
+                
+                @"Z:\ROL\0005000010175B00\content\Sonic_Crytek\Levels\level02_ancientfactorypresent_a\animations\characters\5_minibosses\shadow\shadow.dba"
+                // @"Z:\ROL\0005000010175B00\content\Sonic_Crytek\Levels\level02_ancientfactorypresent_a\objects\characters\5_minibosses\shadow\shadow.chr"
+                
+                // @"Z:\ROL\0005000010175B00\content\Sonic_Crytek\Levels\level02_ancientfactorypresent_a\animations\characters\1_heroes\sonic\sonic.dba"
+                // @"Z:\ROL\0005000010175B00\content\Sonic_Crytek\Levels\level02_ancientfactorypresent_a\objects\characters\1_heroes\sonic\sonic.chr"
             );
             using (var f = new NativeReader(new MemoryStream(inBytes)))
                 testfile.ReadFrom(f);

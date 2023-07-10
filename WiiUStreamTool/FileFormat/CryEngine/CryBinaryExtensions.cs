@@ -1,9 +1,11 @@
 ﻿using System;
 using System.IO;
+using WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Structs;
+using WiiUStreamTool.Util;
 
-namespace WiiUStreamTool.Util.BinaryRW;
+namespace WiiUStreamTool.FileFormat.CryEngine;
 
-public static class CryBinaryPrimitives {
+public static class CryBinaryExtensions {
     public static int CountCryIntBytes(int n, bool useFlag) {
         var res = 1;
 
@@ -87,4 +89,37 @@ public static class CryBinaryPrimitives {
 
     public static int ReadCryIntWithFlag(this BinaryReader reader, out bool flag) =>
         reader.BaseStream.ReadCryIntWithFlag(out flag);
+
+    public static ShortInt3Quat ReadShortInt3Quat(this BinaryReader r) =>
+        new() {
+            X = r.ReadInt16(),
+            Y = r.ReadInt16(),
+            Z = r.ReadInt16(),
+        };
+
+    public static SmallTreeQuat32 ReadSmallTreeQuat32(this BinaryReader r) => new() {
+            Value = r.ReadUInt32(),
+        };
+
+    public static SmallTreeQuat48 ReadSmallTreeQuat48(this BinaryReader r) => new() {
+            M1 = r.ReadUInt16(),
+            M2 = r.ReadUInt16(),
+            M3 = r.ReadUInt16(),
+        };
+
+    public static SmallTreeQuat64 ReadSmallTreeQuat64(this BinaryReader r) => new() {
+            M1 = r.ReadUInt32(),
+            M2 = r.ReadUInt32(),
+        };
+
+    public static SmallTreeQuat64Ext ReadSmallTreeQuat64Ext(this BinaryReader r) => new() {
+            M1 = r.ReadUInt32(),
+            M2 = r.ReadUInt32(),
+        };
+
+    public static PolarQuat ReadPolarQuat(this BinaryReader r) => new() {
+            Yaw = r.ReadInt16(),
+            Pitch = r.ReadInt16(),
+            W = r.ReadInt16(),
+        };
 }

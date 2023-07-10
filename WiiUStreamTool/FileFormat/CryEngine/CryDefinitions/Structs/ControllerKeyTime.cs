@@ -1,0 +1,90 @@
+﻿using System;
+using System.IO;
+using System.Linq;
+using WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Enums;
+using WiiUStreamTool.Util.BinaryRW;
+
+namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Structs;
+
+public struct ControllerKeyTime {
+    public KeyTimesFormat Format;
+    public float[] Data = Array.Empty<float>();
+
+    public ControllerKeyTime() { }
+
+    public void ReadFrom(NativeReader b, KeyTimesFormat format, int length) {
+        float[] data;
+        switch (format) {
+            case KeyTimesFormat.F32:
+                data = new float[length];
+                for (var i = 0; i < length; i++)
+                    data[i] = b.ReadSingle();
+                break;
+            case KeyTimesFormat.UInt16:
+                data = new float[length];
+                for (var i = 0; i < length; i++)
+                    data[i] = b.ReadUInt16();
+                break;
+            case KeyTimesFormat.Byte:
+                data = new float[length];
+                for (var i = 0; i < length; i++)
+                    data[i] = b.ReadByte();
+                break;
+            case KeyTimesFormat.F32StartStop:
+            case KeyTimesFormat.UInt16StartStop:
+            case KeyTimesFormat.ByteStartStop:
+                throw new InvalidDataException();
+            case KeyTimesFormat.Bitset: {
+                var start = b.ReadUInt16();
+                var end = b.ReadUInt16();
+                var size = b.ReadUInt16();
+
+                data = new float[size];
+                var ptr = 0;
+                var keyValue = start;
+                for (var i = 3; i < length; i++) {
+                    var curr = b.ReadUInt16();
+                    for (var j = 0; j < 16; ++j) {
+                        if (((curr >> j) & 1) != 0 && ptr++ < data.Length)
+                            data[ptr - 1] = keyValue;
+                        ++keyValue;
+                    }
+                }
+
+                if (ptr != size)
+                    throw new InvalidDataException($"eBitset: Expected {size} items, got {ptr} items");
+                if (data.Any() && Math.Abs(data[^1] - end) > float.Epsilon)
+                    throw new InvalidDataException($"eBitset: Expected last as {end}, got {data[^1]}");
+                break;
+            }
+            default:
+                throw new ArgumentOutOfRangeException(nameof(format), format, null);
+        }
+
+        for (var i = 1; i < data.Length; i++)
+            if (data[i - 1] > data[i])
+                throw new InvalidDataException();
+
+        Format = format;
+        Data = data;
+    }
+
+    public void WriteTo(NativeWriter w) {
+        throw new NotImplementedException();
+    }
+
+    public int WrittenSize => Format switch {
+        KeyTimesFormat.F32 => Data.Length * 4,
+        KeyTimesFormat.UInt16 => Data.Length * 2,
+        KeyTimesFormat.Byte => Data.Length * 1,
+        KeyTimesFormat.F32StartStop => throw new NotSupportedException(),
+        KeyTimesFormat.UInt16StartStop => throw new NotSupportedException(),
+        KeyTimesFormat.ByteStartStop => throw new NotSupportedException(),
+        KeyTimesFormat.Bitset when Data.Length >= 2 => 2 * (3 + ((ushort) Data[^1] - (ushort) Data[0] + 15) / 16),
+        _ => throw new ArgumentOutOfRangeException(nameof(Format), Format, null),
+    };
+
+    public override string ToString() => Data.Length < 2
+        ? $"{nameof(ControllerKeyTime)}<{Format}>: empty"
+        : $"{nameof(ControllerKeyTime)}<{Format}>: {Data[0]}..{Data[^1]} ({Data.Length} frames)";
+}

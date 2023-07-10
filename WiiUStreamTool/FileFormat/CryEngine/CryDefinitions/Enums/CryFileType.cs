@@ -1,4 +1,4 @@
-namespace WiiUStreamTool.FileFormat.CryEngine;
+namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Enums;
 
 public enum CryFileType : uint {
     Geometry = 0xFFFF0000,
