@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.ObjectPool;
 using WiiUStreamTool.Util;
+using WiiUStreamTool.Util.BinaryRW;
 
 namespace WiiUStreamTool.FileFormat;
 

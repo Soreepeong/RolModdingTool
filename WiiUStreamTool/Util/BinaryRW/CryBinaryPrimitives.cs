@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace WiiUStreamTool.Util;
+namespace WiiUStreamTool.Util.BinaryRW;
 
 public static class CryBinaryPrimitives {
     public static int CountCryIntBytes(int n, bool useFlag) {

@@ -1,9 +1,29 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 
-namespace WiiUStreamTool.Util;
+namespace WiiUStreamTool.Util.BinaryRW;
 
 public static class BinaryWriterExtensions {
+    public static unsafe void WriteEnum<T>(this BinaryWriter writer, T value) where T : unmanaged, Enum {
+        switch (Marshal.SizeOf(Enum.GetUnderlyingType(typeof(T)))) {
+            case 1:
+                writer.Write(*(byte*)&value);
+                break;
+            case 2:
+                writer.Write(*(ushort*)&value);
+                break;
+            case 4:
+                writer.Write(*(uint*)&value);
+                break;
+            case 8:
+                writer.Write(*(ulong*)&value);
+                break;
+            default:
+                throw new ArgumentException("Enum is not of size 1, 2, 4, or 8.", nameof(T), null);
+        }
+    }
+    
     public static void WriteFString(this BinaryWriter writer, string str, int length) {
         var span = str.AsSpan();
         if (span.Length > length)

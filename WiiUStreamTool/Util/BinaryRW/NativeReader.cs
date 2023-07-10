@@ -3,7 +3,7 @@ using System.Buffers.Binary;
 using System.IO;
 using System.Text;
 
-namespace WiiUStreamTool.Util;
+namespace WiiUStreamTool.Util.BinaryRW;
 
 public class NativeReader : BinaryReader {
     public NativeReader(Stream input)
@@ -104,5 +104,25 @@ public class NativeReader : BinaryReader {
         return IsBigEndian
             ? BinaryPrimitives.ReadUInt64BigEndian(buffer)
             : BinaryPrimitives.ReadUInt64LittleEndian(buffer);
+    }
+
+    public EndiannessRestorer ScopedLittleEndian(bool useLittleEndian = true) {
+        var b = new EndiannessRestorer(this);
+        IsBigEndian = !useLittleEndian;
+        return b;
+    }
+
+    public EndiannessRestorer ScopedBigEndian(bool useBigEndian = true) => ScopedLittleEndian(!useBigEndian);
+
+    public sealed class EndiannessRestorer : IDisposable {
+        public readonly bool PreviousBigEndian;
+        public readonly NativeReader Reader;
+
+        public EndiannessRestorer(NativeReader reader) {
+            Reader = reader;
+            PreviousBigEndian = reader.IsBigEndian;
+        }
+
+        public void Dispose() => Reader.IsBigEndian = PreviousBigEndian;
     }
 }

@@ -1,11 +1,14 @@
 ﻿using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using WiiUStreamTool.FileFormat;
+using WiiUStreamTool.FileFormat.CryEngine;
 using WiiUStreamTool.Util;
+using WiiUStreamTool.Util.BinaryRW;
 
 namespace WiiUStreamTool;
 
@@ -189,7 +192,20 @@ public static class Program {
     }
 
     public static Task<int> Main(string[] args) {
-        var cmd = new RootCommand("Tool for extracting and repacking Sonic Boom: Rise of Lyric wiiu.stream archives.\nGithub: https://github.com/ik-01/WiiUStreamTool");
+        {
+            var testfile = new CryFile();
+            using (var f = new NativeReader(File.OpenRead(
+                       // @"Z:\ROL\0005000010175B00\content\Sonic_Crytek\Levels\level05_sunkenruins\animations\characters\5_minibosses\metal_sonic\metal_sonic.dba"
+                       @"Z:\ROL\0005000010175B00\content\Sonic_Crytek\Levels\level05_sunkenruins\objects\characters\5_minibosses\metal_sonic\metal_sonic.chr"
+                   )))
+                testfile.ReadFrom(f);
+
+            Debugger.Break();
+        }
+        return Task.FromResult(-1);
+
+        var cmd = new RootCommand(
+            "Tool for extracting and repacking Sonic Boom: Rise of Lyric wiiu.stream archives.\nGithub: https://github.com/ik-01/WiiUStreamTool");
 
         var overwriteOption = new Option<bool>(
             "--overwrite",

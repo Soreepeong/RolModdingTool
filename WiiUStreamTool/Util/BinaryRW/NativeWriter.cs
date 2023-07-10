@@ -3,7 +3,7 @@ using System.Buffers.Binary;
 using System.IO;
 using System.Text;
 
-namespace WiiUStreamTool.Util;
+namespace WiiUStreamTool.Util.BinaryRW;
 
 public class NativeWriter : BinaryWriter {
     public NativeWriter(Stream inStream)
