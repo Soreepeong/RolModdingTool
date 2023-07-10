@@ -4,7 +4,6 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Xml;
-using WiiUStreamTool.Util;
 using WiiUStreamTool.Util.BinaryRW;
 
 namespace WiiUStreamTool.FileFormat;

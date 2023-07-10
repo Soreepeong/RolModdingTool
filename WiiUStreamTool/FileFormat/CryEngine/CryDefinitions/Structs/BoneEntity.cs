@@ -4,16 +4,16 @@ using WiiUStreamTool.Util.BinaryRW;
 
 namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Structs;
 
-public struct CompiledPhysicalBone : ICryReadWrite {
+public struct BoneEntity : ICryReadWrite {
     public int BoneId;
     public int ParentId;
     public int ChildCount;
     public uint ControllerId;
 
     public string Properties = string.Empty;
-    public PhysicsGeometry PhysicsGeometry;
+    public CompiledBonePhysics Physics;
 
-    public CompiledPhysicalBone() { }
+    public BoneEntity() { }
 
     public void ReadFrom(NativeReader reader, int expectedSize) {
         if (expectedSize == 152) {
@@ -22,14 +22,23 @@ public struct CompiledPhysicalBone : ICryReadWrite {
             reader.ReadInto(out ChildCount);
             reader.ReadInto(out ControllerId);
             Properties = reader.ReadFString(32, Encoding.UTF8);
-            PhysicsGeometry.ReadFrom(reader, 104);
+            Physics.ReadFrom(reader, 104);
         } else
             throw new NotSupportedException();
     }
 
-    public void WriteTo(NativeWriter writer, bool useBigEndian) {
-        throw new NotImplementedException();
+    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+        using (writer.ScopedBigEndian(useBigEndian)) {
+            writer.Write(BoneId);
+            writer.Write(ParentId);
+            writer.Write(ChildCount);
+            writer.Write(ControllerId);
+            writer.WriteFString(Properties, 32, Encoding.UTF8);
+            Physics.WriteTo(writer, useBigEndian);
+        }
     }
+
+    public int WrittenSize => 152;
 
     public override string ToString() => $"{nameof(CompiledBone)} {ControllerId:X08}";
 }

@@ -1,20 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
+﻿using System.Collections.Generic;
+using System.Linq;
+using WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Structs;
 using WiiUStreamTool.Util.BinaryRW;
-using WiiUStreamTool.Util.MathExtras;
 
 namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct CompiledMorphTargetsChunk : ICryReadWrite {
-    public ChunkHeader Header;
+public struct CompiledMorphTargetsChunk : ICryChunk {
+    public ChunkHeader Header { get; set; }
     public readonly List<CompiledMorphTarget> Targets = new();
 
     public CompiledMorphTargetsChunk() { }
 
     public void ReadFrom(NativeReader reader, int expectedSize) {
         var expectedEnd = reader.BaseStream.Position + expectedSize;
-        Header.ReadFrom(reader, Unsafe.SizeOf<ChunkHeader>());
+        Header = new(reader);
         using (reader.ScopedBigEndian(Header.IsBigEndian)) {
             reader.ReadInto(out int count);
             Targets.Clear();
@@ -22,8 +21,7 @@ public struct CompiledMorphTargetsChunk : ICryReadWrite {
 
             var target = new CompiledMorphTarget();
             for (var i = 0; i < count; i++) {
-                target.VertexId = reader.ReadUInt32();
-                target.Vertex = reader.ReadVector3();
+                target.ReadFrom(reader, 16);
                 Targets.Add(target);
             }
         }
@@ -31,9 +29,16 @@ public struct CompiledMorphTargetsChunk : ICryReadWrite {
         reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public void WriteTo(NativeWriter writer, bool useBigEndian) {
-        throw new NotImplementedException();
+    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+        Header.WriteTo(writer, false);
+        using (writer.ScopedBigEndian(useBigEndian)) {
+            writer.Write(Targets.Count);
+            foreach (var target in Targets)
+                target.WriteTo(writer, useBigEndian);
+        }
     }
+
+    public int WrittenSize => Header.WrittenSize + 4 + Targets.Sum(x => x.WrittenSize);
 
     public override string ToString() => $"{nameof(CompiledMorphTargetsChunk)}: {Header}";
 }

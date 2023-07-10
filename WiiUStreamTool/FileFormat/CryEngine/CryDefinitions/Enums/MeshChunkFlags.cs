@@ -3,7 +3,7 @@ using System;
 namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Enums;
 
 [Flags]
-public enum MeshSubsetsFlags {
-    ShHasDecomprMat = 0x1,
-    BoneIndices = 0x2,
+public enum MeshChunkFlags {
+    MeshIsEmpty = 0x0001,
+    HasTexMappingDensity = 0x0002,
 }

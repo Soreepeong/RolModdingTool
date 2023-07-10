@@ -1,13 +1,12 @@
-﻿using System;
-using System.IO;
-using System.Runtime.CompilerServices;
+﻿using System.IO;
 using System.Text;
+using WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Enums;
 using WiiUStreamTool.Util.BinaryRW;
 
 namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct MtlNameChunk : ICryReadWrite {
-    public ChunkHeader Header;
+public struct MtlNameChunk : ICryChunk {
+    public ChunkHeader Header { get; set; }
     public MtlNameFlags Flags;
     public uint Flags2;
     public string Name;
@@ -18,7 +17,7 @@ public struct MtlNameChunk : ICryReadWrite {
 
     public void ReadFrom(NativeReader reader, int expectedSize) {
         var expectedEnd = reader.BaseStream.Position + expectedSize;
-        Header.ReadFrom(reader, Unsafe.SizeOf<ChunkHeader>());
+        Header = new(reader);
         using (reader.ScopedBigEndian(Header.IsBigEndian)) {
             reader.ReadInto(out Flags);
             reader.ReadInto(out Flags2);
@@ -41,9 +40,30 @@ public struct MtlNameChunk : ICryReadWrite {
         reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public void WriteTo(NativeWriter writer, bool useBigEndian) {
-        throw new NotImplementedException();
+    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+        Header.WriteTo(writer, false);
+        using (writer.ScopedBigEndian(useBigEndian)) {
+            writer.WriteEnum(Flags);
+            writer.Write(Flags2);
+            writer.WriteFString(Name, 128, Encoding.UTF8);
+            writer.WriteEnum(PhysicsType);
+
+            if (SubMaterialChunkIds.Length > 32)
+                throw new InvalidDataException();
+            
+            writer.Write(SubMaterialChunkIds.Length);
+            foreach (var t in SubMaterialChunkIds)
+                writer.Write(t);
+            for (var i = SubMaterialChunkIds.Length; i < 32; i++)
+                writer.Write(0);
+
+            writer.Write(AdvancedDataChunkId);
+            writer.Write(ShOpacity);
+            writer.FillZeroes(128);
+        }
     }
+
+    public int WrittenSize => Header.WrittenSize + 408;
 
     public override string ToString() => $"{nameof(MtlNameChunk)}: {Header}: {Name}";
 }

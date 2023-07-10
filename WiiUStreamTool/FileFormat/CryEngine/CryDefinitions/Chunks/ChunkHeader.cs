@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Enums;
 using WiiUStreamTool.Util.BinaryRW;
 
 namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Chunks;
@@ -9,24 +11,32 @@ public struct ChunkHeader : ICryReadWrite {
     public int Offset;
     public int Id;
 
+    public ChunkHeader() { }
+
+    public ChunkHeader(NativeReader reader) => ReadFrom(reader, 16);
+
     public void ReadFrom(NativeReader reader, int expectedSize) {
-        var expectedEnd = reader.BaseStream.Position + expectedSize;
+        if (expectedSize != 16)
+            throw new IOException();
+
         using (reader.ScopedLittleEndian()) {
             reader.ReadInto(out Type);
             reader.ReadInto(out VersionRaw);
             reader.ReadInto(out Offset);
             reader.ReadInto(out Id);
         }
-
-        reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public void WriteTo(NativeWriter writer, bool useBigEndian) {
-        writer.WriteEnum(Type);
-        writer.Write(VersionRaw);
-        writer.Write(Offset);
-        writer.Write(Id);
+    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+        using (writer.ScopedLittleEndian()) {
+            writer.WriteEnum(Type);
+            writer.Write(VersionRaw);
+            writer.Write(Offset);
+            writer.Write(Id);
+        }
     }
+
+    public int WrittenSize => 16;
 
     public bool IsBigEndian {
         get => (VersionRaw & 0x80000000u) != 0;

@@ -5,7 +5,7 @@ using WiiUStreamTool.Util.MathExtras;
 
 namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Structs;
 
-public struct PhysicsGeometry : ICryReadWrite {
+public struct CompiledBonePhysics : ICryReadWrite {
     public uint PhysicsGeom;
     public uint Flags; // 0x0C ?
     public Vector3 Min;
@@ -29,7 +29,18 @@ public struct PhysicsGeometry : ICryReadWrite {
             throw new NotSupportedException();
     }
 
-    public void WriteTo(NativeWriter writer, bool useBigEndian) {
-        throw new System.NotImplementedException();
+    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+        using (writer.ScopedBigEndian(useBigEndian)) {
+            writer.Write(PhysicsGeom);
+            writer.Write(Flags);
+            writer.Write(Min);
+            writer.Write(Max);
+            writer.Write(SpringAngle);
+            writer.Write(SpringTension);
+            writer.Write(Damping);
+            writer.Write(Framemtx);
+        }
     }
+
+    public int WrittenSize => 104;
 }

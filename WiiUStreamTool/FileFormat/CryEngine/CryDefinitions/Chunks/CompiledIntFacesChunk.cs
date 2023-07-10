@@ -1,19 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
+﻿using System.Collections.Generic;
+using System.Linq;
+using WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Structs;
 using WiiUStreamTool.Util.BinaryRW;
 
 namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct CompiledIntFacesChunk : ICryReadWrite {
-    public ChunkHeader Header;
+public struct CompiledIntFacesChunk : ICryChunk {
+    public ChunkHeader Header { get; set; }
     public readonly List<CompiledIntFace> Vertices = new();
 
     public CompiledIntFacesChunk() { }
 
     public void ReadFrom(NativeReader reader, int expectedSize) {
         var expectedEnd = reader.BaseStream.Position + expectedSize;
-        Header.ReadFrom(reader, Unsafe.SizeOf<ChunkHeader>());
+        Header = new(reader);
         using (reader.ScopedBigEndian(Header.IsBigEndian)) {
             var count = (int) ((expectedEnd - reader.BaseStream.Position) / 6);
             Vertices.Clear();
@@ -29,9 +29,15 @@ public struct CompiledIntFacesChunk : ICryReadWrite {
         reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public void WriteTo(NativeWriter writer, bool useBigEndian) {
-        throw new NotImplementedException();
+    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+        Header.WriteTo(writer, false);
+        using (writer.ScopedBigEndian(useBigEndian)) {
+            foreach (var v in Vertices)
+                v.WriteTo(writer, useBigEndian);
+        }
     }
+
+    public int WrittenSize => Header.WrittenSize + Vertices.Sum(x => x.WrittenSize); 
 
     public override string ToString() => $"{nameof(CompiledIntFacesChunk)}: {Header}";
 }

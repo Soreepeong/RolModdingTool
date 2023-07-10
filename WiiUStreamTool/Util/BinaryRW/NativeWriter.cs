@@ -114,4 +114,24 @@ public class NativeWriter : BinaryWriter {
             BinaryPrimitives.WriteUInt64LittleEndian(buffer, value);
         OutStream.Write(buffer);
     }
+
+    public EndiannessRestorer ScopedLittleEndian(bool useLittleEndian = true) {
+        var b = new EndiannessRestorer(this);
+        IsBigEndian = !useLittleEndian;
+        return b;
+    }
+
+    public EndiannessRestorer ScopedBigEndian(bool useBigEndian = true) => ScopedLittleEndian(!useBigEndian);
+
+    public sealed class EndiannessRestorer : IDisposable {
+        public readonly bool PreviousBigEndian;
+        public readonly NativeWriter Writer;
+
+        public EndiannessRestorer(NativeWriter writer) {
+            Writer = writer;
+            PreviousBigEndian = writer.IsBigEndian;
+        }
+
+        public void Dispose() => Writer.IsBigEndian = PreviousBigEndian;
+    }
 }

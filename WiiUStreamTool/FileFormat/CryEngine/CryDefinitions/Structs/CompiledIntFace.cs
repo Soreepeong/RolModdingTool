@@ -1,9 +1,8 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Runtime.InteropServices;
 using WiiUStreamTool.Util.BinaryRW;
 
-namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Chunks;
+namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Structs;
 
 [StructLayout(LayoutKind.Explicit)]
 public struct CompiledIntFace : ICryReadWrite {
@@ -20,7 +19,13 @@ public struct CompiledIntFace : ICryReadWrite {
         reader.ReadInto(out Face2);
     }
 
-    public void WriteTo(NativeWriter writer, bool useBigEndian) {
-        throw new NotImplementedException();
+    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+        using (writer.ScopedBigEndian(useBigEndian)) {
+            writer.Write(Face0);
+            writer.Write(Face1);
+            writer.Write(Face2);
+        }
     }
+
+    public int WrittenSize => 6;
 }

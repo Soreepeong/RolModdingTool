@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 using WiiUStreamTool.Util.BinaryRW;
 
-namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Chunks;
+namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Structs;
 
 [StructLayout(LayoutKind.Explicit)]
 public struct Rgba32 : ICryReadWrite {
@@ -21,10 +21,12 @@ public struct Rgba32 : ICryReadWrite {
         A = reader.ReadByte();
     }
 
-    public void WriteTo(NativeWriter writer, bool useBigEndian) {
+    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
         writer.Write(R);
         writer.Write(G);
         writer.Write(B);
         writer.Write(A);
     }
+
+    public int WrittenSize => 4;
 }

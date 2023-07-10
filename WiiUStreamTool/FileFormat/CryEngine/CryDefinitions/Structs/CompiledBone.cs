@@ -7,8 +7,9 @@ namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Structs;
 
 public struct CompiledBone : ICryReadWrite {
     public uint ControllerId;
-    public PhysicsGeometry[] PhysicsGeometry; // 2 of these. One for live objects, other for dead (ragdoll?)
-    public double Mass; // 0xD8 ?
+    public CompiledBonePhysics PhysicsLive;
+    public CompiledBonePhysics PhysicsDead;
+    public float Mass; // 0xD8 ?
     public Matrix3x4 LocalTransformMatrix; // Bind Pose Matrix
     public Matrix3x4 WorldTransformMatrix;
     public string Name;
@@ -20,9 +21,8 @@ public struct CompiledBone : ICryReadWrite {
     public void ReadFrom(NativeReader reader, int expectedSize) {
         if (expectedSize == 584) {
             reader.ReadInto(out ControllerId);
-            PhysicsGeometry = new PhysicsGeometry[2];
-            PhysicsGeometry[0].ReadFrom(reader, 104); // LOD 0 is the physics of alive body, 
-            PhysicsGeometry[1].ReadFrom(reader, 104); // LOD 1 is the physics of a dead body
+            PhysicsLive.ReadFrom(reader, 104); // LOD 0 is the physics of alive body, 
+            PhysicsDead.ReadFrom(reader, 104); // LOD 1 is the physics of a dead body
             Mass = reader.ReadSingle();
             LocalTransformMatrix = reader.ReadMatrix3x4();
             WorldTransformMatrix = reader.ReadMatrix3x4();
@@ -35,9 +35,23 @@ public struct CompiledBone : ICryReadWrite {
             throw new NotSupportedException();
     }
 
-    public void WriteTo(NativeWriter writer, bool useBigEndian) {
-        throw new System.NotImplementedException();
+    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+        using (writer.ScopedBigEndian(useBigEndian)) {
+            writer.Write(ControllerId);
+            PhysicsLive.WriteTo(writer, useBigEndian);
+            PhysicsDead.WriteTo(writer, useBigEndian);
+            writer.Write(Mass);
+            writer.Write(LocalTransformMatrix);
+            writer.Write(WorldTransformMatrix);
+            writer.WriteFString(Name, 256, Encoding.UTF8);
+            writer.Write(LimbId);
+            writer.Write(ParentOffset);
+            writer.Write(ChildCount);
+            writer.Write(ChildOffset);
+        }
     }
+
+    public int WrittenSize => 584; 
 
     public override string ToString() => $"{nameof(CompiledBone)} {ControllerId:X08} \"{Name}\"";
 }

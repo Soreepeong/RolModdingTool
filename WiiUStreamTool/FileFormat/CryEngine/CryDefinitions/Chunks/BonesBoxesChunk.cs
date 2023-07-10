@@ -1,22 +1,20 @@
-using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using WiiUStreamTool.Util.BinaryRW;
 using WiiUStreamTool.Util.MathExtras;
 
 namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct BonesBoxesChunk : ICryReadWrite {
-    public ChunkHeader Header;
+public struct BonesBoxesChunk : ICryChunk {
+    public ChunkHeader Header { get; set; }
     public uint BoneId;
     public AaBb AaBb;
-    public List<ushort> Indices = new();
-    
+    public readonly List<ushort> Indices = new();
+
     public BonesBoxesChunk() { }
 
     public void ReadFrom(NativeReader reader, int expectedSize) {
         var expectedEnd = reader.BaseStream.Position + expectedSize;
-        Header.ReadFrom(reader, Unsafe.SizeOf<ChunkHeader>());
+        Header = new(reader);
         using (reader.ScopedBigEndian(Header.IsBigEndian)) {
             reader.ReadInto(out BoneId);
             AaBb = reader.ReadAaBb();
@@ -30,9 +28,18 @@ public struct BonesBoxesChunk : ICryReadWrite {
         reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public void WriteTo(NativeWriter writer, bool useBigEndian) {
-        throw new NotImplementedException();
+    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+        Header.WriteTo(writer, false);
+        using (writer.ScopedBigEndian(useBigEndian)) {
+            writer.Write(BoneId);
+            writer.Write(AaBb);
+            writer.Write(Indices.Count);
+            foreach (var x in Indices)
+                writer.Write(x);
+        }
     }
+
+    public int WrittenSize => Header.WrittenSize + 32 + Indices.Count * 2;
 
     public override string ToString() => $"{nameof(BonesBoxesChunk)}: {Header}";
 }

@@ -1,4 +1,4 @@
-namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Chunks;
+namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Enums;
 
 public enum MtlNamePhysicsType : uint {
     None = 0xFFFFFFFF,

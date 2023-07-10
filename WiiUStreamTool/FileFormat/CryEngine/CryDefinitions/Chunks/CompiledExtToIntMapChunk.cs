@@ -1,19 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
+﻿using System.Collections.Generic;
 using WiiUStreamTool.Util.BinaryRW;
 
 namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct CompiledExtToIntMapChunk : ICryReadWrite {
-    public ChunkHeader Header;
+public struct CompiledExtToIntMapChunk : ICryChunk {
+    public ChunkHeader Header { get; set; }
     public readonly List<ushort> Map = new();
 
     public CompiledExtToIntMapChunk() { }
 
     public void ReadFrom(NativeReader reader, int expectedSize) {
         var expectedEnd = reader.BaseStream.Position + expectedSize;
-        Header.ReadFrom(reader, Unsafe.SizeOf<ChunkHeader>());
+        Header = new(reader);
         using (reader.ScopedBigEndian(Header.IsBigEndian)) {
             var count = (int) ((expectedEnd - reader.BaseStream.Position) / 2);
             Map.Clear();
@@ -26,9 +24,15 @@ public struct CompiledExtToIntMapChunk : ICryReadWrite {
         reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public void WriteTo(NativeWriter writer, bool useBigEndian) {
-        throw new NotImplementedException();
+    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+        Header.WriteTo(writer, false);
+        using (writer.ScopedBigEndian(useBigEndian)) {
+            foreach (var r in Map)
+                writer.Write(r);
+        }
     }
+
+    public int WrittenSize => Header.WrittenSize + 2 * Map.Count;
 
     public override string ToString() => $"{nameof(CompiledExtToIntMapChunk)}: {Header}";
 }

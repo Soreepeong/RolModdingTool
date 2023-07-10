@@ -2,22 +2,19 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using WiiUStreamTool.FileFormat.CryEngine.CryDefinitions;
 using WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Chunks;
+using WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Enums;
 using WiiUStreamTool.Util.BinaryRW;
 
 namespace WiiUStreamTool.FileFormat.CryEngine;
 
-public class CryFile {
+public class CryFile : Dictionary<int, ICryChunk> {
     public static readonly ImmutableArray<byte> Magic = "CryTek\0\0"u8.ToArray().ToImmutableArray();
 
-    public FileType Type;
-    public FileVersion Version;
-    public readonly Dictionary<int, object> Chunks = new();
-
-    public CryFile() { }
+    public CryFileType Type;
+    public CryFileVersion Version;
 
     public void ReadFrom(NativeReader reader) {
         using (reader.ScopedLittleEndian()) {
@@ -37,7 +34,7 @@ public class CryFile {
                 headers[i].ReadFrom(reader, Unsafe.SizeOf<ChunkSizeChunk>());
 
             for (var i = 0; i < chunkCount; i++) {
-                ICryReadWrite chunk = (headers[i].Header.Type, headers[i].Header.Version) switch {
+                ICryChunk chunk = (headers[i].Header.Type, headers[i].Header.Version) switch {
                     (ChunkType.MtlName, 0x800) => new MtlNameChunk(),
                     (ChunkType.CompiledBones, 0x800) => new CompiledBonesChunk(),
                     (ChunkType.CompiledPhysicalBones, 0x800) => new CompiledPhysicalBonesChunk(),
@@ -50,34 +47,50 @@ public class CryFile {
                     (ChunkType.ExportFlags, 1) => new ExportFlagsChunk(),
                     (ChunkType.MeshSubsets, 0x800) => new MeshSubsetsChunk(),
                     (ChunkType.DataStream, 0x800) => new DataChunk(),
+                    (ChunkType.Mesh, 0x800) => new MeshChunk(),
+                    (ChunkType.Node, 0x823) => new NodeChunk(),
                     _ => throw new NotSupportedException(headers[i].ToString()),
                 };
                 reader.BaseStream.Position = headers[i].Header.Offset;
                 chunk.ReadFrom(reader, headers[i].Size);
-                Chunks.Add(headers[i].Header.Id, chunk);
+                Add(headers[i].Header.Id, chunk);
             }
+
+            for (var i = 0; i < chunkCount; i++)
+                if (headers[i].Size != this[headers[i].Header.Id].WrittenSize)
+                    throw new InvalidDataException();
         }
 
-        throw new NotImplementedException();
+        if (reader.BaseStream.CanSeek)
+            reader.EnsurePositionOrThrow(reader.BaseStream.Length);
     }
 
     public void WriteTo(NativeWriter writer) {
         writer.Write(Magic.AsSpan());
         writer.WriteEnum(Type);
         writer.WriteEnum(Version);
-        throw new NotImplementedException();
-    }
+        writer.Write(20);
+        writer.Write(Count);
 
-    public CryFile(Stream stream, bool leaveOpen = false) {
-        using var reader = new NativeReader(stream, Encoding.UTF8, leaveOpen);
-    }
+        var chunks = this.OrderBy(x => x.Key).Select(x => x.Value).ToArray();
+        var chunkSizeChunks = new ChunkSizeChunk[Count];
+        for (var i = 0; i < Count; i++) {
+            chunkSizeChunks[i].Size = chunks[i].WrittenSize;
+            chunkSizeChunks[i].Header = chunks[i].Header with {
+                Offset = i == 0
+                    ? 24 + Count * chunkSizeChunks[i].WrittenSize
+                    : chunkSizeChunks[i - 1].Header.Offset + (chunkSizeChunks[i - 1].Size + 3) / 4 * 4,
+            };
+        }
 
-    public enum FileType : uint {
-        Geometry = 0xFFFF0000,
-        Animation = 0xFFFF0001,
-    }
+        foreach (var c in chunkSizeChunks)
+            c.WriteTo(writer);
 
-    public enum FileVersion : uint {
-        CryTek3 = 0x745,
+        foreach (var c in chunks) {
+            if (c.Header.Offset != writer.BaseStream.Position)
+                throw new InvalidDataException();
+            c.WriteTo(writer);
+            writer.WritePadding(4);
+        }
     }
 }

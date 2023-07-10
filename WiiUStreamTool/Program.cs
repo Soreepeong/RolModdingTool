@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Diagnostics;
@@ -7,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using WiiUStreamTool.FileFormat;
 using WiiUStreamTool.FileFormat.CryEngine;
+using WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Chunks;
 using WiiUStreamTool.Util;
 using WiiUStreamTool.Util.BinaryRW;
 
@@ -194,11 +196,33 @@ public static class Program {
     public static Task<int> Main(string[] args) {
         {
             var testfile = new CryFile();
-            using (var f = new NativeReader(File.OpenRead(
-                       // @"Z:\ROL\0005000010175B00\content\Sonic_Crytek\Levels\level05_sunkenruins\animations\characters\5_minibosses\metal_sonic\metal_sonic.dba"
-                       @"Z:\ROL\0005000010175B00\content\Sonic_Crytek\Levels\level05_sunkenruins\objects\characters\5_minibosses\metal_sonic\metal_sonic.chr"
-                   )))
+            var inBytes = File.ReadAllBytes(
+                // @"Z:\ROL\0005000010175B00\content\Sonic_Crytek\Levels\level05_sunkenruins\animations\characters\5_minibosses\metal_sonic\metal_sonic.dba"
+                @"Z:\ROL\0005000010175B00\content\Sonic_Crytek\Levels\level05_sunkenruins\objects\characters\5_minibosses\metal_sonic\metal_sonic.chr"
+            );
+            using (var f = new NativeReader(new MemoryStream(inBytes)))
                 testfile.ReadFrom(f);
+            
+            byte[] outBytes;
+            using (var ms = new MemoryStream())
+            using (var f = new NativeWriter(ms)) {
+                testfile.WriteTo(f);
+                outBytes = ms.ToArray();
+            }
+
+            if (inBytes.Length != outBytes.Length)
+                throw new InvalidDataException();
+
+            var ignoreZones = new List<Tuple<int, int>>();
+            // seems that if boneId array is not full, garbage values remain in place of unused memory
+            // ignore that from comparison
+            foreach (var ignoreItem in testfile.Values.OfType<MeshSubsetsChunk>()) 
+                ignoreZones.Add(Tuple.Create(ignoreItem.Header.Offset, ignoreItem.Header.Offset + ignoreItem.WrittenSize));
+            
+            for (var i = 0; i < inBytes.Length; i++) {
+                if (inBytes[i] != outBytes[i] && ignoreZones.All(x => i < x.Item1 || x.Item2 <= i))
+                    throw new InvalidDataException();
+            }
 
             Debugger.Break();
         }

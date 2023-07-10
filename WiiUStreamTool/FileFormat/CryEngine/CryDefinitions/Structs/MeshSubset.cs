@@ -1,10 +1,9 @@
-using System;
 using System.IO;
 using System.Numerics;
 using WiiUStreamTool.Util.BinaryRW;
 using WiiUStreamTool.Util.MathExtras;
 
-namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Chunks;
+namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Structs;
 
 public struct MeshSubset : ICryReadWrite {
     public int FirstIndexId;
@@ -27,7 +26,17 @@ public struct MeshSubset : ICryReadWrite {
         Center = reader.ReadVector3();
     }
 
-    public void WriteTo(NativeWriter writer, bool useBigEndian) {
-        throw new NotImplementedException();
+    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+        using (writer.ScopedBigEndian(useBigEndian)) {
+            writer.Write(FirstIndexId);
+            writer.Write(NumIndices);
+            writer.Write(FirstVertId);
+            writer.Write(NumVerts);
+            writer.Write(MatId);
+            writer.Write(Radius);
+            writer.Write(Center);
+        }
     }
+
+    public int WrittenSize => 36;
 }

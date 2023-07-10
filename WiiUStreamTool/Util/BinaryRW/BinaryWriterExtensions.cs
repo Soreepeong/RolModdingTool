@@ -1,10 +1,13 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace WiiUStreamTool.Util.BinaryRW;
 
 public static class BinaryWriterExtensions {
+    private static readonly byte[] Zeroes = new byte[4096];
+    
     public static unsafe void WriteEnum<T>(this BinaryWriter writer, T value) where T : unmanaged, Enum {
         switch (Marshal.SizeOf(Enum.GetUnderlyingType(typeof(T)))) {
             case 1:
@@ -24,13 +27,13 @@ public static class BinaryWriterExtensions {
         }
     }
     
-    public static void WriteFString(this BinaryWriter writer, string str, int length) {
-        var span = str.AsSpan();
+    public static void WriteFString(this BinaryWriter writer, string str, int length, Encoding encoding) {
+        var span = encoding.GetBytes(str).AsSpan();
         if (span.Length > length)
             throw new ArgumentOutOfRangeException(nameof(str), str, "String length exceeding length");
         writer.Write(span);
         for (var i = span.Length; i < length; i++)
-            writer.Write((char) 0);
+            writer.Write((byte) 0);
     }
 
     public static void WriteCString(this BinaryWriter writer, string str) {
@@ -41,5 +44,10 @@ public static class BinaryWriterExtensions {
     public static void WritePadding(this BinaryWriter writer, byte alignment, byte padWith = 0) {
         while (writer.BaseStream.Position % alignment != 0)
             writer.Write(padWith);
+    }
+
+    public static void FillZeroes(this BinaryWriter writer, int length) {
+        for (var i = 0; i < length; i += Zeroes.Length)
+            writer.Write(Zeroes.AsSpan(0, Math.Min(Zeroes.Length, length - i)));
     }
 }

@@ -166,4 +166,131 @@ public static class MathExtrasExtensions {
                 (float) r.ReadDouble()),
             _ => throw new ArgumentOutOfRangeException(nameof(inputType), inputType, null),
         };
+
+    public static Matrix4x4 ReadMatrix4x4(this BinaryReader r, FloatSize inputType = FloatSize.Single) =>
+        inputType switch {
+            FloatSize.Half => new(
+                (float) r.ReadHalf(),
+                (float) r.ReadHalf(),
+                (float) r.ReadHalf(),
+                (float) r.ReadHalf(),
+                (float) r.ReadHalf(),
+                (float) r.ReadHalf(),
+                (float) r.ReadHalf(),
+                (float) r.ReadHalf(),
+                (float) r.ReadHalf(),
+                (float) r.ReadHalf(),
+                (float) r.ReadHalf(),
+                (float) r.ReadHalf(),
+                (float) r.ReadHalf(),
+                (float) r.ReadHalf(),
+                (float) r.ReadHalf(),
+                (float) r.ReadHalf()),
+            FloatSize.Single => new(
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle()),
+            FloatSize.Double => new(
+                (float) r.ReadDouble(),
+                (float) r.ReadDouble(),
+                (float) r.ReadDouble(),
+                (float) r.ReadDouble(),
+                (float) r.ReadDouble(),
+                (float) r.ReadDouble(),
+                (float) r.ReadDouble(),
+                (float) r.ReadDouble(),
+                (float) r.ReadDouble(),
+                (float) r.ReadDouble(),
+                (float) r.ReadDouble(),
+                (float) r.ReadDouble(),
+                (float) r.ReadDouble(),
+                (float) r.ReadDouble(),
+                (float) r.ReadDouble(),
+                (float) r.ReadDouble()),
+            _ => throw new ArgumentOutOfRangeException(nameof(inputType), inputType, null),
+        };
+    
+    public static void Write(this BinaryWriter r, in Vector3 value, FloatSize inputType = FloatSize.Single) {
+        switch (inputType) {
+            case FloatSize.Half:
+                r.Write((Half) value.X);
+                r.Write((Half) value.Y);
+                r.Write((Half) value.Z);
+                break;
+            case FloatSize.Single:
+                r.Write(value.X);
+                r.Write(value.Y);
+                r.Write(value.Z);
+                break;
+            case FloatSize.Double:
+                r.Write((double) value.X);
+                r.Write((double) value.Y);
+                r.Write((double) value.Z);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(inputType), inputType, null);
+        }
+    }
+
+    public static void Write(this BinaryWriter r, in Quaternion value, FloatSize inputType = FloatSize.Single){
+        switch (inputType) {
+            case FloatSize.Half:
+                r.Write((Half) value.X);
+                r.Write((Half) value.Y);
+                r.Write((Half) value.Z);
+                r.Write((Half) value.W);
+                break;
+            case FloatSize.Single:
+                r.Write(value.X);
+                r.Write(value.Y);
+                r.Write(value.Z);
+                r.Write(value.W);
+                break;
+            case FloatSize.Double:
+                r.Write((double) value.X);
+                r.Write((double) value.Y);
+                r.Write((double) value.Z);
+                r.Write((double) value.W);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(inputType), inputType, null);
+        }
+    }
+
+    public static void Write(this BinaryWriter r, in AaBb value, FloatSize inputType = FloatSize.Single) {
+        r.Write(value.Min, inputType);
+        r.Write(value.Max, inputType);
+    }
+
+    public static void Write(this BinaryWriter r, in Matrix3x3 value, FloatSize inputType = FloatSize.Single) {
+        r.Write(new Vector3(value.M11, value.M12, value.M13), inputType);
+        r.Write(new Vector3(value.M21, value.M22, value.M23), inputType);
+        r.Write(new Vector3(value.M31, value.M32, value.M33), inputType);
+    }
+
+    public static void Write(this BinaryWriter r, in Matrix3x4 value, FloatSize inputType = FloatSize.Single) {
+        r.Write(new Quaternion(value.M11, value.M12, value.M13, value.M14), inputType);
+        r.Write(new Quaternion(value.M21, value.M22, value.M23, value.M24), inputType);
+        r.Write(new Quaternion(value.M31, value.M32, value.M33, value.M34), inputType);
+    }
+
+    public static void Write(this BinaryWriter r, in Matrix4x4 value, FloatSize inputType = FloatSize.Single) {
+        r.Write(new Quaternion(value.M11, value.M12, value.M13, value.M14), inputType);
+        r.Write(new Quaternion(value.M21, value.M22, value.M23, value.M24), inputType);
+        r.Write(new Quaternion(value.M31, value.M32, value.M33, value.M34), inputType);
+        r.Write(new Quaternion(value.M41, value.M42, value.M43, value.M44), inputType);
+    }
 }

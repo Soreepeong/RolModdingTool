@@ -1,4 +1,4 @@
-namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions;
+namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Enums;
 
 public enum ChunkType : uint {
     Any = 0x0,

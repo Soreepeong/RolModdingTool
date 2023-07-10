@@ -316,7 +316,7 @@ public static class WiiUStream {
         public string InnerPath;
         public string LocalPath;
 
-        public void WriteTo(BinaryWriter writer) {
+        public readonly void WriteTo(BinaryWriter writer) {
             writer.Write(CompressedSize);
             writer.Write(DecompressedSize);
             writer.Write(Hash);

@@ -1,6 +1,6 @@
 using System;
 
-namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Chunks;
+namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Enums;
 
 [Flags]
 public enum ExportFlags {
