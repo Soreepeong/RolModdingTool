@@ -57,7 +57,7 @@ public class CompressProgramCommand : RootProgramCommand {
     public readonly bool PreserveXml;
     public readonly int CompressionLevel;
     public readonly int CompressionChunkSize;
-    
+
     public CompressProgramCommand(ParseResult parseResult) : base(parseResult) {
         InPath = parseResult.GetValueForArgument(PathArgument);
         OutPath = parseResult.GetValueForOption(OutPathOption)
@@ -65,7 +65,6 @@ public class CompressProgramCommand : RootProgramCommand {
         PreserveXml = parseResult.GetValueForOption(PreserveXmlOption);
         CompressionLevel = parseResult.GetValueForOption(CompressionLevelOption);
         CompressionChunkSize = parseResult.GetValueForOption(CompressionChunkSizeOption);
-        
     }
 
     public async Task<int> Handle(CancellationToken cancellationToken) {

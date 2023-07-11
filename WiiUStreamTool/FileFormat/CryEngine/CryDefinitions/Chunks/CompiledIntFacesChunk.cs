@@ -37,7 +37,7 @@ public struct CompiledIntFacesChunk : ICryChunk {
         }
     }
 
-    public int WrittenSize => Header.WrittenSize + Vertices.Sum(x => x.WrittenSize); 
+    public int WrittenSize => Header.WrittenSize + Vertices.Sum(x => x.WrittenSize);
 
     public override string ToString() => $"{nameof(CompiledIntFacesChunk)}: {Header}";
 }

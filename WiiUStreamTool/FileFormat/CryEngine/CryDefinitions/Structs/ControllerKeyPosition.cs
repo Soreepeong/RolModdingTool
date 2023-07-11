@@ -52,7 +52,6 @@ public struct ControllerKeyPosition {
             default:
                 throw new InvalidOperationException();
         }
-
     }
 
     public int WrittenSize => Format switch {

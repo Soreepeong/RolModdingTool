@@ -50,7 +50,7 @@ public struct MtlNameChunk : ICryChunk {
 
             if (SubMaterialChunkIds.Length > 32)
                 throw new InvalidDataException();
-            
+
             writer.Write(SubMaterialChunkIds.Length);
             foreach (var t in SubMaterialChunkIds)
                 writer.Write(t);

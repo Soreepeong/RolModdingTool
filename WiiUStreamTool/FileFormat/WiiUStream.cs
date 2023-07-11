@@ -39,7 +39,7 @@ public static class WiiUStream {
         using var msr = new NativeReader(ms);
         while (reader.BaseStream.Position < reader.BaseStream.Length) {
             cancellationToken.ThrowIfCancellationRequested();
-            
+
             var fe = FileEntryHeader.FromReader(reader, basePath);
             await metadata.WriteLineAsync(fe.ToLine());
 
@@ -65,14 +65,14 @@ public static class WiiUStream {
                         ms.GetBuffer().AsSpan().CommonPrefixLength(Pbxml.Magic.AsSpan()) == Pbxml.Magic.Length)
                         Pbxml.Unpack(msr, new(target, new UTF8Encoding()));
                     else
-                        await target.WriteAsync(ms.GetBuffer().AsMemory(0, (int)ms.Length), cancellationToken);
+                        await target.WriteAsync(ms.GetBuffer().AsMemory(0, (int) ms.Length), cancellationToken);
                 }
 
                 if (Path.Exists(fe.LocalPath))
                     File.Replace(tempPath, fe.LocalPath, null);
                 else
                     File.Move(tempPath, fe.LocalPath);
-                
+
                 progress?.Invoke(ref fe, reader.BaseStream.Position, reader.BaseStream.Length, false, true);
             } catch (Exception) {
                 try {
@@ -92,7 +92,7 @@ public static class WiiUStream {
         bool preserveXml,
         int compressionLevel,
         int compressionChunkSize,
-        CompressProgress progress,
+        CompressProgress? progress,
         CancellationToken cancellationToken) {
         FileEntryHeader[] files;
         using (var s = new StreamReader(File.OpenRead(Path.Combine(basePath, MetadataFilename)))) {
@@ -114,7 +114,7 @@ public static class WiiUStream {
         using var compressionBuffer = new MemoryStream();
         await using var compressionBufferWriter = new BinaryWriter(compressionBuffer);
         for (var i = 0; i < files.Length; i++) {
-            progress(i, files.Length, ref files[i]);
+            progress?.Invoke(i, files.Length, ref files[i]);
 
             await using (var f = new FileStream(files[i].LocalPath, FileMode.Open, FileAccess.Read)) {
                 rawStream.SetLength(f.Length);
@@ -154,7 +154,7 @@ public static class WiiUStream {
             await writer.BaseStream.WriteAsync(
                 discardCompression ? raw : compressionBuffer.GetBuffer().AsMemory(0, compressedSize),
                 cancellationToken);
-            progress(i, files.Length, ref files[i]);
+            progress?.Invoke(i, files.Length, ref files[i]);
         }
     }
 
@@ -164,21 +164,22 @@ public static class WiiUStream {
         int level,
         int chunkSize,
         CancellationToken cancellationToken) {
-
         // Is chunking disabled, or is the file small enough that there is no point in multithreading?
         if (chunkSize <= 0 || raw.Length <= chunkSize) {
             CompressChunk(raw.Span, target, level, cancellationToken);
             return;
         }
-        
+
         var pool = ObjectPool.Create(new DefaultPooledObjectPolicy<MemoryStream>());
 
-        Task<MemoryStream> DoChunk(int offset, int length) => Task.Run(() => {
-            var ms = pool.Get();
-            ms.SetLength(ms.Position = 0);
-            CompressChunk(raw.Span.Slice(offset, length), ms, level, cancellationToken);
-            return ms;
-        }, cancellationToken);
+        Task<MemoryStream> DoChunk(int offset, int length) => Task.Run(
+            () => {
+                var ms = pool.Get();
+                ms.SetLength(ms.Position = 0);
+                CompressChunk(raw.Span.Slice(offset, length), ms, level, cancellationToken);
+                return ms;
+            },
+            cancellationToken);
 
         var concurrency = Environment.ProcessorCount;
         var tasks = new List<Task<MemoryStream>>(Math.Min((raw.Length + chunkSize - 1) / chunkSize, concurrency));
@@ -218,7 +219,7 @@ public static class WiiUStream {
 
         for (var i = 0; i < source.Length;) {
             cancellationToken.ThrowIfCancellationRequested();
-            
+
             var lookbackOffset = 1;
             var maxRepeatedSequenceLength = 0;
 
@@ -244,9 +245,9 @@ public static class WiiUStream {
 
             if (maxRepeatedSequenceLength >= 3 &&
                 maxRepeatedSequenceLength >=
-                (asisLen == 0 ? 0 : CryBinaryExtensions.CountCryIntBytes(asisLen, false)) +
-                CryBinaryExtensions.CountCryIntBytes(maxRepeatedSequenceLength - 3, true) +
-                CryBinaryExtensions.CountCryIntBytes(lookbackOffset, false)) {
+                (asisLen == 0 ? 0 : CrySerializationExtensions.CountCryIntBytes(asisLen, false)) +
+                CrySerializationExtensions.CountCryIntBytes(maxRepeatedSequenceLength - 3, true) +
+                CrySerializationExtensions.CountCryIntBytes(lookbackOffset, false)) {
                 if (asisLen != 0) {
                     target.WriteCryIntWithFlag(asisLen, false);
                     target.Write(source.Slice(asisBegin, asisLen));

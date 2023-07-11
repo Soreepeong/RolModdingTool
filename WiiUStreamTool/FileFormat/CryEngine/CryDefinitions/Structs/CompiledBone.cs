@@ -51,7 +51,7 @@ public struct CompiledBone : ICryReadWrite {
         }
     }
 
-    public int WrittenSize => 584; 
+    public int WrittenSize => 584;
 
     public override string ToString() => $"{nameof(CompiledBone)} {ControllerId:X08} \"{Name}\"";
 }

@@ -7,26 +7,26 @@ namespace WiiUStreamTool.Util.BinaryRW;
 
 public static class BinaryWriterExtensions {
     private static readonly byte[] Zeroes = new byte[4096];
-    
+
     public static unsafe void WriteEnum<T>(this BinaryWriter writer, T value) where T : unmanaged, Enum {
         switch (Marshal.SizeOf(Enum.GetUnderlyingType(typeof(T)))) {
             case 1:
-                writer.Write(*(byte*)&value);
+                writer.Write(*(byte*) &value);
                 break;
             case 2:
-                writer.Write(*(ushort*)&value);
+                writer.Write(*(ushort*) &value);
                 break;
             case 4:
-                writer.Write(*(uint*)&value);
+                writer.Write(*(uint*) &value);
                 break;
             case 8:
-                writer.Write(*(ulong*)&value);
+                writer.Write(*(ulong*) &value);
                 break;
             default:
                 throw new ArgumentException("Enum is not of size 1, 2, 4, or 8.", nameof(T), null);
         }
     }
-    
+
     public static void WriteFString(this BinaryWriter writer, string str, int length, Encoding encoding) {
         var span = encoding.GetBytes(str).AsSpan();
         if (span.Length > length)

@@ -36,17 +36,18 @@ public struct ControllerGroup : ICryReadWrite {
     public void WriteTo(NativeWriter writer, bool useBigEndian) {
         using (writer.ScopedBigEndian(useBigEndian)) {
             var nameBytes = Encoding.UTF8.GetBytes(Name);
-            writer.Write(checked((ushort)nameBytes.Length));
+            writer.Write(checked((ushort) nameBytes.Length));
             writer.Write(nameBytes);
-            
+
             MotionParams.WriteTo(writer, useBigEndian);
-            
-            writer.Write(checked((ushort)FootPlanBits.Length));
+
+            writer.Write(checked((ushort) FootPlanBits.Length));
             writer.Write(FootPlanBits);
-            
-            writer.Write(checked((ushort)Controllers.Count));
+
+            writer.Write(checked((ushort) Controllers.Count));
             foreach (var c in Controllers)
-                c.WriteTo(writer, useBigEndian);;
+                c.WriteTo(writer, useBigEndian);
+            ;
         }
     }
 

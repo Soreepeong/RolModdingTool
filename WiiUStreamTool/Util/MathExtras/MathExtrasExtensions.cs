@@ -222,7 +222,7 @@ public static class MathExtrasExtensions {
                 (float) r.ReadDouble()),
             _ => throw new ArgumentOutOfRangeException(nameof(inputType), inputType, null),
         };
-    
+
     public static void Write(this BinaryWriter r, in Vector3 value, FloatSize inputType = FloatSize.Single) {
         switch (inputType) {
             case FloatSize.Half:
@@ -245,7 +245,7 @@ public static class MathExtrasExtensions {
         }
     }
 
-    public static void Write(this BinaryWriter r, in Quaternion value, FloatSize inputType = FloatSize.Single){
+    public static void Write(this BinaryWriter r, in Quaternion value, FloatSize inputType = FloatSize.Single) {
         switch (inputType) {
             case FloatSize.Half:
                 r.Write((Half) value.X);

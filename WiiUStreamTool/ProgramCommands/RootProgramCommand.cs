@@ -25,7 +25,7 @@ public class RootProgramCommand {
 
     public static readonly Command Command = new RootCommand(
         "Tool for extracting and repacking Sonic Boom: Rise of Lyric wiiu.stream archives.\nGithub: https://github.com/ik-01/WiiUStreamTool");
-    
+
     public readonly bool Overwrite;
 
     public RootProgramCommand(ParseResult parseResult) {

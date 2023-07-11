@@ -21,9 +21,15 @@ public struct Matrix3x3 : IEquatable<Matrix3x3> {
     public float M33;
 
     public static readonly Matrix3x3 Identity = new(
-        1f, 0f, 0f,
-        0f, 1f, 0f,
-        0f, 0f, 1f
+        1f,
+        0f,
+        0f,
+        0f,
+        1f,
+        0f,
+        0f,
+        0f,
+        1f
     );
 
     public Matrix3x3(

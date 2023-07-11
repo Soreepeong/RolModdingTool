@@ -10,7 +10,7 @@ using WiiUStreamTool.Util.BinaryRW;
 
 namespace WiiUStreamTool.FileFormat.CryEngine;
 
-public class CryFile : Dictionary<int, ICryChunk> {
+public class CryChunks : Dictionary<int, ICryChunk> {
     public static readonly ImmutableArray<byte> Magic = "CryTek\0\0"u8.ToArray().ToImmutableArray();
 
     public CryFileType Type;
@@ -51,10 +51,10 @@ public class CryFile : Dictionary<int, ICryChunk> {
                     (ChunkType.DataStream, 0x800) => new DataChunk(),
                     (ChunkType.Mesh, 0x800) => new MeshChunk(),
                     (ChunkType.Node, 0x823) => new NodeChunk(),
-                    
+
                     // dba, in order
                     (ChunkType.Controller, 0x905) => new ControllerChunk(),
-                    
+
                     _ => throw new NotSupportedException(headers[i].ToString()),
                 };
                 reader.BaseStream.Position = headers[i].Header.Offset;
@@ -93,15 +93,17 @@ public class CryFile : Dictionary<int, ICryChunk> {
             c.WriteTo(writer);
 
         foreach (var c in chunks) {
+            writer.WritePadding(4);
             if (c.Header.Offset != writer.BaseStream.Position)
                 throw new InvalidDataException();
-            writer.WritePadding(4);
             c.WriteTo(writer);
         }
     }
 
-    public static CryFile FromBytesAndVerify(byte[] inBytes) {
-        var testfile = new CryFile();
+    public static CryChunks FromFile(string path) => FromBytes(File.ReadAllBytes(path));
+
+    public static CryChunks FromBytes(byte[] inBytes) {
+        var testfile = new CryChunks();
         using (var f = new NativeReader(new MemoryStream(inBytes)))
             testfile.ReadFrom(f);
 
@@ -128,7 +130,7 @@ public class CryFile : Dictionary<int, ICryChunk> {
 
         if (inBytes.Length != outBytes.Length)
             throw new InvalidDataException();
-        
+
         return testfile;
     }
 }

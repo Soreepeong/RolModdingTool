@@ -26,6 +26,6 @@ public sealed class ScopedConsoleColor : IDisposable {
     }
 
     public static ScopedConsoleColor Foreground(ConsoleColor color) => new(color, null);
-    
+
     public static ScopedConsoleColor Background(ConsoleColor color) => new(null, color);
 }

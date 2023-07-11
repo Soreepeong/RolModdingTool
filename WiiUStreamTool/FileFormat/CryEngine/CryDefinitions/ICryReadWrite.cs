@@ -1,6 +1,6 @@
 ﻿using WiiUStreamTool.Util.BinaryRW;
 
-namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions; 
+namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions;
 
 public interface ICryReadWrite {
     public void ReadFrom(NativeReader reader, int expectedSize);

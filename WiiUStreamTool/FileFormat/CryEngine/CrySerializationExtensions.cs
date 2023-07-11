@@ -1,11 +1,11 @@
 ﻿using System;
 using System.IO;
-using WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Structs;
+using System.Numerics;
 using WiiUStreamTool.Util;
 
 namespace WiiUStreamTool.FileFormat.CryEngine;
 
-public static class CryBinaryExtensions {
+public static class CrySerializationExtensions {
     public static int CountCryIntBytes(int n, bool useFlag) {
         var res = 1;
 
@@ -90,36 +90,39 @@ public static class CryBinaryExtensions {
     public static int ReadCryIntWithFlag(this BinaryReader reader, out bool flag) =>
         reader.BaseStream.ReadCryIntWithFlag(out flag);
 
-    public static ShortInt3Quat ReadShortInt3Quat(this BinaryReader r) =>
-        new() {
-            X = r.ReadInt16(),
-            Y = r.ReadInt16(),
-            Z = r.ReadInt16(),
-        };
+    public static Vector3? XmlToVector3(this string? value) {
+        if (string.IsNullOrWhiteSpace(value))
+            return new();
 
-    public static SmallTreeQuat32 ReadSmallTreeQuat32(this BinaryReader r) => new() {
-            Value = r.ReadUInt32(),
-        };
+        var parts = value.Split(',');
+        if (parts.Length != 3)
+            return new();
 
-    public static SmallTreeQuat48 ReadSmallTreeQuat48(this BinaryReader r) => new() {
-            M1 = r.ReadUInt16(),
-            M2 = r.ReadUInt16(),
-            M3 = r.ReadUInt16(),
-        };
+        return new(float.Parse(parts[0]), float.Parse(parts[1]), float.Parse(parts[2]));
+    }
 
-    public static SmallTreeQuat64 ReadSmallTreeQuat64(this BinaryReader r) => new() {
-            M1 = r.ReadUInt32(),
-            M2 = r.ReadUInt32(),
-        };
+    public static Quaternion? XmlToQuaternion(this string? value) {
+        if (string.IsNullOrWhiteSpace(value))
+            return new();
 
-    public static SmallTreeQuat64Ext ReadSmallTreeQuat64Ext(this BinaryReader r) => new() {
-            M1 = r.ReadUInt32(),
-            M2 = r.ReadUInt32(),
-        };
+        var parts = value.Split(',');
+        if (parts.Length != 4)
+            return new();
 
-    public static PolarQuat ReadPolarQuat(this BinaryReader r) => new() {
-            Yaw = r.ReadInt16(),
-            Pitch = r.ReadInt16(),
-            W = r.ReadInt16(),
-        };
+        return new(float.Parse(parts[0]), float.Parse(parts[1]), float.Parse(parts[2]), float.Parse(parts[3]));
+    }
+
+    public static string? ToXmlValue(this Vector3? value) => value is { } v
+        ? $"{v.X:0.########},{v.Y:0.########},{v.Z:0.########}"
+        : null;
+
+    public static string? ToXmlValue(this Quaternion? value) => value is { } v
+        ? $"{v.X:0.########},{v.Y:0.########},{v.Z:0.########},{v.W:0.########}"
+        : null;
+
+    public static string ToXmlValue(this Vector3 value) =>
+        $"{value.X:0.########},{value.Y:0.########},{value.Z:0.########}";
+
+    public static string ToXmlValue(this Quaternion value) =>
+        $"{value.X:0.########},{value.Y:0.########},{value.Z:0.########},{value.W:0.########}";
 }

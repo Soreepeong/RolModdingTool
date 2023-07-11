@@ -18,9 +18,7 @@ public static class Pbxml {
 
         var doc = new XmlDocument();
         doc.AppendChild(UnpackElement(source, doc));
-        doc.Save(new XmlTextWriter(target) {
-            Formatting = Formatting.Indented,
-        });
+        doc.Save(new XmlTextWriter(target) {Formatting = Formatting.Indented});
     }
 
     public static void Pack(Stream source, BinaryWriter target) {
@@ -52,7 +50,7 @@ public static class Pbxml {
             -1 => doc.CreateElement(nodeName),
             var r => doc.CreateElement(nodeName[..r], nodeName[(r + 1)..], nsmgr.LookupNamespace(nodeName[..r])),
         };
-        
+
         foreach (var (key, value) in attrs) {
             var sep = key.IndexOf(':');
             if (sep == -1 || key.StartsWith("xmlns:"))

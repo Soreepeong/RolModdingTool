@@ -11,7 +11,7 @@ namespace WiiUStreamTool.ProgramCommands;
 
 public class ExtractProgramCommand : RootProgramCommand {
     public new static readonly Command Command = new("extract");
-    
+
     public static readonly Argument<string> PathArgument = new(
         "path",
         "Specify path to a .wiiu.stream archive.");
@@ -64,6 +64,8 @@ public class ExtractProgramCommand : RootProgramCommand {
                             fe.InnerPath,
                             fe.DecompressedSize,
                             skipped ? " [SKIPPED]" : "");
+                        if (skipped)
+                            Console.WriteLine();
                     } else {
                         Console.WriteLine(" done!");
                     }

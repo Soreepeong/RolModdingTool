@@ -117,7 +117,7 @@ public struct ControllerKeyTime {
         KeyTimesFormat.Bitset => LengthMarker * 2,
         _ => throw new ArgumentOutOfRangeException(nameof(Format), Format, null),
     };
-    
+
     public int LengthMarker => Format switch {
         KeyTimesFormat.F32 => Data.Length,
         KeyTimesFormat.UInt16 => Data.Length,
