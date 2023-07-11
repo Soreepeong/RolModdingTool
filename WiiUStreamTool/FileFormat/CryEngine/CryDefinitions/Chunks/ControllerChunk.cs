@@ -203,6 +203,8 @@ public struct ControllerChunk : ICryChunk {
 
             foreach (var a in Animations)
                 a.WriteTo(writer, useBigEndian);
+
+            writer.FillZeroes(TrailingPaddingSize);
         }
     }
 
@@ -217,7 +219,9 @@ public struct ControllerChunk : ICryChunk {
                 // Formats
                 4 * ((int) KeyTimesFormat.Bitset + 1 + (int) CompressionFormat.SmallTreeQuat64Ext * 2 + 2) +
                 // Offsets
-                4 * (KeyTimes.Count + KeyPositions.Count + KeyRotations.Count);
+                4 * (KeyTimes.Count + KeyPositions.Count + KeyRotations.Count) +
+                // Track Length
+                4;
             ptr = (ptr + 3) / 4 * 4;
 
             foreach (var x in KeyTimes)
@@ -229,6 +233,7 @@ public struct ControllerChunk : ICryChunk {
 
             ptr += Animations.Sum(x => x.WrittenSize);
             ptr += TrailingPaddingSize;
+            ptr += 92; // todo
             return ptr;
         }
     }

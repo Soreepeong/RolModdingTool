@@ -1,8 +1,10 @@
 using System;
 using System.Numerics;
+using System.Runtime.InteropServices;
 
 namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Structs;
 
+[StructLayout(LayoutKind.Sequential, Size = 6)]
 public struct ShortInt3Quat {
     public short X;
     public short Y;

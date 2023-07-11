@@ -36,7 +36,23 @@ public struct ControllerKeyPosition {
     }
 
     public void WriteTo(NativeWriter w) {
-        throw new NotImplementedException();
+        switch (Format) {
+            case CompressionFormat.NoCompressVec3:
+                foreach (var v in Data)
+                    w.Write(v);
+                break;
+            case CompressionFormat.NoCompress:
+            case CompressionFormat.NoCompressQuat:
+            case CompressionFormat.ShortInt3Quat:
+            case CompressionFormat.SmallTreeQuat32:
+            case CompressionFormat.SmallTreeQuat48:
+            case CompressionFormat.SmallTreeQuat64:
+            case CompressionFormat.PolarQuat:
+            case CompressionFormat.SmallTreeQuat64Ext:
+            default:
+                throw new InvalidOperationException();
+        }
+
     }
 
     public int WrittenSize => Format switch {

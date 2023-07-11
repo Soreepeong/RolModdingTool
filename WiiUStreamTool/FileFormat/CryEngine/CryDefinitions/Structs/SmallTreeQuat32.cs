@@ -1,10 +1,12 @@
 using System;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using WiiUStreamTool.Util.MathExtras;
 
 namespace WiiUStreamTool.FileFormat.CryEngine.CryDefinitions.Structs;
 
+[StructLayout(LayoutKind.Sequential, Size = 4)]
 public struct SmallTreeQuat32 {
     private const float Max10Bit = 723.0f;
     private const float Range10Bit = 0.707106781186f;

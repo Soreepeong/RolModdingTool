@@ -17,8 +17,7 @@ public struct ControllerKeyTime {
         switch (format) {
             case KeyTimesFormat.F32:
                 data = new float[length];
-                for (var i = 0; i < length; i++)
-                    data[i] = b.ReadSingle();
+                b.ReadIntoSpan(data.AsSpan());
                 break;
             case KeyTimesFormat.UInt16:
                 data = new float[length];
@@ -70,7 +69,42 @@ public struct ControllerKeyTime {
     }
 
     public void WriteTo(NativeWriter w) {
-        throw new NotImplementedException();
+        switch (Format) {
+            case KeyTimesFormat.F32:
+                foreach (var f in Data)
+                    w.Write(f);
+                break;
+            case KeyTimesFormat.UInt16:
+                foreach (var f in Data)
+                    w.Write((ushort) f);
+                break;
+            case KeyTimesFormat.Byte:
+                foreach (var f in Data)
+                    w.Write((byte) f);
+                break;
+            case KeyTimesFormat.F32StartStop:
+            case KeyTimesFormat.UInt16StartStop:
+            case KeyTimesFormat.ByteStartStop:
+                throw new NotSupportedException();
+            case KeyTimesFormat.Bitset: {
+                w.Write((ushort) Data[0]);
+                w.Write((ushort) Data[^1]);
+                w.Write(checked((ushort) Data.Length));
+
+                Span<ushort> tmp = stackalloc ushort[1 + ((ushort) Data[^1] - (ushort) Data[0]) / 16];
+                foreach (var f in Data) {
+                    var index = Math.DivRem((int) (f - Data[0]), 16, out var shift);
+                    tmp[index] |= (ushort) (1 << shift);
+                }
+
+                foreach (var t in tmp)
+                    w.Write(t);
+
+                break;
+            }
+            default:
+                throw new InvalidOperationException();
+        }
     }
 
     public int WrittenSize => Format switch {
