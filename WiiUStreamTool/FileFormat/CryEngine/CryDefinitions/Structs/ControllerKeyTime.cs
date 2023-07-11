@@ -93,7 +93,7 @@ public struct ControllerKeyTime {
 
                 Span<ushort> tmp = stackalloc ushort[1 + ((ushort) Data[^1] - (ushort) Data[0]) / 16];
                 foreach (var f in Data) {
-                    var index = Math.DivRem((int) (f - Data[0]), 16, out var shift);
+                    var index = Math.DivRem((int) f - (int) Data[0], 16, out var shift);
                     tmp[index] |= (ushort) (1 << shift);
                 }
 
@@ -108,13 +108,24 @@ public struct ControllerKeyTime {
     }
 
     public int WrittenSize => Format switch {
-        KeyTimesFormat.F32 => Data.Length * 4,
-        KeyTimesFormat.UInt16 => Data.Length * 2,
-        KeyTimesFormat.Byte => Data.Length * 1,
+        KeyTimesFormat.F32 => LengthMarker * 4,
+        KeyTimesFormat.UInt16 => LengthMarker * 2,
+        KeyTimesFormat.Byte => LengthMarker * 1,
         KeyTimesFormat.F32StartStop => throw new NotSupportedException(),
         KeyTimesFormat.UInt16StartStop => throw new NotSupportedException(),
         KeyTimesFormat.ByteStartStop => throw new NotSupportedException(),
-        KeyTimesFormat.Bitset when Data.Length >= 2 => 2 * (3 + ((ushort) Data[^1] - (ushort) Data[0] + 15) / 16),
+        KeyTimesFormat.Bitset => LengthMarker * 2,
+        _ => throw new ArgumentOutOfRangeException(nameof(Format), Format, null),
+    };
+    
+    public int LengthMarker => Format switch {
+        KeyTimesFormat.F32 => Data.Length,
+        KeyTimesFormat.UInt16 => Data.Length,
+        KeyTimesFormat.Byte => Data.Length,
+        KeyTimesFormat.F32StartStop => throw new NotSupportedException(),
+        KeyTimesFormat.UInt16StartStop => throw new NotSupportedException(),
+        KeyTimesFormat.ByteStartStop => throw new NotSupportedException(),
+        KeyTimesFormat.Bitset when Data.Length >= 2 => 4 + ((ushort) Data[^1] - (ushort) Data[0]) / 16,
         _ => throw new ArgumentOutOfRangeException(nameof(Format), Format, null),
     };
 

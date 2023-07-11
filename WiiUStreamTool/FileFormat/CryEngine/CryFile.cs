@@ -35,7 +35,7 @@ public class CryFile : Dictionary<int, ICryChunk> {
 
             for (var i = 0; i < chunkCount; i++) {
                 ICryChunk chunk = (headers[i].Header.Type, headers[i].Header.Version) switch {
-                    // Geometry
+                    // chr, in order
                     (ChunkType.MtlName, 0x800) => new MtlNameChunk(),
                     (ChunkType.CompiledBones, 0x800) => new CompiledBonesChunk(),
                     (ChunkType.CompiledPhysicalBones, 0x800) => new CompiledPhysicalBonesChunk(),
@@ -52,7 +52,7 @@ public class CryFile : Dictionary<int, ICryChunk> {
                     (ChunkType.Mesh, 0x800) => new MeshChunk(),
                     (ChunkType.Node, 0x823) => new NodeChunk(),
                     
-                    // Animation
+                    // dba, in order
                     (ChunkType.Controller, 0x905) => new ControllerChunk(),
                     
                     _ => throw new NotSupportedException(headers[i].ToString()),
@@ -95,8 +95,40 @@ public class CryFile : Dictionary<int, ICryChunk> {
         foreach (var c in chunks) {
             if (c.Header.Offset != writer.BaseStream.Position)
                 throw new InvalidDataException();
-            c.WriteTo(writer);
             writer.WritePadding(4);
+            c.WriteTo(writer);
         }
+    }
+
+    public static CryFile FromBytesAndVerify(byte[] inBytes) {
+        var testfile = new CryFile();
+        using (var f = new NativeReader(new MemoryStream(inBytes)))
+            testfile.ReadFrom(f);
+
+        byte[] outBytes;
+        using (var ms = new MemoryStream())
+        using (var f = new NativeWriter(ms)) {
+            testfile.WriteTo(f);
+            outBytes = ms.ToArray();
+        }
+
+        var ignoreZones = new List<Tuple<int, int>>();
+        // seems that if boneId array is not full, garbage values remain in place of unused memory.
+        // ignore that from comparison.
+        foreach (var ignoreItem in testfile.Values.OfType<MeshSubsetsChunk>())
+            ignoreZones.Add(Tuple.Create(ignoreItem.Header.Offset, ignoreItem.Header.Offset + ignoreItem.WrittenSize));
+
+        ignoreZones.Add(Tuple.Create(31, 32));
+        ignoreZones.Add(Tuple.Create(51, 52));
+
+        for (int i = 0, to = Math.Min(inBytes.Length, outBytes.Length); i < to; i++) {
+            if (inBytes[i] != outBytes[i] && !ignoreZones.Any(x => x.Item1 <= i && i < x.Item2))
+                throw new InvalidDataException();
+        }
+
+        if (inBytes.Length != outBytes.Length)
+            throw new InvalidDataException();
+        
+        return testfile;
     }
 }

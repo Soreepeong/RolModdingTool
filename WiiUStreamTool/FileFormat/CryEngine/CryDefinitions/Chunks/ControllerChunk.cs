@@ -153,17 +153,17 @@ public struct ControllerChunk : ICryChunk {
             writer.Write(Animations.Count);
 
             foreach (var x in KeyTimes)
-                writer.Write(checked((ushort) x.WrittenSize));
+                writer.Write(checked((ushort) x.LengthMarker));
             for (var i = 0; i <= (int) KeyTimesFormat.Bitset; i++)
                 writer.Write(KeyTimes.Count(x => (int) x.Format == i));
 
             foreach (var x in KeyPositions)
-                writer.Write(checked((ushort) x.WrittenSize));
+                writer.Write(checked((ushort) x.Data.Length));
             for (var i = 0; i <= (int) CompressionFormat.SmallTreeQuat64Ext; i++)
                 writer.Write(KeyPositions.Count(x => (int) x.Format == i));
 
             foreach (var x in KeyRotations)
-                writer.Write(checked((ushort) x.WrittenSize));
+                writer.Write(checked((ushort) x.Count));
             for (var i = 0; i <= (int) CompressionFormat.SmallTreeQuat64Ext; i++)
                 writer.Write(KeyRotations.Count(x => (int) x.Format == i));
 
@@ -233,7 +233,6 @@ public struct ControllerChunk : ICryChunk {
 
             ptr += Animations.Sum(x => x.WrittenSize);
             ptr += TrailingPaddingSize;
-            ptr += 92; // todo
             return ptr;
         }
     }

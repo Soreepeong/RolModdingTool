@@ -65,18 +65,7 @@ public struct ControllerKeyRotation : IReadOnlyList<Quaternion> {
     }
 
     public void ReadFrom(NativeReader b, CompressionFormat format, int length) {
-        var (cBytesPerNumber, cNumberPerElement) = format switch {
-            CompressionFormat.NoCompressQuat => (4, 4),
-            CompressionFormat.ShortInt3Quat => (2, 3),
-            CompressionFormat.SmallTreeQuat32 => (4, 1),
-            CompressionFormat.SmallTreeQuat48 => (2, 3),
-            CompressionFormat.SmallTreeQuat64 => (4, 2),
-            CompressionFormat.PolarQuat => (2, 3),
-            CompressionFormat.SmallTreeQuat64Ext => (4, 2),
-            CompressionFormat.NoCompress => throw new ArgumentOutOfRangeException(nameof(format), format, null),
-            CompressionFormat.NoCompressVec3 => throw new ArgumentOutOfRangeException(nameof(format), format, null),
-            _ => throw new ArgumentOutOfRangeException(nameof(format), format, null),
-        };
+        GetElementComponentSizes(format, out var cBytesPerNumber, out var cNumberPerElement);
 
         var data = b.ReadBytes(length * cBytesPerNumber * cNumberPerElement);
         if (BitConverter.IsLittleEndian == b.IsBigEndian) {
@@ -88,7 +77,33 @@ public struct ControllerKeyRotation : IReadOnlyList<Quaternion> {
         RawData = data;
     }
 
-    public void WriteTo(NativeWriter w) => w.Write(RawData);
+    public unsafe void WriteTo(NativeWriter w) {
+        if (BitConverter.IsLittleEndian != w.IsBigEndian) {
+            w.Write(RawData);
+        } else {
+            GetElementComponentSizes(Format, out var cBytesPerNumber, out _);
+            fixed (void* p = RawData)
+                switch (cBytesPerNumber) {
+                    case 1:
+                        w.Write(RawData);
+                        break;
+                    case 2:
+                        foreach (var s in new Span<ushort>(p, RawData.Length / cBytesPerNumber))
+                            w.Write(s);
+                        break;
+                    case 4:
+                        foreach (var s in new Span<uint>(p, RawData.Length / cBytesPerNumber))
+                            w.Write(s);
+                        break;
+                    case 8:
+                        foreach (var s in new Span<ulong>(p, RawData.Length / cBytesPerNumber))
+                            w.Write(s);
+                        break;
+                    default:
+                        throw new NotSupportedException();
+                }
+        }
+    }
 
     public int WrittenSize => RawData.Length;
 
@@ -113,4 +128,18 @@ public struct ControllerKeyRotation : IReadOnlyList<Quaternion> {
         CompressionFormat.SmallTreeQuat64Ext => RawData.Length / Unsafe.SizeOf<SmallTreeQuat64Ext>(),
         _ => 0,
     };
+
+    private static void GetElementComponentSizes(CompressionFormat format, out int intSize, out int intCount) =>
+        (intSize, intCount) = format switch {
+            CompressionFormat.NoCompressQuat => (4, 4),
+            CompressionFormat.ShortInt3Quat => (2, 3),
+            CompressionFormat.SmallTreeQuat32 => (4, 1),
+            CompressionFormat.SmallTreeQuat48 => (2, 3),
+            CompressionFormat.SmallTreeQuat64 => (4, 2),
+            CompressionFormat.PolarQuat => (2, 3),
+            CompressionFormat.SmallTreeQuat64Ext => (4, 2),
+            CompressionFormat.NoCompress => throw new ArgumentOutOfRangeException(nameof(format), format, null),
+            CompressionFormat.NoCompressVec3 => throw new ArgumentOutOfRangeException(nameof(format), format, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(format), format, null),
+        };
 }
