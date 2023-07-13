@@ -201,7 +201,6 @@ public class QuickModProgramCommand : RootProgramCommand {
 
         await CommonSilenceVoices(soundsPath, cancellationToken);
         await CommonAdjustSonicExertions(soundsPath, cancellationToken);
-        return -1;
         
         if (Mode == SonicClones.Shadow) 
             await ShadowAdjustSpinDashBallColor(cancellationToken);
@@ -295,7 +294,8 @@ public class QuickModProgramCommand : RootProgramCommand {
                     if (!cueName.Contains("_Sonic_x_x_"))
                         continue;
                     
-                    targetAcb.SetTrackIndices(sequenceIndex, Array.Empty<ushort>());
+                    foreach (var trackIndex in targetAcb.GetTrackIndices(sequenceIndex))
+                        targetAcb.SilenceTrack(trackIndex);
                     changed = true;
                 }
 

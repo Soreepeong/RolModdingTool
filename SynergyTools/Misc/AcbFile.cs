@@ -113,51 +113,49 @@ public class AcbFile {
                 if (eventIndex == 65535)
                     continue;
 
-                var command = NativeReader.FromBytes(CommandTable.Rows[eventIndex].GetValue<byte[]>("Command"));
-                command.IsBigEndian = true;
-                while (command.BaseStream.Position < command.BaseStream.Length) {
-                    var code = command.ReadUInt16();
-                    var size = command.ReadByte();
-                    var next = command.BaseStream.Position + size;
+                foreach (var (code, data) in IterateCommands(eventIndex)) {
+                    var reader = NativeReader.FromBytes(data, true);
                     switch (code) {
                         case 0: // no-op
                             break;
                         case 2000: // noteOn
                         case 2003: // noteOnWithNo
-                            var referenceType = command.ReadUInt16();
-                            var referenceIndex = command.ReadUInt16();
+                            var referenceType = reader.ReadUInt16();
+                            var referenceIndex = reader.ReadUInt16();
                             if (referenceType != 2) // don't care if it's not a synth
                                 break;
 
-                            var synth = SynthTable.Rows[referenceIndex];
-                            var referenceItems =
-                                BinaryMiscUtils.GetBigEndianArray<ushort>(synth.GetValue<byte[]>("ReferenceItems"));
-                            for (var j = 0; j < referenceItems.Length; j += 2) {
-                                var itemType = referenceItems[j];
-                                var itemIndex = referenceItems[j + 1];
-                                switch (itemType) {
-                                    case 0:
-                                        break;
-                                    case 1:
-                                        waveformIds.Add(WaveformTable.Rows[itemIndex].GetValue<ushort>("Id"));
-                                        break;
-                                    default:
-                                        throw new NotSupportedException();
-                                }
-                            }
+                            foreach (var itemIndex in EnumerateWaveformIdsForSynthIndex(referenceIndex))
+                                waveformIds.Add(WaveformTable.Rows[itemIndex].GetValue<ushort>("Id"));
 
                             break;
                         case 999:
                         case 1990:
-                        case 2001:
+                        case 2001: // Wait
                         case 4000:
-                            break; // unknown opcodes
+                            break;
                         default:
                             throw new NotSupportedException();
                     }
-
-                    command.BaseStream.Position = next;
                 }
+            }
+        }
+    }
+
+    public IEnumerable<ushort> EnumerateWaveformIdsForSynthIndex(int synthIndex) {
+        var synth = SynthTable.Rows[synthIndex];
+        var referenceItems = BinaryMiscUtils.GetBigEndianArray<ushort>(synth.GetValue<byte[]>("ReferenceItems"));
+        for (var j = 0; j < referenceItems.Length; j += 2) {
+            var itemType = referenceItems[j];
+            var itemIndex = referenceItems[j + 1];
+            switch (itemType) {
+                case 0:
+                    break;
+                case 1:
+                    yield return WaveformTable.Rows[itemIndex].GetValue<ushort>("Id");
+                    break;
+                default:
+                    throw new NotSupportedException();
             }
         }
     }
@@ -187,6 +185,46 @@ public class AcbFile {
             bw.Write((ushort) (100 - 100 / trackIndices.Length * (trackIndices.Length - 1)));
             sequence["TrackValues"] = ms.ToArray();
         }
+    }
+
+    public void SilenceTrack(int trackIndex) {
+        var commandIndex = TrackTable.Rows[trackIndex].GetValue<ushort>("EventIndex");
+
+        var ms = new MemoryStream();
+        var msw = new NativeWriter(ms) {IsBigEndian = true};
+        foreach (var (code, data) in IterateCommands(commandIndex)) {
+            var reader = NativeReader.FromBytes(data, true);
+            if (code == 2000) {
+                var referenceType = reader.ReadUInt16();
+                var referenceIndex = reader.ReadUInt16();
+                if (referenceType != 2) // don't care if it's not a synth
+                    continue;
+
+                var durationMs = 0u;
+                foreach (var itemIndex in EnumerateWaveformIdsForSynthIndex(referenceIndex)) {
+                    var sampleCount = WaveformTable.Rows[itemIndex].GetValue<uint>("NumSamples");
+                    var sampleRate  = WaveformTable.Rows[itemIndex].GetValue<ushort>("SamplingRate");
+                    durationMs += 1000 * sampleCount / sampleRate;
+                }
+                
+                msw.Write((ushort)2001);
+                msw.Write((byte)4);
+                msw.Write(durationMs);
+            } else {
+                msw.Write(code);
+                msw.Write(checked((byte) data.Length));
+                msw.Write(data);
+            }
+        }
+
+        var cmd = CommandTable.Rows[commandIndex].GetValue<byte[]>("Command").AsSpan();
+        if (cmd.Length > 3 && cmd[^1] == 0 && cmd[^2] == 0 && cmd[^3] == 0)
+            cmd = cmd[..^3];
+        ms.Write(cmd);
+
+        Span<byte> mute = stackalloc byte[] {0, 33, 0, 0, 0, 0,};
+        ms.Write(mute);
+        CommandTable.Rows[commandIndex]["Command"] = ms.ToArray();
     }
 
     public ushort AddTrack(CriRow sourceRow, byte[] hca) {
@@ -323,5 +361,14 @@ public class AcbFile {
         }
 
         Acb.Save(baseName + ".acb");
+    }
+
+    public IEnumerable<Tuple<ushort, byte[]>> IterateCommands(int commandIndex) {
+        var command = NativeReader.FromBytes(CommandTable.Rows[commandIndex].GetValue<byte[]>("Command"), true);
+        while (command.BaseStream.Position < command.BaseStream.Length) {
+            var code = command.ReadUInt16();
+            var size = command.ReadByte();
+            yield return Tuple.Create(code, command.ReadBytes(size));
+        }
     }
 }
