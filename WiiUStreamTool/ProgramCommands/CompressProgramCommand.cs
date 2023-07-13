@@ -10,118 +10,123 @@ using WiiUStreamTool.Util;
 namespace WiiUStreamTool.ProgramCommands;
 
 public class CompressProgramCommand : RootProgramCommand {
-    public const int CompressionLevelDefault = 8;
-
     public new static readonly Command Command = new("compress");
 
-    public static readonly Argument<string> PathArgument = new("path", "Specify path to a folder to compress.");
+    public static readonly Argument<string[]> PathArgument = new(
+        "path",
+        "Specify path to a folder to compress.") {
+        Arity = ArgumentArity.OneOrMore,
+    };
 
-    public static readonly Option<string?> OutPathOption = new(
+    public static readonly Option<string?> BaseOutPathOption = new(
         "--out-path",
         () => null,
-        "Specify target path. Defaults to given folder name with .wiiu.stream extension.");
+        "Specify target path. Defaults to given folder name with .wiiu.stream extension for each file.");
 
     public static readonly Option<bool> PreserveXmlOption = new(
         "--preserve-xml",
         () => false,
         "Keep text XML files as-is.");
 
-    public static readonly Option<int> CompressionLevelOption = new(
-        "--compression-level",
-        () => -1,
-        "Specify the effort for compressing files.\n" +
-        $"Use -1 to use {CompressionLevelDefault} if chunking is disabled, and otherwise, use chunk size.\n" +
-        "Use 0 to disable compression.");
-
-    public static readonly Option<int> CompressionChunkSizeOption = new(
-        "--compression-chunk-size",
-        () => 24576,
-        "Specify the compression block size. Use 0 to disable chunking.");
-
     static CompressProgramCommand() {
         Command.AddAlias("c");
         Command.AddArgument(PathArgument);
-        OutPathOption.AddAlias("-o");
-        Command.AddOption(OutPathOption);
+        BaseOutPathOption.AddAlias("-o");
+        Command.AddOption(BaseOutPathOption);
         PreserveXmlOption.AddAlias("-p");
         Command.AddOption(PreserveXmlOption);
-        CompressionLevelOption.AddAlias("-l");
-        Command.AddOption(CompressionLevelOption);
-        CompressionChunkSizeOption.AddAlias("-c");
-        Command.AddOption(CompressionChunkSizeOption);
         Command.SetHandler(ic => new CompressProgramCommand(ic.ParseResult).Handle(ic.GetCancellationToken()));
     }
 
-    public readonly string InPath;
-    public readonly string OutPath;
+    public readonly string[] InPathArray;
+    public readonly string? BaseOutPath;
     public readonly bool PreserveXml;
-    public readonly int CompressionLevel;
-    public readonly int CompressionChunkSize;
 
     public CompressProgramCommand(ParseResult parseResult) : base(parseResult) {
-        InPath = parseResult.GetValueForArgument(PathArgument);
-        OutPath = parseResult.GetValueForOption(OutPathOption)
-            ?? Path.Combine(Path.GetDirectoryName(InPath)!, Path.GetFileName(InPath) + ".wiiu.stream");
+        InPathArray = parseResult.GetValueForArgument(PathArgument);
+        BaseOutPath = parseResult.GetValueForOption(BaseOutPathOption);
         PreserveXml = parseResult.GetValueForOption(PreserveXmlOption);
-        CompressionLevel = parseResult.GetValueForOption(CompressionLevelOption);
-        CompressionChunkSize = parseResult.GetValueForOption(CompressionChunkSizeOption);
     }
 
     public async Task<int> Handle(CancellationToken cancellationToken) {
-        if (!Overwrite && Path.Exists(OutPath)) {
-            Console.Error.WriteLine("File {0} already exists; aborting. Use -y to overwrite.", OutPath);
-            return -1;
-        }
+        var saveConfig = new WiiuStreamFile.SaveConfig() {
+            CompressionChunkSize = CompressionChunkSize,
+            CompressionLevel = CompressionLevel,
+            PreserveXml = PreserveXml,
+        };
+        foreach (var inPath in InPathArray) {
+            var outPath = Path.Combine(
+                BaseOutPath ?? Path.GetDirectoryName(inPath)!,
+                Path.GetFileName(inPath) + ".wiiu.stream");
 
-        void CompressProgress(int progress, int max, ref WiiUStream.FileEntryHeader header) {
-            if (header.DecompressedSize == 0) {
-                Console.Write(
-                    "[{0:00.00}%] {1}... ",
-                    100.0 * progress / max,
-                    header.InnerPath);
-            } else if (header.CompressedSize == 0) {
-                Console.WriteLine("not compressed");
-            } else {
-                Console.WriteLine(
-                    "{0:##,###} bytes to {1:##,###} bytes ({2:00.00}%)",
-                    header.DecompressedSize,
-                    header.CompressedSize,
-                    100.0 * header.CompressedSize / header.DecompressedSize);
+            if (!Overwrite && Path.Exists(outPath)) {
+                Console.Error.WriteLine("File {0} already exists; skipping. Use -y to overwrite.", outPath);
+                continue;
+            }
+
+            try {
+                var strm = new WiiuStreamFile();
+                await using (var s = File.OpenRead(Path.Join(inPath, WiiuStreamFile.MetadataFilename)))
+                    await strm.ReadFromMetadata(s, inPath, cancellationToken);
+
+                await WriteAndPrintProgress(outPath, strm, saveConfig, cancellationToken);
+            } catch (Exception e) {
+                if (e is OperationCanceledException) {
+                    using (ScopedConsoleColor.Foreground(ConsoleColor.Yellow))
+                        Console.WriteLine("Cancelled per user request.");
+                    return -1;
+                }
+
+                throw;
             }
         }
 
-        var tmpPath = $"{OutPath}.tmp{Environment.TickCount64:X}";
+        Console.WriteLine("Done!");
+
+        return 0;
+    }
+
+    public static async Task WriteAndPrintProgress(
+        string outPath,
+        WiiuStreamFile strm,
+        WiiuStreamFile.SaveConfig saveConfig,
+        CancellationToken cancellationToken,
+        TimeSpan printProgressDelay = default) {
+        var tmpPath = $"{outPath}.{Environment.TickCount64:X}.tmp";
         try {
-            await using (var stream = new FileStream(tmpPath, FileMode.Create))
-                await WiiUStream.Compress(
-                    InPath,
-                    stream,
-                    PreserveXml,
-                    CompressionLevel == -1
-                        ? CompressionChunkSize == 0 ? CompressionLevelDefault : CompressionChunkSize
-                        : CompressionLevel,
-                    CompressionChunkSize,
-                    CompressProgress,
-                    cancellationToken);
+            var printProgressAfter = Environment.TickCount64 + printProgressDelay.TotalMilliseconds;
+            Console.WriteLine("Saving: {0}", outPath);
+            await using (var stream = new FileStream(tmpPath, FileMode.Create)) {
+                await foreach (var (progress, max, entry, entryComplete) in strm.WriteTo(
+                                   stream,
+                                   saveConfig,
+                                   cancellationToken)) {
+                    if (Environment.TickCount64 < printProgressAfter)
+                        continue;
+                    
+                    if (!entryComplete) {
+                        Console.Write(
+                            "[{0:00.00}%] {1}... ",
+                            100.0 * progress / max,
+                            entry.Header.InnerPath);
+                    } else if (entry.Header.CompressedSize == 0) {
+                        Console.WriteLine("not compressed");
+                    } else {
+                        Console.WriteLine(
+                            "{0:##,###} bytes to {1:##,###} bytes ({2:00.00}%)",
+                            entry.Header.DecompressedSize,
+                            entry.Header.CompressedSize,
+                            100.0 * entry.Header.CompressedSize / entry.Header.DecompressedSize);
+                    }
+                }
+            }
 
-            if (File.Exists(OutPath))
-                File.Replace(tmpPath, OutPath, null);
-            else
-                File.Move(tmpPath, OutPath);
-
-            Console.WriteLine("Done!");
-            return 0;
-        } catch (Exception e) {
+            File.Move(tmpPath, outPath, true);
+        } catch (Exception) {
             try {
                 File.Delete(tmpPath);
             } catch (Exception) {
                 // swallow
-            }
-
-            if (e is OperationCanceledException) {
-                using (ScopedConsoleColor.Foreground(ConsoleColor.Yellow))
-                    Console.WriteLine("Cancelled per user request.");
-                return -1;
             }
 
             throw;

@@ -9,8 +9,12 @@ using WiiUStreamTool.Util.BinaryRW;
 
 namespace WiiUStreamTool.FileFormat;
 
-public static class Pbxml {
+public static class PbxmlFile {
     public static readonly ImmutableArray<byte> Magic = "pbxml\0"u8.ToArray().ToImmutableArray();
+
+    public static bool IsPbxmlFile(Span<byte> buffer) =>
+        buffer.Length >= Magic.Length &&
+        buffer.CommonPrefixLength(Magic.AsSpan()) == Magic.Length;
 
     public static void Unpack(BinaryReader source, StreamWriter target) {
         if (!source.ReadBytes(Magic.Length).SequenceEqual(Magic))
@@ -21,9 +25,22 @@ public static class Pbxml {
         doc.Save(new XmlTextWriter(target) {Formatting = Formatting.Indented});
     }
 
+    public static XmlDocument Load(byte[] s) {
+        var doc = new XmlDocument();
+        if (IsPbxmlFile(s.AsSpan()))
+            doc.AppendChild(UnpackElement(new(new MemoryStream(s, Magic.Length, s.Length - Magic.Length)), doc));
+        else
+            doc.Load(new MemoryStream(s));
+        return doc;
+    }
+
     public static void Pack(Stream source, BinaryWriter target) {
         var doc = new XmlDocument();
         doc.Load(source);
+        Pack(doc, target);
+    }
+
+    public static void Pack(XmlDocument doc, BinaryWriter target) {
         target.Write(Magic.AsSpan());
         PackElement(target, doc.ChildNodes.OfType<XmlElement>().Single());
     }
