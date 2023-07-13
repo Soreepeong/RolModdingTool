@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\lib\SonicAudioTools\Source\SonicAudioLib\SonicAudioLib.csproj" />
     <ProjectReference Include="..\SynergyLib\SynergyLib.csproj" />
   </ItemGroup>
 

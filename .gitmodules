@@ -1,0 +1,3 @@
+[submodule "lib/SonicAudioTools"]
+	path = lib/SonicAudioTools
+	url = https://github.com/Soreepeong/SonicAudioTools.git

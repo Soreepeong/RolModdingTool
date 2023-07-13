@@ -114,6 +114,8 @@ public class NativeReader : BinaryReader {
 
     public EndiannessRestorer ScopedBigEndian(bool useBigEndian = true) => ScopedLittleEndian(!useBigEndian);
 
+    public static NativeReader FromBytes(byte[] b) => new(new MemoryStream(b, false));
+
     public sealed class EndiannessRestorer : IDisposable {
         public readonly bool PreviousBigEndian;
         public readonly NativeReader Reader;
