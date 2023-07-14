@@ -85,8 +85,8 @@ public class QuickModProgramCommand : RootProgramCommand {
     public readonly string[] PathArray;
     public readonly SonicClones Mode;
 
-    public WiiuStreamFile? heroes;
-    public Dictionary<string, WiiuStreamFile> levels = new();
+    public WiiuStreamFile? Heroes;
+    public readonly Dictionary<string, WiiuStreamFile> Levels = new();
 
     public QuickModProgramCommand(ParseResult parseResult) : base(parseResult) {
         PathArray = parseResult.GetValueForArgument(PathArgument);
@@ -94,8 +94,8 @@ public class QuickModProgramCommand : RootProgramCommand {
     }
 
     public async Task<int> Handle(CancellationToken cancellationToken) {
-        heroes = null;
-        levels.Clear();
+        Heroes = null;
+        Levels.Clear();
 
         string? heroesPath = null;
         string? soundsPath = null;
@@ -128,8 +128,8 @@ public class QuickModProgramCommand : RootProgramCommand {
                         Console.WriteLine("Made a backup copy: {0}", Path.GetFileName(bakFile));
                     }
 
-                    heroes = new();
-                    heroes.ReadFrom(null, bakFile, cancellationToken);
+                    Heroes = new();
+                    Heroes.ReadFrom(null, bakFile, cancellationToken);
                 } else {
                     heroesPath = null;
                 }
@@ -155,7 +155,7 @@ public class QuickModProgramCommand : RootProgramCommand {
 
                 var key = Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(levelPath))
                     .ToLowerInvariant();
-                if (levels.ContainsKey(key))
+                if (Levels.ContainsKey(key))
                     continue;
 
                 if (!File.Exists(bakFile)) {
@@ -165,7 +165,7 @@ public class QuickModProgramCommand : RootProgramCommand {
 
                 var strm = new WiiuStreamFile();
                 strm.ReadFrom(null, bakFile, cancellationToken);
-                levels.Add(key, strm);
+                Levels.Add(key, strm);
                 levelPaths.Add(key, levelPath);
             }
         }
@@ -191,7 +191,7 @@ public class QuickModProgramCommand : RootProgramCommand {
             return 0;
         }
 
-        if (heroes is null || heroesPath is null)
+        if (Heroes is null || heroesPath is null)
             throw new FileNotFoundException("heroes.wiiu.stream could not be found.");
 
         if (soundsPath is null)
@@ -205,7 +205,7 @@ public class QuickModProgramCommand : RootProgramCommand {
         if (Mode == SonicClones.Shadow) 
             await ShadowAdjustSpinDashBallColor(cancellationToken);
         
-        await Task.WhenAll(levels.Values.Select(level => CommonReplaceModels(level, cancellationToken)));
+        await Task.WhenAll(Levels.Values.Select(level => CommonReplaceModels(level, cancellationToken)));
         await CommonAddTextures(cancellationToken);
 
         Console.WriteLine("Saving data...");
@@ -217,11 +217,11 @@ public class QuickModProgramCommand : RootProgramCommand {
         var suppressProgressDuration = TimeSpan.FromSeconds(5);
         await CompressProgramCommand.WriteAndPrintProgress(
             heroesPath,
-            heroes,
+            Heroes,
             saveConfig,
             cancellationToken,
             suppressProgressDuration);
-        foreach (var (levelName, level) in levels)
+        foreach (var (levelName, level) in Levels)
             await CompressProgramCommand.WriteAndPrintProgress(
                 levelPaths[levelName],
                 level,
@@ -248,7 +248,7 @@ public class QuickModProgramCommand : RootProgramCommand {
 
         using var ms = new MemoryStream();
         foreach (var (filename, divisor) in DesaturationTargetTextures) {
-            var entry = heroes!.GetEntry(filename);
+            var entry = Heroes!.GetEntry(filename);
             var image = await decoder.DecodeToImageRgba32Async(
                 new MemoryStream(entry.Source.ReadRaw()),
                 cancellationToken);
@@ -380,7 +380,7 @@ public class QuickModProgramCommand : RootProgramCommand {
 
     private Task CommonAddTextures(CancellationToken cancellationToken) => Task.Run(
         () => {
-            var referenceLevel = levels[Mode switch {
+            var referenceLevel = Levels[Mode switch {
                 SonicClones.Shadow => "level02_ancientfactorypresent_a",
                 SonicClones.MetalSonic => "level05_sunkenruins",
                 _ => throw new InvalidOperationException(),
@@ -396,7 +396,7 @@ public class QuickModProgramCommand : RootProgramCommand {
                         replacementPathPrefix,
                         StringComparison.InvariantCultureIgnoreCase))
                     continue;
-                heroes!.PutEntry(entry.Header.InnerPath, entry.Source);
+                Heroes!.PutEntry(entry.Header.InnerPath, entry.Source);
             }
         },
         cancellationToken);
@@ -404,7 +404,7 @@ public class QuickModProgramCommand : RootProgramCommand {
     private Task CommonReplaceModels(WiiuStreamFile level, CancellationToken cancellationToken) => Task.Run(
         () => {
             var sonicBaseFile = "objects/characters/1_heroes/sonic/sonic";
-            var referenceLevel = levels[Mode switch {
+            var referenceLevel = Levels[Mode switch {
                 SonicClones.Shadow => "level02_ancientfactorypresent_a",
                 SonicClones.MetalSonic => "level05_sunkenruins",
                 _ => throw new InvalidOperationException(),

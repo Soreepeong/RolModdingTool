@@ -44,10 +44,8 @@ public class RootProgramCommand {
     }
 
     public static readonly Command Command = new RootCommand(
-        "Tool for extracting and repacking Sonic Boom: Rise of Lyric wiiu.stream archives.\n" +
-        "Github:\n" +
-        "* https://github.com/ik-01/WiiUStreamTool\n" +
-        "* https://github.com/Soreepeong/SynergyTools");
+        "Tool for modding Sonic Boom: Rise of Lyric.\n" +
+        "Github: https://github.com/Soreepeong/SynergyTools");
 
     public readonly bool Overwrite;
     public readonly int CompressionLevel;
