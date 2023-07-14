@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Xml.Serialization;
 
-namespace SynergyLib.FileFormat.CryEngine.CryXml.MtlSubElements;
+namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialSubElements;
 
 [XmlRoot(ElementName = "Textures")]
 public record Textures {

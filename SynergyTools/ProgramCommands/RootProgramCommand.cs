@@ -41,6 +41,7 @@ public class RootProgramCommand {
         Command.AddCommand(ExtractProgramCommand.Command);
         Command.AddCommand(CompressProgramCommand.Command);
         Command.AddCommand(QuickModProgramCommand.Command);
+        Command.AddCommand(TestDevProgramCommand.Command);
     }
 
     public static readonly Command Command = new RootCommand(

@@ -1,4 +1,4 @@
-﻿namespace SynergyLib.FileFormat.CryEngine.CryXml.MtlSubElements;
+﻿namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialSubElements;
 
 public enum ETexModRotateType {
     NoChange,

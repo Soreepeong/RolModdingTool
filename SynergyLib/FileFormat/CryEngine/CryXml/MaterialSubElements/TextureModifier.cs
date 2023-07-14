@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Xml.Serialization;
 
-namespace SynergyLib.FileFormat.CryEngine.CryXml.MtlSubElements;
+namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialSubElements;
 
 /// <summary>The texture modifier</summary>
 [XmlRoot(ElementName = "TexMod")]

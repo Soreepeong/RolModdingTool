@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using System.Xml.Serialization;
 
-namespace SynergyLib.FileFormat.CryEngine.CryXml.MtlSubElements;
+namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialSubElements;
 
 [XmlRoot(ElementName = "PublicParams")]
 public class PublicParams {

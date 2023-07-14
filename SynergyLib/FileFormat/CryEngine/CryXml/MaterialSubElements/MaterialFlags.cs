@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SynergyLib.FileFormat.CryEngine.CryXml.MtlSubElements;
+namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialSubElements;
 
 [Flags]
 public enum MaterialFlags {

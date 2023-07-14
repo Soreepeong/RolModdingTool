@@ -1,11 +1,11 @@
 ﻿using System.Numerics;
 using System.Xml.Serialization;
-using SynergyLib.FileFormat.CryEngine.CryXml.MtlSubElements;
+using SynergyLib.FileFormat.CryEngine.CryXml.MaterialSubElements;
 
 namespace SynergyLib.FileFormat.CryEngine.CryXml;
 
 [XmlRoot(ElementName = "Material")]
-public class MtlFile {
+public class Material {
     public Vector3? DiffuseColor;
     public Vector3? SpecularColor;
     public Vector3? EmissiveColor;
@@ -73,7 +73,7 @@ public class MtlFile {
 
     [XmlArray(ElementName = "SubMaterials")]
     [XmlArrayItem(ElementName = "Material")]
-    public MtlFile[]? SubMaterials { get; set; }
+    public Material[]? SubMaterials { get; set; }
 
     [XmlElement(ElementName = "PublicParams")]
     internal PublicParams? PublicParams { get; set; }
