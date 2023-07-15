@@ -24,22 +24,23 @@ public class WiiuStreamFile {
         x => string.Compare(x.Header.InnerPath, path, StringComparison.InvariantCultureIgnoreCase) == 0
             && x.Header.SkinFlag == skinFlag);
 
-    public void PutEntry(string path, FileEntrySource source, SkinFlag skinFlag = SkinFlag.Default) {
-        foreach (var entry in Entries) {
-            if (string.Compare(entry.Header.InnerPath, path, StringComparison.InvariantCultureIgnoreCase) != 0)
-                continue;
+    public void PutEntry(int position, string path, FileEntrySource source, SkinFlag skinFlag = SkinFlag.Default) {
+        var entry = Entries.SingleOrDefault(
+            x => string.Compare(x.Header.InnerPath, path, StringComparison.InvariantCultureIgnoreCase) != 0);
+        if (entry is not null)
             entry.Source = source;
-            return;
-        }
+        
+        entry = new(
+            new() {
+                InnerPath = path,
+                SkinFlag = skinFlag,
+                Unknown = Entries.First().Header.Unknown,
+            },
+            source);
 
-        Entries.Add(
-            new(
-                new() {
-                    InnerPath = path,
-                    SkinFlag = skinFlag,
-                    Unknown = Entries.First().Header.Unknown,
-                },
-                source));
+        if (position < 0)
+            position += Entries.Count;
+        Entries.Insert(position, entry);
     }
 
     public async Task ReadFromMetadata(Stream stream, string basePath, CancellationToken cancellationToken = default) {

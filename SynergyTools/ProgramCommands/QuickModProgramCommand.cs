@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Parsing;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -31,6 +32,13 @@ public class QuickModProgramCommand : RootProgramCommand {
         "--mode",
         () => SonicClones.Default,
         "Specify which character to replace Sonic.");
+
+    public static readonly Option<SonicCloneVoices> VoiceOption = new(
+        "--voice",
+        () => SonicCloneVoices.Auto,
+        "Specify which voice to replace Sonic's voice.");
+
+    private const string SonicBaseName = "objects/characters/1_heroes/sonic/sonic";
 
     private static readonly Tuple<string, int>[] DesaturationTargetTextures = {
         Tuple.Create("art/textures/effects/playerfx/ball_blue.dds", 18),
@@ -75,30 +83,51 @@ public class QuickModProgramCommand : RootProgramCommand {
         Command.AddArgument(PathArgument);
         ModeOption.AddAlias("-m");
         Command.AddOption(ModeOption);
-        CompressionLevelOption.AddAlias("-l");
-        Command.AddOption(CompressionLevelOption);
-        CompressionChunkSizeOption.AddAlias("-c");
-        Command.AddOption(CompressionChunkSizeOption);
+        VoiceOption.AddAlias("-v");
+        Command.AddOption(VoiceOption);
         Command.SetHandler(ic => new QuickModProgramCommand(ic.ParseResult).Handle(ic.GetCancellationToken()));
     }
 
     public readonly string[] PathArray;
     public readonly SonicClones Mode;
-
+    public readonly SonicCloneVoices Voice;
+    
+    public string? SoundsPath;
+    public string? HeroesPath;
     public WiiuStreamFile? Heroes;
     public readonly Dictionary<string, WiiuStreamFile> Levels = new();
 
     public QuickModProgramCommand(ParseResult parseResult) : base(parseResult) {
         PathArray = parseResult.GetValueForArgument(PathArgument);
         Mode = parseResult.GetValueForOption(ModeOption);
+        Voice = parseResult.GetValueForOption(VoiceOption);
     }
+
+    private WiiuStreamFile ReferenceLevel => Levels[Mode switch {
+        SonicClones.Shadow => "level02_ancientfactorypresent_a",
+        SonicClones.MetalSonic => "level05_sunkenruins",
+        SonicClones.Sonic => throw new InvalidOperationException(),
+        _ => throw new InvalidOperationException(),
+    }];
+
+    private string ReferenceObjectBaseName => Mode switch {
+        SonicClones.Shadow => "objects/characters/5_minibosses/shadow/shadow",
+        SonicClones.MetalSonic => "objects/characters/5_minibosses/metal_sonic/metal_sonic",
+        SonicClones.Sonic => throw new InvalidOperationException(),
+        _ => throw new InvalidOperationException(),
+    };
+
+    private string ReferenceTexturePathPrefix => Mode switch {
+        SonicClones.Shadow => "art/characters/5_minibosses/shadow/texture/",
+        SonicClones.MetalSonic => "art/characters/5_minibosses/metal_sonic/textures/",
+        SonicClones.Sonic => throw new InvalidOperationException(),
+        _ => throw new InvalidOperationException(),
+    };
 
     public async Task<int> Handle(CancellationToken cancellationToken) {
         Heroes = null;
         Levels.Clear();
 
-        string? heroesPath = null;
-        string? soundsPath = null;
         var levelPaths = new Dictionary<string, string>();
 
         Console.WriteLine("Looking for files to patch...");
@@ -108,30 +137,30 @@ public class QuickModProgramCommand : RootProgramCommand {
                 throw new DirectoryNotFoundException("Given path does not contain Sonic_Crytek\\Level folder.");
 
             if (Directory.Exists(Path.Join(inPath, "Sonic_Crytek", "Sounds")))
-                soundsPath = Path.Join(inPath, "Sonic_Crytek", "Sounds");
+                SoundsPath = Path.Join(inPath, "Sonic_Crytek", "Sounds");
 
-            if (heroesPath is null) {
-                heroesPath = Path.Join(inPath, "Sonic_Crytek", "heroes.wiiu.stream");
-                var bakFile = heroesPath + ".bak";
+            if (HeroesPath is null) {
+                HeroesPath = Path.Join(inPath, "Sonic_Crytek", "heroes.wiiu.stream");
+                var bakFile = HeroesPath + ".bak";
                 if (Mode == SonicClones.Sonic) {
                     if (File.Exists(bakFile)) {
-                        File.Delete(heroesPath);
-                        File.Move(bakFile, heroesPath);
+                        File.Delete(HeroesPath);
+                        File.Move(bakFile, HeroesPath);
                         Console.WriteLine(
                             "Restored: {0} from {1}",
-                            Path.GetFileName(heroesPath),
+                            Path.GetFileName(HeroesPath),
                             Path.GetFileName(bakFile));
                     }
-                } else if (File.Exists(heroesPath)) {
+                } else if (File.Exists(HeroesPath)) {
                     if (!File.Exists(bakFile)) {
-                        File.Copy(heroesPath, bakFile);
+                        File.Copy(HeroesPath, bakFile);
                         Console.WriteLine("Made a backup copy: {0}", Path.GetFileName(bakFile));
                     }
 
                     Heroes = new();
                     Heroes.ReadFrom(null, bakFile, cancellationToken);
                 } else {
-                    heroesPath = null;
+                    HeroesPath = null;
                 }
             }
 
@@ -170,71 +199,72 @@ public class QuickModProgramCommand : RootProgramCommand {
             }
         }
 
-        if (Mode == SonicClones.Sonic) {
-            if (soundsPath is not null) {
-                foreach (var f in Directory.GetFiles(soundsPath)) {
-                    if (f.EndsWith(".acb.bak"))
-                        File.Move(f, f[..^4], true);
-                    else if (f.EndsWith(".awb.bak"))
-                        File.Move(f, f[..^4], true);
-                }
-
-                foreach (var f in Directory.GetFiles(Path.Join(soundsPath, "exertions"))) {
-                    if (f.EndsWith(".acb.bak"))
-                        File.Move(f, f[..^4], true);
-                    else if (f.EndsWith(".awb.bak"))
-                        File.Move(f, f[..^4], true);
-                }
-            }
-
-            Console.WriteLine("All files restored.");
-            return 0;
-        }
-
-        if (Heroes is null || heroesPath is null)
-            throw new FileNotFoundException("heroes.wiiu.stream could not be found.");
-
-        if (soundsPath is null)
+        if (SoundsPath is null)
             throw new DirectoryNotFoundException("Sounds folder could not be found.");
 
-        Console.WriteLine("Patching data...");
+        if ((Voice == SonicCloneVoices.Auto && Mode == SonicClones.Sonic)
+            || Voice == SonicCloneVoices.Sonic) {
+            Console.WriteLine("Reverting voices...");
 
-        await CommonSilenceVoices(soundsPath, cancellationToken);
-        await CommonAdjustSonicExertions(soundsPath, cancellationToken);
-        
-        if (Mode == SonicClones.Shadow) 
-            await ShadowAdjustSpinDashBallColor(cancellationToken);
-        
-        await Task.WhenAll(Levels.Values.Select(level => CommonReplaceModels(level, cancellationToken)));
-        await CommonAddTextures(cancellationToken);
+            foreach (var f in Directory.GetFiles(SoundsPath)) {
+                if (f.EndsWith(".acb.bak"))
+                    File.Move(f, f[..^4], true);
+                else if (f.EndsWith(".awb.bak"))
+                    File.Move(f, f[..^4], true);
+            }
 
-        Console.WriteLine("Saving data...");
-        var saveConfig = new WiiuStreamFile.SaveConfig {
-            CompressionLevel = CompressionLevel,
-            CompressionChunkSize = CompressionChunkSize,
-        };
+            foreach (var f in Directory.GetFiles(Path.Join(SoundsPath, "exertions"))) {
+                if (f.EndsWith(".acb.bak"))
+                    File.Move(f, f[..^4], true);
+                else if (f.EndsWith(".awb.bak"))
+                    File.Move(f, f[..^4], true);
+            }
+        } else {
+            Console.WriteLine("Patching voices...");
+            await PatchSonicDialogues(cancellationToken);
+            await PatchSonicExertions(cancellationToken);
+        }
 
-        var suppressProgressDuration = TimeSpan.FromSeconds(5);
-        await CompressProgramCommand.WriteAndPrintProgress(
-            heroesPath,
-            Heroes,
-            saveConfig,
-            cancellationToken,
-            suppressProgressDuration);
-        foreach (var (levelName, level) in Levels)
+        if (Mode != SonicClones.Sonic) {
+            if (Heroes is null || HeroesPath is null)
+                throw new FileNotFoundException("heroes.wiiu.stream could not be found.");
+
+            Console.WriteLine("Patching graphics...");
+
+            if (Mode == SonicClones.Shadow)
+                await PatchSpinDashBallColor(cancellationToken);
+
+            await Task.WhenAll(Levels.Values.Select(level => PatchSonicModel(level, cancellationToken)));
+            await PatchAddCloneTextures(cancellationToken);
+
+            Console.WriteLine("Saving data...");
+            var saveConfig = new WiiuStreamFile.SaveConfig {
+                CompressionLevel = CompressionLevel,
+                CompressionChunkSize = CompressionChunkSize,
+            };
+
+            var suppressProgressDuration = TimeSpan.FromSeconds(5);
             await CompressProgramCommand.WriteAndPrintProgress(
-                levelPaths[levelName],
-                level,
+                HeroesPath,
+                Heroes,
                 saveConfig,
                 cancellationToken,
                 suppressProgressDuration);
+            foreach (var (levelName, level) in Levels)
+                await CompressProgramCommand.WriteAndPrintProgress(
+                    levelPaths[levelName],
+                    level,
+                    saveConfig,
+                    cancellationToken,
+                    suppressProgressDuration);
+        }
 
         Console.WriteLine("Done!");
 
         return 0;
     }
 
-    private async Task ShadowAdjustSpinDashBallColor(
+    private async Task PatchSpinDashBallColor(
         CancellationToken cancellationToken) {
         // Turn Sonic's blue spindash ball grey
         var decoder = new BcDecoder();
@@ -274,16 +304,17 @@ public class QuickModProgramCommand : RootProgramCommand {
         }
     }
 
-    private static Task CommonSilenceVoices(string soundsPath, CancellationToken cancellationToken) => Task.Run(
+    private Task PatchSonicDialogues(CancellationToken cancellationToken) => Task.Run(
         () => {
-            foreach (var f in Directory.GetFiles(soundsPath)) {
+            Debug.Assert(SoundsPath is not null);
+            foreach (var f in Directory.GetFiles(SoundsPath)) {
                 if (!f.EndsWith(".acb"))
                     continue;
 
                 var baseName = f[..^4];
                 var acbFile = baseName + ".acb";
                 var awbFile = File.Exists(baseName + ".awb") ? baseName + ".awb" : null;
-                
+
                 var targetAcb = new AcbFile(
                     File.Exists(acbFile + ".bak") ? acbFile + ".bak" : acbFile,
                     awbFile is not null && File.Exists(awbFile + ".bak") ? awbFile + ".bak" : awbFile);
@@ -293,7 +324,7 @@ public class QuickModProgramCommand : RootProgramCommand {
                 foreach (var (cueName, sequenceIndex) in targetAcb.CueNameToSequenceIndex) {
                     if (!cueName.Contains("_Sonic_x_x_"))
                         continue;
-                    
+
                     foreach (var trackIndex in targetAcb.GetTrackIndices(sequenceIndex))
                         targetAcb.SilenceTrack(trackIndex);
                     changed = true;
@@ -301,21 +332,22 @@ public class QuickModProgramCommand : RootProgramCommand {
 
                 if (!changed)
                     continue;
-                
+
                 if (!File.Exists(acbFile + ".bak"))
                     File.Copy(acbFile, acbFile + ".bak");
                 if (awbFile is not null && !File.Exists(awbFile + ".bak"))
                     File.Copy(awbFile, awbFile + ".bak");
-                
+
                 targetAcb.Save(baseName);
                 Console.WriteLine("Silenced Sonic dialogues in acb/awb file(s): {0}", baseName);
             }
         },
         cancellationToken);
 
-    private Task CommonAdjustSonicExertions(string soundsPath, CancellationToken cancellationToken) => Task.Run(
+    private Task PatchSonicExertions(CancellationToken cancellationToken) => Task.Run(
         () => {
-            var baseName = Path.Join(soundsPath, "exertions/hero_sonic");
+            Debug.Assert(SoundsPath is not null);
+            var baseName = Path.Join(SoundsPath, "exertions/hero_sonic");
             var acbFile = baseName + ".acb";
             var awbFile = File.Exists(baseName + ".awb") ? baseName + ".awb" : null;
             if (!File.Exists(acbFile + ".bak"))
@@ -324,9 +356,10 @@ public class QuickModProgramCommand : RootProgramCommand {
                 File.Copy(awbFile, awbFile + ".bak");
             var targetAcb = new AcbFile(acbFile + ".bak", awbFile + ".bak");
 
-            switch (Mode) {
-                case SonicClones.Shadow: {
-                    var shadowAcb = new AcbFile(Path.Join(soundsPath, "exertions", "shadow.acb"), null);
+            switch (Voice) {
+                case SonicCloneVoices.Auto when Mode == SonicClones.Shadow:
+                case SonicCloneVoices.Shadow: {
+                    var shadowAcb = new AcbFile(Path.Join(SoundsPath, "exertions", "shadow.acb"), null);
                     var trackIndicesOfShadowWaveformsInSonic = new List<ushort>(shadowAcb.InternalWaveforms.Count);
                     trackIndicesOfShadowWaveformsInSonic.AddRange(
                         shadowAcb.InternalWaveformRows.Select(
@@ -363,13 +396,14 @@ public class QuickModProgramCommand : RootProgramCommand {
 
                     break;
                 }
-                case SonicClones.MetalSonic: {
-                    // he's silent type
+                case SonicCloneVoices.Auto when Mode == SonicClones.MetalSonic:
+                case SonicCloneVoices.Silence: {
+                    // he's a silent type
                     for (var i = 0; i < targetAcb.SequenceTable.Rows.Count; i++)
                         targetAcb.SetTrackIndices(i, Array.Empty<ushort>());
                     break;
                 }
-                case SonicClones.Sonic:
+                case SonicCloneVoices.Sonic:
                 default:
                     throw new InvalidOperationException();
             }
@@ -378,50 +412,26 @@ public class QuickModProgramCommand : RootProgramCommand {
         },
         cancellationToken);
 
-    private Task CommonAddTextures(CancellationToken cancellationToken) => Task.Run(
+    private Task PatchAddCloneTextures(CancellationToken cancellationToken) => Task.Run(
         () => {
-            var referenceLevel = Levels[Mode switch {
-                SonicClones.Shadow => "level02_ancientfactorypresent_a",
-                SonicClones.MetalSonic => "level05_sunkenruins",
-                _ => throw new InvalidOperationException(),
-            }];
-            var replacementPathPrefix = Mode switch {
-                SonicClones.Shadow => "art/characters/5_minibosses/shadow/texture/",
-                SonicClones.MetalSonic => "art/characters/5_minibosses/metal_sonic/textures/",
-                _ => throw new InvalidOperationException(),
-            };
-
-            foreach (var entry in referenceLevel.Entries) {
-                if (!entry.Header.InnerPath.StartsWith(
-                        replacementPathPrefix,
-                        StringComparison.InvariantCultureIgnoreCase))
-                    continue;
-                Heroes!.PutEntry(entry.Header.InnerPath, entry.Source);
+            foreach (var entry in ReferenceLevel.Entries.Where(
+                         entry => entry.Header.InnerPath.StartsWith(
+                             ReferenceTexturePathPrefix,
+                             StringComparison.InvariantCultureIgnoreCase))) {
+                Heroes!.PutEntry(-1, entry.Header.InnerPath, entry.Source);
             }
         },
         cancellationToken);
 
-    private Task CommonReplaceModels(WiiuStreamFile level, CancellationToken cancellationToken) => Task.Run(
+    private Task PatchSonicModel(WiiuStreamFile level, CancellationToken cancellationToken) => Task.Run(
         () => {
-            var sonicBaseFile = "objects/characters/1_heroes/sonic/sonic";
-            var referenceLevel = Levels[Mode switch {
-                SonicClones.Shadow => "level02_ancientfactorypresent_a",
-                SonicClones.MetalSonic => "level05_sunkenruins",
-                _ => throw new InvalidOperationException(),
-            }];
-            var replacementBaseFile = Mode switch {
-                SonicClones.Shadow => "objects/characters/5_minibosses/shadow/shadow",
-                SonicClones.MetalSonic => "objects/characters/5_minibosses/metal_sonic/metal_sonic",
-                _ => throw new InvalidOperationException(),
-            };
-
-            var sonicChr = level.GetEntry($"{sonicBaseFile}.chr");
-            var replacementChr = referenceLevel.GetEntry($"{replacementBaseFile}.chr");
+            var sonicChr = level.GetEntry($"{SonicBaseName}.chr");
+            var replacementChr = ReferenceLevel.GetEntry($"{ReferenceObjectBaseName}.chr");
             sonicChr.Source = replacementChr.Source;
 
-            var sonicMtl = level.GetEntry($"{sonicBaseFile}.mtl", SkinFlag.Sonic_Default);
-            var sonicMtlAlt = level.GetEntry($"{sonicBaseFile}.mtl", SkinFlag.Sonic_Alt);
-            var replacementMtl = referenceLevel.GetEntry($"{replacementBaseFile}.mtl");
+            var sonicMtl = level.GetEntry($"{SonicBaseName}.mtl", SkinFlag.Sonic_Default);
+            var sonicMtlAlt = level.GetEntry($"{SonicBaseName}.mtl", SkinFlag.Sonic_Alt);
+            var replacementMtl = ReferenceLevel.GetEntry($"{ReferenceObjectBaseName}.mtl");
 
             var sonicDoc = PbxmlFile.Load(sonicMtl.Source.ReadRaw());
             var replacementDoc = PbxmlFile.Load(replacementMtl.Source.ReadRaw());
@@ -443,14 +453,29 @@ public class QuickModProgramCommand : RootProgramCommand {
         },
         cancellationToken);
 
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public enum SonicClones {
         Sonic = 0,
         Shadow = 1,
         MetalSonic = 2,
 
+        // Aliases for command line invocation
         Default = Sonic,
         Revert = Sonic,
         Restore = Sonic,
         Metal = MetalSonic,
+    }
+
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    public enum SonicCloneVoices {
+        Auto = 0,
+        Sonic = 1,
+        Shadow = 2,
+        Silence = 3,
+
+        // Aliases for command line invocation
+        Default = Auto,
+        Revert = Auto,
+        Restore = Auto,
     }
 }
