@@ -8,12 +8,12 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml;
 using BCnEncoder.Decoder;
 using BCnEncoder.Encoder;
 using BCnEncoder.ImageSharp;
 using BCnEncoder.Shared;
 using SynergyLib.FileFormat;
+using SynergyLib.FileFormat.CryEngine;
 using SynergyTools.Misc;
 
 namespace SynergyTools.ProgramCommands;
@@ -91,7 +91,7 @@ public class QuickModProgramCommand : RootProgramCommand {
     public readonly string[] PathArray;
     public readonly SonicClones Mode;
     public readonly SonicCloneVoices Voice;
-    
+
     public string? SoundsPath;
     public string? HeroesPath;
     public WiiuStreamFile? Heroes;
@@ -234,8 +234,9 @@ public class QuickModProgramCommand : RootProgramCommand {
             if (Mode == SonicClones.Shadow)
                 await PatchSpinDashBallColor(cancellationToken);
 
-            await Task.WhenAll(Levels.Values.Select(level => PatchSonicModel(level, cancellationToken)));
-            await PatchAddCloneTextures(cancellationToken);
+            await Task.WhenAll(
+                PatchSonicModel(cancellationToken),
+                PatchAddCloneTextures(cancellationToken));
 
             Console.WriteLine("Saving data...");
             var saveConfig = new WiiuStreamFile.SaveConfig {
@@ -423,33 +424,64 @@ public class QuickModProgramCommand : RootProgramCommand {
         },
         cancellationToken);
 
-    private Task PatchSonicModel(WiiuStreamFile level, CancellationToken cancellationToken) => Task.Run(
+    private Task PatchSonicModel(CancellationToken cancellationToken) => Task.Run(
         () => {
-            var sonicChr = level.GetEntry($"{SonicBaseName}.chr");
-            var replacementChr = ReferenceLevel.GetEntry($"{ReferenceObjectBaseName}.chr");
-            sonicChr.Source = replacementChr.Source;
+            var sonic = new CryCharacter(
+                x => new MemoryStream(
+                    (ReferenceLevel.TryGetEntry(out var e, x, SkinFlag.Sonic_Default) ? e : ReferenceLevel.GetEntry(x))
+                    .Source.ReadRaw()),
+                SonicBaseName);
+            var reference = new CryCharacter(
+                x => new MemoryStream(ReferenceLevel.GetEntry(x).Source.ReadRaw()),
+                ReferenceObjectBaseName);
+            var sonicMaterials = sonic.Model.Material.SubMaterials ?? throw new InvalidDataException();
+            var referenceMaterials = reference.Model.Material.SubMaterials ?? throw new InvalidDataException();
 
-            var sonicMtl = level.GetEntry($"{SonicBaseName}.mtl", SkinFlag.Sonic_Default);
-            var sonicMtlAlt = level.GetEntry($"{SonicBaseName}.mtl", SkinFlag.Sonic_Alt);
-            var replacementMtl = ReferenceLevel.GetEntry($"{ReferenceObjectBaseName}.mtl");
-
-            var sonicDoc = PbxmlFile.FromBytes(sonicMtl.Source.ReadRaw());
-            var replacementDoc = PbxmlFile.FromBytes(replacementMtl.Source.ReadRaw());
-            var existingNames = replacementDoc.Document["Material"]!["SubMaterials"]!
-                .OfType<XmlElement>()
-                .Select(x => x.GetAttribute("Name"))
-                .ToHashSet();
-            foreach (var elem in sonicDoc.Document["Material"]!["SubMaterials"]!.OfType<XmlElement>()) {
-                if (existingNames.Contains(elem.GetAttribute("Name")))
-                    continue;
-
-                replacementDoc.Document["Material"]!["SubMaterials"]!.AppendChild(replacementDoc.Document.ImportNode(elem, true));
-                existingNames.Add(elem.GetAttribute("Name"));
+            sonic.Model.Meshes.Clear();
+            sonic.Model.Meshes.AddRange(reference.Model.Meshes.Select(x => x.Clone()));
+            sonic.Attachments.AddRange(reference.Attachments);
+            sonic.Definition ??= new();
+            sonic.Definition.Attachments ??= new();
+            if (reference.Definition?.Attachments is not null)
+                sonic.Definition.Attachments.AddRange(reference.Definition.Attachments);
+            switch (Mode) {
+                case SonicClones.Shadow:
+                    sonicMaterials.RemoveAll(x => x.Name == "SonicHead_M");
+                    sonicMaterials.RemoveAll(x => x.Name == "SonicBody_M1");
+                    sonicMaterials.Add(referenceMaterials.Single(x => x.Name == "Shadow_Head_M"));
+                    sonicMaterials.Add(referenceMaterials.Single(x => x.Name == "Shadow_Body_M"));
+                    break;
+                case SonicClones.MetalSonic:
+                    sonicMaterials.RemoveAll(x => x.Name == "eyeL_m");
+                    sonicMaterials.RemoveAll(x => x.Name == "eyeR_m");
+                    sonicMaterials.RemoveAll(x => x.Name == "SonicHead_M");
+                    sonicMaterials.RemoveAll(x => x.Name == "SonicBody_M1");
+                    sonicMaterials.Add(referenceMaterials.Single(x => x.Name == "L_eye_M"));
+                    sonicMaterials.Add(referenceMaterials.Single(x => x.Name == "R_eye_M"));
+                    sonicMaterials.Add(referenceMaterials.Single(x => x.Name == "Metal_Sonic_M"));
+                    break;
+                case SonicClones.Sonic:
+                default:
+                    throw new InvalidOperationException();
             }
 
-            using var targetMs = new MemoryStream();
-            replacementDoc.WriteBinary(targetMs);
-            sonicMtl.Source = sonicMtlAlt.Source = new(targetMs.ToArray());
+            foreach (var refController in reference.Model.Controllers) {
+                if (sonic.Model.Controllers.SingleOrDefault(x => x.Id == refController.Id) is not null)
+                    continue;
+                
+                var parent = sonic.Model.Controllers.Single(x => x.Id == refController.Parent!.Id);
+                refController.CloneInto(parent, sonic.Model.Controllers);
+            }
+
+            var geoBytes = sonic.Model.GetGeometryBytes();
+            var matBytes = sonic.Model.GetMaterialBytes();
+            foreach (var level in Levels.Values) {
+                var sonicChr = level.GetEntry($"{SonicBaseName}.chr");
+                var sonicMtl = level.GetEntry($"{SonicBaseName}.mtl", SkinFlag.Sonic_Default);
+                var sonicMtlAlt = level.GetEntry($"{SonicBaseName}.mtl", SkinFlag.Sonic_Alt);
+                sonicChr.Source = new(geoBytes);
+                sonicMtl.Source = sonicMtlAlt.Source = new(matBytes);
+            }
         },
         cancellationToken);
 

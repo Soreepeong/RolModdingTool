@@ -30,6 +30,14 @@ public class Controller {
     public Matrix4x4 InverseBindPoseMatrix =>
         Matrix4x4.Invert(BindPoseMatrix, out var res) ? res : throw new InvalidOperationException();
 
+    public Controller CloneInto(Controller parent, IList<Controller> controllerList) {
+        var res = new Controller(Id, Name, BindPoseMatrix, parent);
+        controllerList.Add(res);
+        foreach (var c in Children)
+            c.CloneInto(res, controllerList);
+        return res;
+    }
+
     public static List<Controller> ListFromCompiledBones(IReadOnlyList<CompiledBone> bones) {
         var controllers = new List<Controller>(bones.Count);
         foreach (var compiledBone in bones)
