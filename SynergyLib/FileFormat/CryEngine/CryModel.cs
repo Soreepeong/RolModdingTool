@@ -4,16 +4,19 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Enums;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
 using SynergyLib.FileFormat.CryEngine.CryModelElements;
 using SynergyLib.FileFormat.CryEngine.CryXml;
+using SynergyLib.Util.BinaryRW;
 using SynergyLib.Util.MathExtras;
 
 namespace SynergyLib.FileFormat.CryEngine;
 
 public class CryModel {
+    public string Name;
     public CryChunks Chunks;
     public Material Material;
     public List<Controller> Controllers;
@@ -29,6 +32,14 @@ public class CryModel {
         NotSupportedIfFalse(Chunks.Values.OfType<ExportFlagsChunk>().Single().Flags == ExportFlags.UseCustomNormals);
 
         var nodeChunk = Chunks.Values.OfType<NodeChunk>().Single(x => x.ParentId == -1);
+        Name = nodeChunk.Name;
+        NotSupportedIfFalse(!nodeChunk.IsGroupHead);
+        NotSupportedIfFalse(!nodeChunk.IsGroupMember);
+        NotSupportedIfFalse(nodeChunk.Properties.Length == 0);
+        NotSupportedIfFalse(nodeChunk.Position == Vector3.Zero);
+        NotSupportedIfFalse((nodeChunk.Rotation - Quaternion.Identity).Length() < 1e-6);
+        NotSupportedIfFalse(nodeChunk.Scale == Vector3.One);
+        NotSupportedIfFalse(nodeChunk.Transform.M44 == 0 && (nodeChunk.Transform with {M44 = 1}).IsIdentity);
         NotSupportedIfFalse(nodeChunk.ChildCount == 0);
         NotSupportedIfFalse(Chunks[nodeChunk.MaterialId] is MtlNameChunk);
         var meshChunk = NotSupportedIfNull<MeshChunk>(Chunks[nodeChunk.ObjectId]);
@@ -55,6 +66,9 @@ public class CryModel {
         var hasBones = meshChunk.BoneMappingChunkId != 0;
         NotSupportedIfFalse(hasBones == subsetsChunk.Flags.HasFlag(MeshSubsetsFlags.BoneIndices));
 
+        foreach (var ds in Chunks.Values.OfType<DataChunk>())
+            NotSupportedIfFalse(ds.Flags == 0);
+
         // Test: Ensure that there isn't anything we don't care defined
         NotSupportedIfFalse(meshChunk.VertAnimId == 0);
         NotSupportedIfFalse(meshChunk.Colors2ChunkId == 0);
@@ -65,9 +79,9 @@ public class CryModel {
         NotSupportedIfFalse(meshChunk.SkinDataChunkId == 0);
         NotSupportedIfFalse(meshChunk.Ps3EdgeDataChunkId == 0);
         NotSupportedIfFalse(meshChunk.Reserved15ChunkId == 0);
-        NotSupportedIfFalse(meshChunk.PhysicsDataChunkId1 == 0);
-        NotSupportedIfFalse(meshChunk.PhysicsDataChunkId2 == 0);
-        NotSupportedIfFalse(meshChunk.PhysicsDataChunkId3 == 0);
+        NotSupportedIfFalse(meshChunk.PhysicsDataChunkId[1] == 0);
+        NotSupportedIfFalse(meshChunk.PhysicsDataChunkId[2] == 0);
+        NotSupportedIfFalse(meshChunk.PhysicsDataChunkId[3] == 0);
 
         var vertices = new Vertex[meshChunk.VertexCount];
         foreach (var i in Enumerable.Range(0, meshChunk.VertexCount)) {
@@ -77,6 +91,9 @@ public class CryModel {
                 TexCoord = ((DataChunk) Chunks[meshChunk.TexCoordsChunkId]).GetItem<Vector2>(i),
                 Color = ((DataChunk) Chunks[meshChunk.ColorsChunkId]).GetItem<Vector4<byte>>(i),
                 Tangent = ((DataChunk) Chunks[meshChunk.TangentsChunkId]).GetItem<MeshTangent>(i),
+                BoneMapping = meshChunk.BoneMappingChunkId == 0
+                    ? default
+                    : ((DataChunk) Chunks[meshChunk.BoneMappingChunkId]).GetItem<MeshBoneMapping>(i),
             };
         }
 
@@ -88,15 +105,15 @@ public class CryModel {
             : ((DataChunk) Chunks[meshChunk.BoneMappingChunkId]).AsArray<MeshBoneMapping>();
 
         var indices = ((DataChunk) Chunks[meshChunk.IndicesChunkId]).AsArray<ushort>();
-        PhysicsData = meshChunk.PhysicsDataChunkId0 == 0
+        PhysicsData = meshChunk.PhysicsDataChunkId[0] == 0
             ? Array.Empty<byte[]>()
             : new[] {
-                ((MeshPhysicsDataChunk) Chunks[meshChunk.PhysicsDataChunkId0]).Data
+                ((MeshPhysicsDataChunk) Chunks[meshChunk.PhysicsDataChunkId[0]]).Data
             };
 
         // Test: ShapeDeformation.Index are all set to 0xFF
         foreach (var sd in shapeDeformations)
-            NotSupportedIfFalse(sd.Index.All(x => x == 0xFF));
+            NotSupportedIfFalse(sd.Index.All(x => x is 0xFF or 1));
 
         // Test: Ensure subset counts match
         NotSupportedIfFalse(subsetsChunk.Subsets.Count == meshChunk.SubsetsCount);
@@ -170,8 +187,12 @@ public class CryModel {
                 }
 
                 var aabb = AaBb.FromVectorEnumerable(boneBox.Indices.Select(x => vertices[x].Position).ToArray());
-                if (boneBox.AaBb != aabb)
-                    throw new InvalidDataException();
+                NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Min.X - aabb.Min.X) < 1e-3);
+                NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Min.Y - aabb.Min.Y) < 1e-3);
+                NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Min.Z - aabb.Min.Z) < 1e-3);
+                NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Max.X - aabb.Max.X) < 1e-3);
+                NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Max.Y - aabb.Max.Y) < 1e-3);
+                NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Max.Z - aabb.Max.Z) < 1e-3);
                 foreach (var index in boneBox.Indices) {
                     var bw = intSkinVertices.Vertices[extToInt.Map[index]].Weights;
                     NotSupportedIfFalse(Math.Abs(bw.Sum(x => x) - 1f) < 1e-6);
@@ -188,12 +209,12 @@ public class CryModel {
 
                     // var iv = intSkinVertices.Vertices[extToInt.Map[index]].BoneIds;
                     // var subsetIndex = subsetsChunk.Subsets.Select((x, i) => (x, i))
-                    //     .Where(x => x.x.FirstVertId <= index && index < x.x.FirstVertId + x.x.NumVerts)
+                    //     .Where(x => Enumerable.Range(x.x.FirstIndexId, x.x.NumIndices).Any(y => indices[y] == index))
                     //     .Select(x => x.i)
                     //     .ToArray();
-                    // var bm = BoneMappings[index].BoneIds
+                    // var bm = boneMappings[index].BoneIds
                     //     .Select(x => subsetIndex.Select(y => subsetsChunk.BoneIds[y][x]).Distinct().Single())
-                    //     .Select((x, i) => BoneMappings[index].Weights[i] == 0 ? (ushort)0 : x)
+                    //     .Select((x, i) => boneMappings[index].Weights[i] == 0 ? (ushort) 0 : x)
                     //     .ToArray();
                     // if (!bm.SequenceEqual(iv))
                     //     throw new InvalidDataException();
@@ -249,6 +270,14 @@ public class CryModel {
             i = to;
         }
 
+        foreach (var foliageInfo in Chunks.Values.OfType<FoliageInfoChunk>()) {
+            NotSupportedIfFalse(!foliageInfo.Spines.Any());
+            NotSupportedIfFalse(!foliageInfo.SpineVertices.Any());
+            NotSupportedIfFalse(!foliageInfo.SpineVertexSegDim.Any());
+            NotSupportedIfFalse(!foliageInfo.BoneMappings.Any());
+            NotSupportedIfFalse(!foliageInfo.BoneIds.Any());
+        }
+
         // foreach (var subset in subsetsChunk.Subsets) {
         //     // Test: Center/Radius is correctly defined
         //     var aabb = new AaBb(Positions[Indices[subset.FirstIndexId]]);
@@ -261,8 +290,376 @@ public class CryModel {
         //     NotSupportedIfFalse(Math.Abs(diff.Z) < 1e-6);
         //     NotSupportedIfFalse(Math.Abs((aabb.Center - aabb.Min).Length() - subset.Radius) < 1e-6);
         // }
+    }
 
-        Debugger.Break();
+    public void WriteGeometryTo(NativeWriter writer) {
+        var chunks = new CryChunks {
+            Type = CryFileType.Geometry,
+            Version = CryFileVersion.CryTek3
+        };
+
+        var rootMaterialChunk = chunks.AddChunkLE(
+            ChunkType.MtlName,
+            0x800,
+            new MtlNameChunk {
+                Flags = Meshes.Any() ? MtlNameFlags.MultiMaterial : 0,
+                Name = Name,
+                SubMaterialChunkIds = new(Meshes.Count),
+            });
+
+        foreach (var mesh in Meshes) {
+            rootMaterialChunk.SubMaterialChunkIds.Add(
+                chunks.AddChunkLE(
+                    ChunkType.MtlName,
+                    0x800,
+                    new MtlNameChunk {
+                        Flags = MtlNameFlags.SubMaterial,
+                        Name = mesh.MaterialName,
+                        ShOpacity = 0f,
+                    }).Header.Id);
+        }
+
+        Dictionary<uint, ushort>? controllerIdToBoneId = null;
+        List<ushort>? extToInt = null;
+        CompiledIntSkinVerticesChunk? intSkinVertices = null;
+        if (Controllers.Any()) {
+            var compiledBones = chunks.AddChunkBE(
+                ChunkType.CompiledBones,
+                0x800,
+                new CompiledBonesChunk {Bones = Controller.ToCompiledBonesList(Controllers)});
+
+            controllerIdToBoneId = compiledBones.Bones
+                .Select((x, i) => (x, i))
+                .ToDictionary(x => x.x.ControllerId, x => (ushort) x.i);
+
+            chunks.AddChunkBE(
+                ChunkType.CompiledPhysicalBones,
+                0x800,
+                new CompiledPhysicalBonesChunk {Bones = Controller.ToBoneEntityList(Controllers)});
+
+            chunks.AddChunkBE(ChunkType.CompiledPhysicalProxies, 0x800, new CompiledPhysicalProxyChunk());
+
+            chunks.AddChunkBE(ChunkType.CompiledMorphTargets, 0x800, new CompiledMorphTargetsChunk());
+
+            intSkinVertices = chunks.AddChunkBE(
+                ChunkType.CompiledIntSkinVertices,
+                0x800,
+                new CompiledIntSkinVerticesChunk {
+                    Vertices = Mesh.ToIntSkinVertices(Meshes, controllerIdToBoneId, out extToInt),
+                });
+
+            chunks.AddChunkBE(
+                ChunkType.CompiledIntFaces,
+                0x800,
+                new CompiledIntFacesChunk {Faces = Mesh.ToIntFaces(Meshes, extToInt)});
+
+            chunks.AddChunkBE(
+                ChunkType.CompiledExt2IntMap,
+                0x800,
+                new CompiledExtToIntMapChunk {Map = extToInt});
+
+            foreach (var controller in Controllers) {
+                var boneId = controllerIdToBoneId[controller.Id];
+                var boneVertexIndices = new List<ushort>();
+                var aabb = AaBb.NegativeExtreme;
+                foreach (var extIndex in Enumerable.Range(0, extToInt.Count)) {
+                    var intIndex = extToInt[extIndex];
+                    if (!intSkinVertices.Vertices[intIndex].BoneIds.Contains(boneId))
+                        continue;
+
+                    boneVertexIndices.Add((ushort) extIndex);
+                    aabb.Expand(intSkinVertices.Vertices[intIndex].Position1);
+                }
+
+                if (!boneVertexIndices.Any())
+                    continue;
+
+                chunks.AddChunkBE(
+                    ChunkType.BonesBoxes,
+                    0x801,
+                    new BonesBoxesChunk {BoneId = boneId, Indices = boneVertexIndices, AaBb = aabb});
+            }
+        }
+
+        chunks.AddChunkLE(
+            ChunkType.ExportFlags,
+            1,
+            new ExportFlagsChunk {
+                Flags = ExportFlags.UseCustomNormals,
+                RcVersion = new(4123, 1, 4, 3),
+                RcVersionString = " RCVer:4.1 ",
+            });
+
+        // (ChunkType.MeshPhysicsData, 0x800) => new MeshPhysicsDataChunk(),
+
+        var meshSubsetsChunk = chunks.AddChunkBE(
+            ChunkType.MeshSubsets,
+            0x800,
+            new MeshSubsetsChunk {
+                BoneIds = new(),
+                Flags = controllerIdToBoneId is null ? 0 : MeshSubsetsFlags.BoneIndices,
+                Subsets = new(),
+            });
+
+        var totalVertices = Meshes.Sum(x => x.Vertices.Length);
+        var positionsChunk = chunks.AddChunkBE(
+            ChunkType.DataStream,
+            0x800,
+            new DataChunk {Type = CgfStreamType.Positions});
+        var normalsChunk = chunks.AddChunkBE(ChunkType.DataStream, 0x800, new DataChunk {Type = CgfStreamType.Normals});
+        var texCoordsChunk = chunks.AddChunkBE(
+            ChunkType.DataStream,
+            0x800,
+            new DataChunk {Type = CgfStreamType.TexCoords});
+        var colorsChunk = chunks.AddChunkBE(ChunkType.DataStream, 0x800, new DataChunk {Type = CgfStreamType.Colors});
+        var tangentsChunk = chunks.AddChunkBE(
+            ChunkType.DataStream,
+            0x800,
+            new DataChunk {Type = CgfStreamType.Tangents});
+        positionsChunk.FromEnumerable(Meshes.SelectMany(x => x.Vertices.Select(y => y.Position)), totalVertices);
+        normalsChunk.FromEnumerable(Meshes.SelectMany(x => x.Vertices.Select(y => y.Normal)), totalVertices);
+        texCoordsChunk.FromEnumerable(Meshes.SelectMany(x => x.Vertices.Select(y => y.TexCoord)), totalVertices);
+        colorsChunk.FromEnumerable(Meshes.SelectMany(x => x.Vertices.Select(y => y.Color)), totalVertices);
+        tangentsChunk.FromEnumerable(Meshes.SelectMany(x => x.Vertices.Select(y => y.Tangent)), totalVertices);
+
+        DataChunk? boneMappingsChunk = null;
+        if (controllerIdToBoneId is not null) {
+            Debug.Assert(extToInt is not null);
+            Debug.Assert(intSkinVertices is not null);
+
+            boneMappingsChunk = chunks.AddChunkBE(
+                ChunkType.DataStream,
+                0x800,
+                new DataChunk {
+                    Type = CgfStreamType.BoneMapping,
+                    ElementSize = Unsafe.SizeOf<MeshBoneMapping>(),
+                    NativeData = new byte[Unsafe.SizeOf<MeshBoneMapping>() * totalVertices],
+                }
+            );
+        }
+
+        var totalIndices = Meshes.Sum(x => x.Indices.Length);
+        var indicesChunk = chunks.AddChunkBE(
+            ChunkType.DataStream,
+            0x800,
+            new DataChunk {
+                Type = CgfStreamType.Indices,
+                ElementSize = Unsafe.SizeOf<ushort>(),
+                NativeData = new byte[Unsafe.SizeOf<ushort>() * totalIndices],
+            });
+        {
+            var baseVertexIndex = 0;
+            var baseIndexIndex = 0;
+
+            var boneUseRange = new ushort[controllerIdToBoneId?.Count ?? 0, 2];
+            for (var i = 0; i < boneUseRange.GetLength(0); i++)
+            for (var j = 0; j < boneUseRange.GetLength(1); j++)
+                boneUseRange[i, j] = ushort.MaxValue;
+
+            var boneSlots = new ushort[MeshSubsetsChunk.MaxBoneIdPerSubset];
+            boneSlots.AsSpan().Fill(ushort.MaxValue);
+
+            var usedBoneIndices = new HashSet<ushort>(MeshSubsetsChunk.MaxBoneIdPerSubset);
+            var currentBoneIndices = new HashSet<ushort>(12);
+            foreach (var mesh in Meshes) {
+                for (var i = 0; i < mesh.Indices.Length; i++)
+                    indicesChunk.SetItem(baseIndexIndex + i, (ushort) (baseVertexIndex + mesh.Indices[i]));
+
+                var matId = Material.SubMaterials!
+                    .Select((x, i) => (x, i))
+                    .Single(x => x.x.Name == mesh.MaterialName)
+                    .i;
+                if (controllerIdToBoneId is not null) {
+                    Debug.Assert(extToInt is not null);
+                    Debug.Assert(intSkinVertices is not null);
+                    Debug.Assert(boneMappingsChunk is not null);
+
+                    for (var i = 0; i < mesh.Indices.Length; i += 3) {
+                        for (var j = 0; j < 3; j++) {
+                            var v = mesh.Vertices[mesh.Indices[i + j]];
+                            for (var k = 0; k < 4; k++) {
+                                if (v.Weights[k] == 0)
+                                    continue;
+                                var boneId = controllerIdToBoneId[v.ControllerIds[k]];
+                                if (boneUseRange[boneId, 0] == ushort.MaxValue)
+                                    boneUseRange[boneId, 0] = (ushort) (baseIndexIndex + i);
+                                boneUseRange[boneId, 1] = (ushort) (baseIndexIndex + i + 3);
+                            }
+                        }
+                    }
+
+                    var firstIndexId = 0;
+
+                    void FlushSubset(int nextIndexId) {
+                        meshSubsetsChunk.BoneIds.Add(
+                            boneSlots
+                                .Reverse()
+                                .SkipWhile(x => x == ushort.MaxValue)
+                                .Reverse()
+                                .Select(x => x == ushort.MaxValue ? (ushort) 0 : x)
+                                .ToArray());
+                        var firstVertId = Enumerable.Range(firstIndexId, nextIndexId - firstIndexId)
+                            .Select(x => mesh.Indices[x]).Min();
+                        var lastVertId = Enumerable.Range(firstIndexId, nextIndexId - firstIndexId)
+                            .Select(x => mesh.Indices[x]).Max();
+                        var aabb = AaBb.NegativeExtreme;
+                        for (var i = firstIndexId; i < nextIndexId; i++)
+                            aabb.Expand(mesh.Vertices[mesh.Indices[i]].Position);
+
+                        meshSubsetsChunk.Subsets.Add(
+                            new() {
+                                FirstIndexId = baseIndexIndex + firstIndexId,
+                                NumIndices = nextIndexId - firstIndexId,
+                                FirstVertId = baseVertexIndex + firstVertId,
+                                NumVerts = lastVertId - firstVertId + 1,
+                                MatId = matId,
+                                Center = aabb.Center,
+                                Radius = aabb.Radius,
+                            });
+
+                        firstIndexId = nextIndexId;
+                        usedBoneIndices.RemoveWhere(
+                            x => {
+                                if (baseIndexIndex + nextIndexId < boneUseRange[x, 1])
+                                    return false;
+
+                                boneSlots[Array.IndexOf(boneSlots, x)] = ushort.MaxValue;
+                                return true;
+                            });
+                    }
+
+                    for (var i = 0; i < mesh.Indices.Length; i += 3) {
+                        currentBoneIndices.Clear();
+                        for (var j = 0; j < 3; j++) {
+                            var v = mesh.Vertices[mesh.Indices[i + j]];
+                            for (var k = 0; k < 4; k++) {
+                                if (v.Weights[k] == 0)
+                                    continue;
+                                currentBoneIndices.Add(controllerIdToBoneId[v.ControllerIds[k]]);
+                            }
+                        }
+
+                        if (usedBoneIndices.Concat(currentBoneIndices).Distinct().Count() > boneSlots.Length)
+                            FlushSubset(i);
+
+                        foreach (var x in currentBoneIndices.Where(x => usedBoneIndices.Add(x)))
+                            boneSlots[Array.IndexOf(boneSlots, ushort.MaxValue)] = x;
+                    }
+
+                    FlushSubset(mesh.Indices.Length);
+                } else {
+                    var firstVertId = mesh.Indices.Min();
+                    var lastVertId = mesh.Indices.Max();
+                    var aabb = AaBb.NegativeExtreme;
+                    foreach (var index in mesh.Indices)
+                        aabb.Expand(mesh.Vertices[index].Position);
+
+                    meshSubsetsChunk.Subsets.Add(
+                        new() {
+                            FirstIndexId = baseIndexIndex,
+                            NumIndices = mesh.Indices.Length,
+                            FirstVertId = baseVertexIndex + firstVertId,
+                            NumVerts = lastVertId - firstVertId + 1,
+                            MatId = matId,
+                            Center = aabb.Center,
+                            Radius = aabb.Radius,
+                        });
+                }
+
+                baseVertexIndex += mesh.Vertices.Length;
+                baseIndexIndex += mesh.Indices.Length;
+            }
+        }
+
+        // var shapeDeformation = chunks.AddChunkBE(
+        //     ChunkType.DataStream,
+        //     0x800,
+        //     Chunks.Values.OfType<DataChunk>().Single(x => x.Type == CgfStreamType.ShapeDeformation));
+
+        if (controllerIdToBoneId is not null) {
+            Debug.Assert(extToInt is not null);
+            Debug.Assert(intSkinVertices is not null);
+            Debug.Assert(boneMappingsChunk is not null);
+            foreach (var (subset, subsetBoneIds) in meshSubsetsChunk.Subsets.Zip(meshSubsetsChunk.BoneIds)) {
+                for (var i = subset.FirstIndexId; i < subset.FirstIndexId + subset.NumIndices; i++) {
+                    var vertexIndex = indicesChunk.GetItem<ushort>(i);
+                    var intIndex = extToInt[vertexIndex];
+                    var weights = new Vector4<byte>(
+                        intSkinVertices.Vertices[intIndex].Weights.Select(x => (byte) Math.Round(255 * x)));
+                    var boneIds = new Vector4<byte>(
+                        intSkinVertices.Vertices[intIndex].BoneIds.Select(
+                            (x, y) => (byte) (weights[y] == 0 ? 0 : Array.IndexOf(subsetBoneIds, x))));
+
+                    var item = boneMappingsChunk.GetItem<MeshBoneMapping>(vertexIndex);
+                    item.BoneIds = boneIds;
+                    item.Weights = weights;
+
+                    var weightSum = item.Weights.Sum(x => x);
+                    if (weightSum != 255) {
+                        for (var j = 0; j < 4; j++) {
+                            if (item.Weights[j] != 0) {
+                                item.Weights[j] += (byte) (255 - weightSum);
+                                break;
+                            }
+                        }
+                    }
+
+                    boneMappingsChunk.SetItem(vertexIndex, item);
+                }
+            }
+        }
+
+        var meshChunk = chunks.AddChunkBE(
+            ChunkType.Mesh,
+            0x800,
+            new MeshChunk {
+                Bbox = AaBb.FromVectorEnumerable(Meshes.SelectMany(x => x.Vertices.Select(y => y.Position))),
+                BoneMappingChunkId = boneMappingsChunk?.Header.Id ?? 0,
+                ColorsChunkId = colorsChunk.Header.Id,
+                Flags = MeshChunkFlags.HasTexMappingDensity,
+                Flags2 = PhysicalizeFlags.MeshNotNeeded | PhysicalizeFlags.NoBreaking,
+                IndexCount = totalIndices,
+                IndicesChunkId = indicesChunk.Header.Id,
+                NormalsChunkId = normalsChunk.Header.Id,
+                PositionsChunkId = positionsChunk.Header.Id,
+                // ShapeDeformationChunkId = shapeDeformation.Header.Id,
+                SubsetsChunkId = meshSubsetsChunk.Header.Id,
+                SubsetsCount = meshSubsetsChunk.Subsets.Count,
+                TangentsChunkId = tangentsChunk.Header.Id,
+                TexCoordsChunkId = texCoordsChunk.Header.Id,
+                TexMappingDensity = 2.61f, // value not used
+                VertexCount = totalVertices,
+            });
+
+        chunks.AddChunkBE(
+            ChunkType.Node,
+            0x823,
+            new NodeChunk {
+                MaterialId = rootMaterialChunk.Header.Id,
+                Name = Name,
+                ObjectId = meshChunk.Header.Id,
+                ParentId = -1,
+            });
+
+        // (ChunkType.FoliageInfo, 1) => new FoliageInfoChunk(),
+
+        chunks.WriteTo(writer);
+    }
+
+    public void WriteGeometryTo(Stream stream) => WriteGeometryTo(new NativeWriter(stream));
+    
+    public byte[] GetGeometryBytes() {
+        var ms = new MemoryStream();
+        WriteGeometryTo(ms);
+        return ms.ToArray();
+    }
+
+    public void WriteMaterialTo(MemoryStream ms) => PbxmlFile.FromObject(Material).WriteBinary(ms);
+
+    public byte[] GetMaterialBytes() {
+        var ms = new MemoryStream();
+        WriteMaterialTo(ms);
+        return ms.ToArray();
     }
 
     private static void NotSupportedIfFalse(bool test, string? message = null) {

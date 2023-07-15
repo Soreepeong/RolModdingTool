@@ -5,7 +5,7 @@ using SynergyLib.Util.BinaryRW;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct ChunkHeader : ICryReadWrite {
+public class ChunkHeader : ICryReadWrite {
     public ChunkType Type;
     public uint VersionRaw;
     public int Offset;
@@ -27,7 +27,7 @@ public struct ChunkHeader : ICryReadWrite {
         }
     }
 
-    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+    public void WriteTo(NativeWriter writer, bool useBigEndian) {
         using (writer.ScopedLittleEndian()) {
             writer.WriteEnum(Type);
             writer.Write(VersionRaw);

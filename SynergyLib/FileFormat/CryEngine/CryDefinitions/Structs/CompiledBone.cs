@@ -6,14 +6,14 @@ using SynergyLib.Util.MathExtras;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
 
-public struct CompiledBone : ICryReadWrite {
+public class CompiledBone : ICryReadWrite {
     public uint ControllerId;
     public CompiledBonePhysics PhysicsLive;
     public CompiledBonePhysics PhysicsDead;
     public float Mass; // 0xD8 ?
     public Matrix3x4 LocalTransformMatrix; // Bind Pose Matrix
     public Matrix3x4 WorldTransformMatrix;
-    public string Name;
+    public string Name = string.Empty;
     public uint LimbId; // ID of this limb... usually just 0xFFFFFFFF
     public int ParentOffset; // offset to the parent in number of CompiledBone structs (584 bytes)
     public int ChildOffset; // Offset to the first child to this bone in number of CompiledBone structs
@@ -38,7 +38,7 @@ public struct CompiledBone : ICryReadWrite {
             throw new NotSupportedException();
     }
 
-    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+    public void WriteTo(NativeWriter writer, bool useBigEndian) {
         using (writer.ScopedBigEndian(useBigEndian)) {
             writer.Write(ControllerId);
             PhysicsLive.WriteTo(writer, useBigEndian);

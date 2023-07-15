@@ -5,9 +5,9 @@ using SynergyLib.Util.BinaryRW;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct CompiledIntFacesChunk : ICryChunk {
-    public ChunkHeader Header { get; set; }
-    public readonly List<CompiledIntFace> Faces = new();
+public class CompiledIntFacesChunk : ICryChunk {
+    public ChunkHeader Header { get; set; } = new();
+    public List<CompiledIntFace> Faces = new();
 
     public CompiledIntFacesChunk() { }
 
@@ -29,7 +29,7 @@ public struct CompiledIntFacesChunk : ICryChunk {
         reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+    public void WriteTo(NativeWriter writer, bool useBigEndian) {
         Header.WriteTo(writer, false);
         using (writer.ScopedBigEndian(useBigEndian)) {
             foreach (var v in Faces)

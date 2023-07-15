@@ -65,6 +65,20 @@ public struct Matrix3x4 : IEquatable<Matrix3x4> {
 
     public Matrix4x4 Transformation => new(M11, M12, M13, M14, M21, M22, M23, M24, M31, M32, M33, M34, 0, 0, 0, 1);
 
+    public static Matrix3x4 CreateFromMatrix4x4(Matrix4x4 m) => new(
+        m.M11,
+        m.M12,
+        m.M13,
+        m.M14,
+        m.M21,
+        m.M22,
+        m.M23,
+        m.M24,
+        m.M31,
+        m.M32,
+        m.M33,
+        m.M34);
+
     /// <summary>
     /// Creates a rotation matrix from the given Quaternion rotation value.
     /// </summary>

@@ -6,9 +6,9 @@ using SynergyLib.Util.BinaryRW;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct CompiledBonesChunk : ICryChunk {
-    public ChunkHeader Header { get; set; }
-    public readonly List<CompiledBone> Bones = new();
+public class CompiledBonesChunk : ICryChunk {
+    public ChunkHeader Header { get; set; } = new();
+    public List<CompiledBone> Bones = new();
 
     public CompiledBonesChunk() { }
 
@@ -18,10 +18,10 @@ public struct CompiledBonesChunk : ICryChunk {
         using (reader.ScopedBigEndian(Header.IsBigEndian)) {
             reader.EnsureZeroesOrThrow(32);
 
-            var bone = new CompiledBone();
             var boneCount = 1;
             Bones.Clear();
             for (var i = 0; i < boneCount; i++) {
+                var bone = new CompiledBone();
                 bone.ReadFrom(reader, 584);
                 boneCount = Math.Max(boneCount, i + bone.ChildOffset + bone.ChildCount);
                 Bones.Add(bone);
@@ -31,7 +31,7 @@ public struct CompiledBonesChunk : ICryChunk {
         reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+    public void WriteTo(NativeWriter writer, bool useBigEndian) {
         Header.WriteTo(writer, false);
         using (writer.ScopedBigEndian(useBigEndian)) {
             writer.FillZeroes(32);

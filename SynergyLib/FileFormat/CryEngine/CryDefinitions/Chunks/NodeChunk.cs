@@ -5,8 +5,8 @@ using SynergyLib.Util.MathExtras;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct NodeChunk : ICryChunk {
-    public ChunkHeader Header { get; set; }
+public class NodeChunk : ICryChunk {
+    public ChunkHeader Header { get; set; } = new();
     public string Name = string.Empty;
     public int ObjectId;
     public int ParentId;
@@ -14,13 +14,13 @@ public struct NodeChunk : ICryChunk {
     public int MaterialId;
     public bool IsGroupHead;
     public bool IsGroupMember;
-    public Matrix4x4 Transform;
-    public Vector3 Position;
-    public Quaternion Rotation;
-    public Vector3 Scale;
-    public int PositionControllerId;
-    public int RotationControllerId;
-    public int ScaleControllerId;
+    public Matrix4x4 Transform = new(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0);
+    public Vector3 Position = Vector3.Zero;
+    public Quaternion Rotation = Quaternion.Identity;
+    public Vector3 Scale = Vector3.One;
+    public int PositionControllerId = -1;
+    public int RotationControllerId = -1;
+    public int ScaleControllerId = -1;
     public string Properties = string.Empty;
 
     public NodeChunk() { }
@@ -50,7 +50,7 @@ public struct NodeChunk : ICryChunk {
         reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+    public void WriteTo(NativeWriter writer, bool useBigEndian) {
         Header.WriteTo(writer, false);
         using (writer.ScopedBigEndian(useBigEndian)) {
             writer.WriteFString(Name, 64, Encoding.UTF8);

@@ -4,8 +4,8 @@ using SynergyLib.Util.MathExtras;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct MeshChunk : ICryChunk {
-    public ChunkHeader Header { get; set; }
+public class MeshChunk : ICryChunk {
+    public ChunkHeader Header { get; set; } = new();
 
     public MeshChunkFlags Flags;
     public PhysicalizeFlags Flags2;
@@ -30,31 +30,9 @@ public struct MeshChunk : ICryChunk {
     public int SkinDataChunkId;
     public int Ps3EdgeDataChunkId;
     public int Reserved15ChunkId;
-    public unsafe fixed int PhysicsDataChunkId[4];
+    public Vector4<int> PhysicsDataChunkId;
     public AaBb Bbox;
     public float TexMappingDensity;
-
-    public MeshChunk() { }
-
-    public unsafe int PhysicsDataChunkId0 {
-        get => PhysicsDataChunkId[0];
-        set => PhysicsDataChunkId[0] = value;
-    }
-
-    public unsafe int PhysicsDataChunkId1 {
-        get => PhysicsDataChunkId[1];
-        set => PhysicsDataChunkId[1] = value;
-    }
-
-    public unsafe int PhysicsDataChunkId2 {
-        get => PhysicsDataChunkId[2];
-        set => PhysicsDataChunkId[2] = value;
-    }
-
-    public unsafe int PhysicsDataChunkId3 {
-        get => PhysicsDataChunkId[3];
-        set => PhysicsDataChunkId[3] = value;
-    }
 
     public void ReadFrom(NativeReader reader, int expectedSize) {
         var expectedEnd = reader.BaseStream.Position + expectedSize;
@@ -83,12 +61,10 @@ public struct MeshChunk : ICryChunk {
             reader.ReadInto(out SkinDataChunkId);
             reader.ReadInto(out Ps3EdgeDataChunkId);
             reader.ReadInto(out Reserved15ChunkId);
-            unsafe {
-                reader.ReadInto(out PhysicsDataChunkId[0]);
-                reader.ReadInto(out PhysicsDataChunkId[1]);
-                reader.ReadInto(out PhysicsDataChunkId[2]);
-                reader.ReadInto(out PhysicsDataChunkId[3]);
-            }
+            PhysicsDataChunkId[0] = reader.ReadInt32();
+            PhysicsDataChunkId[1] = reader.ReadInt32();
+            PhysicsDataChunkId[2] = reader.ReadInt32();
+            PhysicsDataChunkId[3] = reader.ReadInt32();
 
             Bbox = reader.ReadAaBb();
             reader.ReadInto(out TexMappingDensity);
@@ -99,7 +75,7 @@ public struct MeshChunk : ICryChunk {
         reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+    public void WriteTo(NativeWriter writer, bool useBigEndian) {
         Header.WriteTo(writer, false);
         using (writer.ScopedBigEndian(useBigEndian)) {
             writer.WriteEnum(Flags);
@@ -125,12 +101,10 @@ public struct MeshChunk : ICryChunk {
             writer.Write(SkinDataChunkId);
             writer.Write(Ps3EdgeDataChunkId);
             writer.Write(Reserved15ChunkId);
-            unsafe {
-                writer.Write(PhysicsDataChunkId[0]);
-                writer.Write(PhysicsDataChunkId[1]);
-                writer.Write(PhysicsDataChunkId[2]);
-                writer.Write(PhysicsDataChunkId[3]);
-            }
+            writer.Write(PhysicsDataChunkId[0]);
+            writer.Write(PhysicsDataChunkId[1]);
+            writer.Write(PhysicsDataChunkId[2]);
+            writer.Write(PhysicsDataChunkId[3]);
 
             writer.Write(Bbox);
             writer.Write(TexMappingDensity);

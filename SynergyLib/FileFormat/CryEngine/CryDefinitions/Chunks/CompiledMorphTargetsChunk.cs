@@ -5,8 +5,8 @@ using SynergyLib.Util.BinaryRW;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct CompiledMorphTargetsChunk : ICryChunk {
-    public ChunkHeader Header { get; set; }
+public class CompiledMorphTargetsChunk : ICryChunk {
+    public ChunkHeader Header { get; set; } = new();
     public readonly List<CompiledMorphTarget> Targets = new();
 
     public CompiledMorphTargetsChunk() { }
@@ -29,7 +29,7 @@ public struct CompiledMorphTargetsChunk : ICryChunk {
         reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+    public void WriteTo(NativeWriter writer, bool useBigEndian) {
         Header.WriteTo(writer, false);
         using (writer.ScopedBigEndian(useBigEndian)) {
             writer.Write(Targets.Count);

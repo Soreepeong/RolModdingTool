@@ -140,6 +140,22 @@ public struct Matrix3x3 : IEquatable<Matrix3x3> {
         M31 == other.M31 &&
         M32 == other.M32;
 
+    public override bool Equals(object? obj) => obj is Matrix3x3 other && Equals(other);
+
+    public override int GetHashCode() {
+        var hashCode = new HashCode();
+        hashCode.Add(M11);
+        hashCode.Add(M12);
+        hashCode.Add(M13);
+        hashCode.Add(M21);
+        hashCode.Add(M22);
+        hashCode.Add(M23);
+        hashCode.Add(M31);
+        hashCode.Add(M32);
+        hashCode.Add(M33);
+        return hashCode.ToHashCode();
+    }
+
     public static bool operator ==(Matrix3x3 a, Matrix3x3 b) => a.Equals(b);
     
     public static bool operator !=(Matrix3x3 a, Matrix3x3 b) => !a.Equals(b);

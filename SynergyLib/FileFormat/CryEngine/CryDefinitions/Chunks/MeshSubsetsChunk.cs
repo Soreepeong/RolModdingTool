@@ -7,8 +7,9 @@ using SynergyLib.Util.BinaryRW;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct MeshSubsetsChunk : ICryChunk {
-    public ChunkHeader Header { get; set; }
+public class MeshSubsetsChunk : ICryChunk {
+    public const int MaxBoneIdPerSubset = 0x80;
+    public ChunkHeader Header { get; set; } = new();
     public MeshSubsetsFlags Flags;
     public List<MeshSubset> Subsets = new();
     public List<ushort[]> BoneIds = new();
@@ -36,12 +37,12 @@ public struct MeshSubsetsChunk : ICryChunk {
                 BoneIds.EnsureCapacity(count);
                 for (var i = 0; i < count; i++) {
                     reader.ReadInto(out int count2);
-                    if (count2 > 0x80)
+                    if (count2 > MaxBoneIdPerSubset)
                         throw new InvalidDataException();
                     var ids = new ushort[count2];
                     for (var j = 0; j < ids.Length; j++)
                         ids[j] = reader.ReadUInt16();
-                    reader.BaseStream.Position += (0x80 - ids.Length) * 2;
+                    reader.BaseStream.Position += (MaxBoneIdPerSubset - ids.Length) * 2;
                     BoneIds.Add(ids);
                 }
             }
@@ -50,7 +51,7 @@ public struct MeshSubsetsChunk : ICryChunk {
         reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+    public void WriteTo(NativeWriter writer, bool useBigEndian) {
         Header.WriteTo(writer, false);
         using (writer.ScopedBigEndian(useBigEndian)) {
             if (Flags.HasFlag(MeshSubsetsFlags.BoneIndices)) {
@@ -70,12 +71,12 @@ public struct MeshSubsetsChunk : ICryChunk {
                 b.WriteTo(writer, useBigEndian);
             if (Flags.HasFlag(MeshSubsetsFlags.BoneIndices)) {
                 foreach (var b in BoneIds) {
-                    if (b.Length > 128)
-                        throw new InvalidDataException("BoneIds[..].Length > 0x80");
+                    if (b.Length > MaxBoneIdPerSubset)
+                        throw new InvalidDataException($"BoneIds[..].Length={b.Length} > {MaxBoneIdPerSubset}");
                     writer.Write(b.Length);
                     foreach (var c in b)
                         writer.Write(c);
-                    for (var i = b.Length; i < 128; i++)
+                    for (var i = b.Length; i < MaxBoneIdPerSubset; i++)
                         writer.Write((short) 0);
                 }
             }

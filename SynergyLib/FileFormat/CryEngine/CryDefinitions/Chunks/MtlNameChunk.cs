@@ -1,19 +1,23 @@
-﻿using System.IO;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Enums;
 using SynergyLib.Util.BinaryRW;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct MtlNameChunk : ICryChunk {
-    public ChunkHeader Header { get; set; }
+public class MtlNameChunk : ICryChunk {
+    public ChunkHeader Header { get; set; } = new();
     public MtlNameFlags Flags;
     public uint Flags2;
-    public string Name;
-    public MtlNamePhysicsType PhysicsType;
-    public int[] SubMaterialChunkIds;
+    public string Name = string.Empty;
+    public MtlNamePhysicsType PhysicsType = MtlNamePhysicsType.None;
+    public List<int> SubMaterialChunkIds = new();
     public int AdvancedDataChunkId;
-    public float ShOpacity;
+    public float ShOpacity = 1f;
+
+    public MtlNameChunk() { }
 
     public void ReadFrom(NativeReader reader, int expectedSize) {
         var expectedEnd = reader.BaseStream.Position + expectedSize;
@@ -27,9 +31,9 @@ public struct MtlNameChunk : ICryChunk {
             reader.ReadInto(out int childCount);
             if (childCount > 32)
                 throw new InvalidDataException();
-            SubMaterialChunkIds = new int[childCount];
+            SubMaterialChunkIds.EnsureCapacity(childCount);
             for (var i = 0; i < childCount; i++)
-                reader.ReadInto(out SubMaterialChunkIds[i]);
+                SubMaterialChunkIds.Add(reader.ReadInt32());
             reader.BaseStream.Position += (32 - childCount) * 4;
 
             reader.ReadInto(out AdvancedDataChunkId);
@@ -40,7 +44,7 @@ public struct MtlNameChunk : ICryChunk {
         reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+    public void WriteTo(NativeWriter writer, bool useBigEndian) {
         Header.WriteTo(writer, false);
         using (writer.ScopedBigEndian(useBigEndian)) {
             writer.WriteEnum(Flags);
@@ -48,13 +52,13 @@ public struct MtlNameChunk : ICryChunk {
             writer.WriteFString(Name, 128, Encoding.UTF8);
             writer.WriteEnum(PhysicsType);
 
-            if (SubMaterialChunkIds.Length > 32)
+            if (SubMaterialChunkIds.Count > 32)
                 throw new InvalidDataException();
 
-            writer.Write(SubMaterialChunkIds.Length);
+            writer.Write(SubMaterialChunkIds.Count);
             foreach (var t in SubMaterialChunkIds)
                 writer.Write(t);
-            for (var i = SubMaterialChunkIds.Length; i < 32; i++)
+            for (var i = SubMaterialChunkIds.Count; i < 32; i++)
                 writer.Write(0);
 
             writer.Write(AdvancedDataChunkId);

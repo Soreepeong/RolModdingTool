@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.Collections.Generic;
+using System.Numerics;
 using System.Xml.Serialization;
 using SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
@@ -73,14 +74,14 @@ public class Material {
 
     [XmlArray(ElementName = "SubMaterials")]
     [XmlArrayItem(ElementName = "Material")]
-    public Material[]? SubMaterials { get; set; }
+    public List<Material>? SubMaterials { get; set; }
 
     [XmlElement(ElementName = "PublicParams")]
     public PublicParams? PublicParams { get; set; }
 
     [XmlArray(ElementName = "Textures")]
     [XmlArrayItem(ElementName = "Texture")]
-    public Texture[]? Textures { get; set; }
+    public List<Texture>? Textures { get; set; }
 
-    public override string ToString() => $"Name: {Name}, Shader: {Shader}, Submaterials: {SubMaterials?.Length ?? 0}";
+    public override string ToString() => $"Name: {Name}, Shader: {Shader}, Submaterials: {SubMaterials?.Count ?? 0}";
 }

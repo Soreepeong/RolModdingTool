@@ -2,8 +2,8 @@ using SynergyLib.Util.BinaryRW;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct ChunkSizeChunk : ICryChunk {
-    public ChunkHeader Header { get; set; }
+public class ChunkSizeChunk : ICryChunk {
+    public ChunkHeader Header { get; set; } = new();
     public int Size;
 
     public void ReadFrom(NativeReader reader, int expectedSize) {
@@ -16,13 +16,13 @@ public struct ChunkSizeChunk : ICryChunk {
         reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+    public void WriteTo(NativeWriter writer, bool useBigEndian) {
         Header.WriteTo(writer, useBigEndian);
         using (writer.ScopedLittleEndian())
             writer.Write(Size);
     }
 
-    public readonly void WriteTo(NativeWriter writer) {
+    public void WriteTo(NativeWriter writer) {
         Header.WriteTo(writer, false);
         using (writer.ScopedLittleEndian())
             writer.Write(Size);

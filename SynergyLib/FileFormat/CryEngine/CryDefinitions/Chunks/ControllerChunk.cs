@@ -10,15 +10,13 @@ using SynergyLib.Util.BinaryRW;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct ControllerChunk : ICryChunk {
-    public ChunkHeader Header { get; set; }
+public class ControllerChunk : ICryChunk {
+    public ChunkHeader Header { get; set; } = new();
     public readonly List<ControllerKeyTime> KeyTimes = new();
     public readonly List<ControllerKeyPosition> KeyPositions = new();
     public readonly List<ControllerKeyRotation> KeyRotations = new();
     public readonly List<ControllerGroup> Animations = new();
     public int TrailingPaddingSize;
-
-    public ControllerChunk() { }
 
     public void ReadFrom(NativeReader reader, int expectedSize) {
         var expectedEnd = reader.BaseStream.Position + expectedSize;
@@ -30,8 +28,7 @@ public struct ControllerChunk : ICryChunk {
             reader.ReadInto(out int numAnims);
 
             if (0 != (numAnims & 0xFF000000)) {
-                Header = Header with {IsBigEndian = true};
-                reader.IsBigEndian = true;
+                Header.IsBigEndian = reader.IsBigEndian = true;
                 numKeyPos = BinaryPrimitives.ReverseEndianness(numKeyPos);
                 numKeyRot = BinaryPrimitives.ReverseEndianness(numKeyRot);
                 numKeyTime = BinaryPrimitives.ReverseEndianness(numKeyTime);
@@ -144,7 +141,7 @@ public struct ControllerChunk : ICryChunk {
         reader.EnsureZeroesOrThrow(TrailingPaddingSize = checked((int) (expectedEnd - reader.BaseStream.Position)));
     }
 
-    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+    public void WriteTo(NativeWriter writer, bool useBigEndian) {
         Header.WriteTo(writer, false);
         using (writer.ScopedBigEndian(useBigEndian)) {
             writer.Write(KeyPositions.Count);

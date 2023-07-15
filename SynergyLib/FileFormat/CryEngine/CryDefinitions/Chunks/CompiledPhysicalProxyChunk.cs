@@ -5,8 +5,8 @@ using SynergyLib.Util.BinaryRW;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct CompiledPhysicalProxyChunk : ICryChunk {
-    public ChunkHeader Header { get; set; }
+public class CompiledPhysicalProxyChunk : ICryChunk {
+    public ChunkHeader Header { get; set; } = new();
     public readonly List<CompiledPhysicalProxy> Proxies = new();
 
     public CompiledPhysicalProxyChunk() { }
@@ -29,7 +29,7 @@ public struct CompiledPhysicalProxyChunk : ICryChunk {
         reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+    public void WriteTo(NativeWriter writer, bool useBigEndian) {
         Header.WriteTo(writer, false);
         using (writer.ScopedBigEndian(useBigEndian)) {
             writer.Write(Proxies.Count);

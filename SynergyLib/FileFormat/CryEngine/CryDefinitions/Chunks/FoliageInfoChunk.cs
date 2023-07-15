@@ -8,43 +8,8 @@ using SynergyLib.Util.MathExtras;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct FoliageSpineSubChunk : ICryReadWrite {
-    public byte VertexCount;
-    public float Length;
-    public Vector3 Navigation;
-    public byte AttachSpine;
-    public byte AttachSegment;
-
-    public void ReadFrom(NativeReader reader, int expectedSize) {
-        if (expectedSize != 24)
-            throw new ArgumentOutOfRangeException(nameof(expectedSize), expectedSize, null);
-
-        reader.ReadInto(out VertexCount);
-        reader.EnsureZeroesOrThrow(3);
-        reader.ReadInto(out Length);
-        Navigation = reader.ReadVector3();
-        reader.ReadInto(out AttachSpine);
-        reader.ReadInto(out AttachSegment);
-        reader.EnsureZeroesOrThrow(2);
-    }
-
-    public void WriteTo(NativeWriter writer, bool useBigEndian) {
-        using (writer.ScopedBigEndian(useBigEndian)) {
-            writer.Write(VertexCount);
-            writer.FillZeroes(3);
-            writer.Write(Length);
-            writer.Write(Navigation);
-            writer.Write(AttachSpine);
-            writer.Write(AttachSegment);
-            writer.FillZeroes(2);
-        }
-    }
-
-    public int WrittenSize => 24;
-}
-
-public struct FoliageInfoChunk : ICryChunk {
-    public ChunkHeader Header { get; set; }
+public class FoliageInfoChunk : ICryChunk {
+    public ChunkHeader Header { get; set; } = new();
     public FoliageSpineSubChunk[] Spines = Array.Empty<FoliageSpineSubChunk>();
     public Vector3[] SpineVertices = Array.Empty<Vector3>();
     public Vector4[] SpineVertexSegDim = Array.Empty<Vector4>();
@@ -86,7 +51,7 @@ public struct FoliageInfoChunk : ICryChunk {
         reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+    public void WriteTo(NativeWriter writer, bool useBigEndian) {
         Header.WriteTo(writer, false);
         using (writer.ScopedBigEndian(useBigEndian)) {
             writer.Write(Spines.Length);

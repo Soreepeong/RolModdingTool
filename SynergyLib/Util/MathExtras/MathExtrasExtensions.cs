@@ -70,6 +70,9 @@ public static class MathExtrasExtensions {
             _ => throw new ArgumentOutOfRangeException(nameof(inputType), inputType, null),
         };
 
+    public static Vector4<byte> ReadVector4Byte(this BinaryReader r) =>
+        new(r.ReadByte(), r.ReadByte(), r.ReadByte(), r.ReadByte());
+
     public static Quaternion ReadQuaternion(this BinaryReader r, FloatSize inputType = FloatSize.Single) =>
         inputType switch {
             FloatSize.Half => new(
@@ -284,6 +287,13 @@ public static class MathExtrasExtensions {
             default:
                 throw new ArgumentOutOfRangeException(nameof(inputType), inputType, null);
         }
+    }
+
+    public static void Write(this BinaryWriter r, in Vector4<byte> value) {
+        r.Write(value.X);
+        r.Write(value.Y);
+        r.Write(value.Z);
+        r.Write(value.W);
     }
 
     public static void Write(this BinaryWriter r, in Quaternion value, FloatSize inputType = FloatSize.Single) {

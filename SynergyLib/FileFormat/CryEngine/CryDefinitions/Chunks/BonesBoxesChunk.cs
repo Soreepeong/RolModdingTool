@@ -4,13 +4,11 @@ using SynergyLib.Util.MathExtras;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct BonesBoxesChunk : ICryChunk {
-    public ChunkHeader Header { get; set; }
-    public uint BoneId;
+public class BonesBoxesChunk : ICryChunk {
+    public ChunkHeader Header { get; set; } = new();
+    public int BoneId;
     public AaBb AaBb;
-    public readonly List<ushort> Indices = new();
-
-    public BonesBoxesChunk() { }
+    public List<ushort> Indices = new();
 
     public void ReadFrom(NativeReader reader, int expectedSize) {
         var expectedEnd = reader.BaseStream.Position + expectedSize;
@@ -32,7 +30,7 @@ public struct BonesBoxesChunk : ICryChunk {
         reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+    public void WriteTo(NativeWriter writer, bool useBigEndian) {
         Header.WriteTo(writer, false);
         using (writer.ScopedBigEndian(useBigEndian)) {
             writer.Write(BoneId);

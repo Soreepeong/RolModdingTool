@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -20,11 +21,23 @@ public class WiiuStreamFile {
 
     public readonly List<FileEntry> Entries = new();
 
-    public FileEntry GetEntry(string path, SkinFlag skinFlag = SkinFlag.Default) => Entries.First(
-        x => string.Compare(x.Header.InnerPath, path, StringComparison.InvariantCultureIgnoreCase) == 0
-            && x.Header.SkinFlag == skinFlag);
+    public FileEntry GetEntry(string path, SkinFlag skinFlag = SkinFlag.Default) {
+        path = path.Replace('\\', '/');
+        return Entries.First(
+            x => string.Compare(x.Header.InnerPath, path, StringComparison.InvariantCultureIgnoreCase) == 0
+                && x.Header.SkinFlag == skinFlag);
+    }
+
+    public bool TryGetEntry([NotNullWhen(true)] out FileEntry? entry, string path, SkinFlag skinFlag = SkinFlag.Default) {
+        path = path.Replace('\\', '/');
+        entry = Entries.FirstOrDefault(
+            x => string.Compare(x.Header.InnerPath, path, StringComparison.InvariantCultureIgnoreCase) == 0
+                && x.Header.SkinFlag == skinFlag);
+        return entry is not null;
+    }
 
     public void PutEntry(int position, string path, FileEntrySource source, SkinFlag skinFlag = SkinFlag.Default) {
+        path = path.Replace('\\', '/');
         var entry = Entries.SingleOrDefault(
             x => string.Compare(x.Header.InnerPath, path, StringComparison.InvariantCultureIgnoreCase) != 0);
         if (entry is not null)

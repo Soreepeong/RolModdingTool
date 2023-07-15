@@ -25,6 +25,14 @@ public class PbxmlFile {
         Document = document;
     }
 
+    public static PbxmlFile FromObject<T>(T obj) where T : class {
+        var serializer = new XmlSerializer(typeof(T));
+        var doc = new XmlDocument();
+        using (var w = doc.CreateNavigator()!.AppendChild())
+            serializer.Serialize(w, obj);
+        return new(doc);
+    }
+
     public static PbxmlFile FromReader(BinaryReader reader, bool leaveOpen = false) {
         try {
             Span<byte> magicChecker = stackalloc byte[Magic.Length];

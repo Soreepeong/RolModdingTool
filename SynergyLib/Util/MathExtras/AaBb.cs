@@ -8,6 +8,10 @@ public struct AaBb : IEquatable<AaBb> {
     public Vector3 Min;
     public Vector3 Max;
 
+    public static AaBb NegativeExtreme = new(
+        new(float.MaxValue, float.MaxValue, float.MaxValue),
+        new(float.MinValue, float.MinValue, float.MinValue));
+
     public AaBb() { }
 
     public AaBb(Vector3 value) {
@@ -20,6 +24,8 @@ public struct AaBb : IEquatable<AaBb> {
     }
 
     public Vector3 Center => (Min + Max) / 2;
+
+    public float Radius => ((Max - Min) / 2).Length();
 
     public void Expand(in Vector3 v) {
         Min.X = Math.Min(Min.X, v.X);

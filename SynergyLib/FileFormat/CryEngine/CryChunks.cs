@@ -17,6 +17,26 @@ public class CryChunks : Dictionary<int, ICryChunk> {
     public CryFileType Type;
     public CryFileVersion Version;
 
+    public T AddChunkLE<T>(ChunkType type, int version, T chunk) where T : ICryChunk {
+        chunk.Header = new() {
+            Id = Count == 0 ? 1 : Values.Max(x => x.Header.Id) + 1,
+            Type = type,
+            VersionRaw = (uint) version,
+        };
+        Add(chunk.Header.Id, chunk);
+        return chunk;
+    }
+
+    public T AddChunkBE<T>(ChunkType type, int version, T chunk) where T : ICryChunk {
+        chunk.Header = new() {
+            Id = Count == 0 ? 1 : Values.Max(x => x.Header.Id) + 1,
+            Type = type,
+            VersionRaw = (uint) version | 0x80000000u,
+        };
+        Add(chunk.Header.Id, chunk);
+        return chunk;
+    }
+
     public void ReadFrom(NativeReader reader) {
         using (reader.ScopedLittleEndian()) {
             reader.EnsureMagicOrThrow(Magic.AsSpan());
@@ -30,9 +50,11 @@ public class CryChunks : Dictionary<int, ICryChunk> {
             reader.ReadInto(out int chunkCount);
             reader.EnsurePositionOrThrow(chunkOffset + 4);
 
-            Span<ChunkSizeChunk> headers = stackalloc ChunkSizeChunk[chunkCount];
-            for (var i = 0; i < chunkCount; i++)
-                headers[i].ReadFrom(reader, Unsafe.SizeOf<ChunkSizeChunk>());
+            var headers = new ChunkSizeChunk[chunkCount];
+            for (var i = 0; i < chunkCount; i++) {
+                headers[i] = new();
+                headers[i].ReadFrom(reader, headers[i].WrittenSize);
+            }
 
             for (var i = 0; i < chunkCount; i++) {
                 ICryChunk chunk = (headers[i].Header.Type, headers[i].Header.Version) switch {
@@ -83,12 +105,10 @@ public class CryChunks : Dictionary<int, ICryChunk> {
         var chunks = this.OrderBy(x => x.Key).Select(x => x.Value).ToArray();
         var chunkSizeChunks = new ChunkSizeChunk[Count];
         for (var i = 0; i < Count; i++) {
-            chunkSizeChunks[i].Size = chunks[i].WrittenSize;
-            chunkSizeChunks[i].Header = chunks[i].Header with {
-                Offset = i == 0
-                    ? 24 + Count * chunkSizeChunks[i].WrittenSize
-                    : chunkSizeChunks[i - 1].Header.Offset + (chunkSizeChunks[i - 1].Size + 3) / 4 * 4,
-            };
+            chunkSizeChunks[i] = new() {Size = chunks[i].WrittenSize};
+            (chunkSizeChunks[i].Header = chunks[i].Header).Offset = i == 0
+                ? 24 + Count * chunkSizeChunks[i].WrittenSize
+                : chunkSizeChunks[i - 1].Header.Offset + (chunkSizeChunks[i - 1].Size + 3) / 4 * 4;
         }
 
         foreach (var c in chunkSizeChunks)

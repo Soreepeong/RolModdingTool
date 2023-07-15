@@ -1,13 +1,14 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using SynergyLib.Util.BinaryRW;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct DataChunk : ICryChunk {
-    public ChunkHeader Header { get; set; }
+public class DataChunk : ICryChunk {
+    public ChunkHeader Header { get; set; } = new();
     public uint Flags;
     public CgfStreamType Type;
     public int ElementSize;
@@ -117,7 +118,7 @@ public struct DataChunk : ICryChunk {
         reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+    public void WriteTo(NativeWriter writer, bool useBigEndian) {
         Header.WriteTo(writer, false);
         using (writer.ScopedBigEndian(useBigEndian)) {
             var elementCount = NativeData.Length / ElementSize;
@@ -268,13 +269,20 @@ public struct DataChunk : ICryChunk {
 
     public override string ToString() => $"{nameof(DataChunk)}: {Header}";
 
-    public unsafe T GetItem<T>(int index) where T : unmanaged {
-        if (sizeof(T) != ElementSize)
+    public T GetItem<T>(int index) where T : unmanaged {
+        if (Unsafe.SizeOf<T>() != ElementSize)
             throw new ArgumentException(null, nameof(T));
         if (index < 0 || index * ElementSize > NativeData.Length)
             throw new ArgumentOutOfRangeException(nameof(index), index, null);
-        fixed (void* p = &NativeData[index * ElementSize])
-            return *(T*) p;
+        return GetItemUnchecked<T>(index);
+    }
+
+    public void SetItem<T>(int index, in T value) where T : unmanaged {
+        if (Unsafe.SizeOf<T>() != ElementSize)
+            throw new ArgumentException(null, nameof(T));
+        if (index < 0 || index * ElementSize > NativeData.Length)
+            throw new ArgumentOutOfRangeException(nameof(index), index, null);
+        SetItemUnchecked(index, value);
     }
 
     public unsafe T[] AsArray<T>() where T : unmanaged {
@@ -285,5 +293,33 @@ public struct DataChunk : ICryChunk {
         fixed (void* p = res)
             NativeData.CopyTo(new Span<byte>(p, NativeData.Length));
         return res;
+    }
+
+    public IEnumerable<T> AsEnumerable<T>() where T : unmanaged {
+        var count = NativeData.Length / ElementSize;
+        for (var i = 0; i < count; i++)
+            yield return GetItemUnchecked<T>(i);
+    }
+
+    public void FromEnumerable<T>(IEnumerable<T> items, int count) where T : unmanaged {
+        ElementSize = Unsafe.SizeOf<T>();
+        NativeData = new byte[count * ElementSize];
+        var i = 0;
+        foreach (var item in items)
+            SetItemUnchecked(i++, item);
+        
+        Debug.Assert(i == count);
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private unsafe T GetItemUnchecked<T>(int index) where T : unmanaged {
+        fixed (void* p = &NativeData[index * ElementSize])
+            return *(T*) p;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private unsafe void SetItemUnchecked<T>(int index, in T value) where T : unmanaged {
+        fixed (void* p = &NativeData[index * ElementSize])
+            *(T*) p = value;
     }
 }

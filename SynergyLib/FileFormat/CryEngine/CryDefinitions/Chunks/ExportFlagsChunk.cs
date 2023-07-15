@@ -1,13 +1,14 @@
 using System.Text;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Enums;
 using SynergyLib.Util.BinaryRW;
+using SynergyLib.Util.MathExtras;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct ExportFlagsChunk : ICryChunk {
-    public ChunkHeader Header { get; set; }
+public class ExportFlagsChunk : ICryChunk {
+    public ChunkHeader Header { get; set; } = new();
     public ExportFlags Flags;
-    public unsafe fixed uint RcVersion[4];
+    public Vector4<uint> RcVersion;
     public string RcVersionString = string.Empty;
     public int AssetAuthorTool;
     public int AuthorToolVersion;
@@ -19,12 +20,10 @@ public struct ExportFlagsChunk : ICryChunk {
         Header = new(reader);
         using (reader.ScopedBigEndian(Header.IsBigEndian)) {
             reader.ReadInto(out Flags);
-            unsafe {
-                reader.ReadInto(out RcVersion[0]);
-                reader.ReadInto(out RcVersion[1]);
-                reader.ReadInto(out RcVersion[2]);
-                reader.ReadInto(out RcVersion[3]);
-            }
+            RcVersion[0] = reader.ReadUInt32();
+            RcVersion[1] = reader.ReadUInt32();
+            RcVersion[2] = reader.ReadUInt32();
+            RcVersion[3] = reader.ReadUInt32();
 
             RcVersionString = reader.ReadFString(16, Encoding.UTF8);
             reader.ReadInto(out AssetAuthorTool);
@@ -35,16 +34,14 @@ public struct ExportFlagsChunk : ICryChunk {
         reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+    public void WriteTo(NativeWriter writer, bool useBigEndian) {
         Header.WriteTo(writer, false);
         using (writer.ScopedBigEndian(useBigEndian)) {
             writer.WriteEnum(Flags);
-            unsafe {
-                writer.Write(RcVersion[0]);
-                writer.Write(RcVersion[1]);
-                writer.Write(RcVersion[2]);
-                writer.Write(RcVersion[3]);
-            }
+            writer.Write(RcVersion[0]);
+            writer.Write(RcVersion[1]);
+            writer.Write(RcVersion[2]);
+            writer.Write(RcVersion[3]);
 
             writer.WriteFString(RcVersionString, 16, Encoding.UTF8);
             writer.Write(AssetAuthorTool);

@@ -3,9 +3,9 @@ using SynergyLib.Util.BinaryRW;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 
-public struct CompiledExtToIntMapChunk : ICryChunk {
-    public ChunkHeader Header { get; set; }
-    public readonly List<ushort> Map = new();
+public class CompiledExtToIntMapChunk : ICryChunk {
+    public ChunkHeader Header { get; set; } = new();
+    public List<ushort> Map = new();
 
     public CompiledExtToIntMapChunk() { }
 
@@ -24,7 +24,7 @@ public struct CompiledExtToIntMapChunk : ICryChunk {
         reader.EnsurePositionOrThrow(expectedEnd);
     }
 
-    public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
+    public void WriteTo(NativeWriter writer, bool useBigEndian) {
         Header.WriteTo(writer, false);
         using (writer.ScopedBigEndian(useBigEndian)) {
             foreach (var r in Map)

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace SynergyLib.Util.MathExtras;
 
-public struct Vector4<T> : IList<T> where T : unmanaged {
+public struct Vector4<T> : IList<T>, IEquatable<Vector4<T>> where T : unmanaged {
     public T X;
     public T Y;
     public T Z;
@@ -112,4 +112,13 @@ public struct Vector4<T> : IList<T> where T : unmanaged {
             }
         }
     }
+
+    public bool Equals(Vector4<T> other) =>
+        X.Equals(other.X) && Y.Equals(other.Y) && Z.Equals(other.Z) && W.Equals(other.W);
+
+    public override bool Equals(object? obj) => obj is Vector4<T> other && Equals(other);
+
+    public override int GetHashCode() => HashCode.Combine(X, Y, Z, W);
+
+    public override string ToString() => $"<{X}, {Y}, {Z}, {W}>";
 }
