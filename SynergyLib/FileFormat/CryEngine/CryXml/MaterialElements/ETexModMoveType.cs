@@ -1,4 +1,4 @@
-﻿namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialSubElements;
+﻿namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
 public enum ETexModMoveType {
     NoChange,

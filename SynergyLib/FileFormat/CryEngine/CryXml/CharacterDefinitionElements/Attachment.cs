@@ -1,7 +1,7 @@
 using System.Numerics;
 using System.Xml.Serialization;
 
-namespace SynergyLib.FileFormat.CryEngine.CryXml.CdfSubElements;
+namespace SynergyLib.FileFormat.CryEngine.CryXml.CharacterDefinitionElements;
 
 [XmlRoot(ElementName = "Attachment")]
 public class Attachment {
@@ -12,10 +12,10 @@ public class Attachment {
     public Vector3 Position = Vector3.Zero;
 
     [XmlAttribute(AttributeName = "AName")]
-    public string AName { get; set; } = string.Empty;
+    public string? AName { get; set; }
 
     [XmlAttribute(AttributeName = "Type")]
-    public string Type { get; set; } = string.Empty;
+    public string? Type { get; set; }
 
     [XmlAttribute(AttributeName = "Rotation")]
     public string? RotationString {
@@ -30,11 +30,14 @@ public class Attachment {
     }
 
     [XmlAttribute(AttributeName = "BoneName")]
-    public string BoneName { get; set; } = string.Empty;
+    public string? BoneName { get; set; }
 
     [XmlAttribute(AttributeName = "Binding")]
-    public string Binding { get; set; } = string.Empty;
+    public string? Binding { get; set; }
 
     [XmlAttribute(AttributeName = "Flags")]
     public int Flags { get; set; }
+
+    [XmlAttribute(AttributeName = "Material")]
+    public string? Material { get; set; }
 }

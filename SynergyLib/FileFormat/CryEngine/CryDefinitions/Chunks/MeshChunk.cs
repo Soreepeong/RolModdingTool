@@ -8,7 +8,7 @@ public struct MeshChunk : ICryChunk {
     public ChunkHeader Header { get; set; }
 
     public MeshChunkFlags Flags;
-    public int Flags2;
+    public PhysicalizeFlags Flags2;
     public int VertexCount;
     public int IndexCount;
     public int SubsetsCount;
@@ -35,6 +35,26 @@ public struct MeshChunk : ICryChunk {
     public float TexMappingDensity;
 
     public MeshChunk() { }
+
+    public unsafe int PhysicsDataChunkId0 {
+        get => PhysicsDataChunkId[0];
+        set => PhysicsDataChunkId[0] = value;
+    }
+
+    public unsafe int PhysicsDataChunkId1 {
+        get => PhysicsDataChunkId[1];
+        set => PhysicsDataChunkId[1] = value;
+    }
+
+    public unsafe int PhysicsDataChunkId2 {
+        get => PhysicsDataChunkId[2];
+        set => PhysicsDataChunkId[2] = value;
+    }
+
+    public unsafe int PhysicsDataChunkId3 {
+        get => PhysicsDataChunkId[3];
+        set => PhysicsDataChunkId[3] = value;
+    }
 
     public void ReadFrom(NativeReader reader, int expectedSize) {
         var expectedEnd = reader.BaseStream.Position + expectedSize;
@@ -83,7 +103,7 @@ public struct MeshChunk : ICryChunk {
         Header.WriteTo(writer, false);
         using (writer.ScopedBigEndian(useBigEndian)) {
             writer.WriteEnum(Flags);
-            writer.Write(Flags2);
+            writer.WriteEnum(Flags2);
             writer.Write(VertexCount);
             writer.Write(IndexCount);
             writer.Write(SubsetsCount);

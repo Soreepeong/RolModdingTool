@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using SynergyLib.Util;
 using SynergyLib.Util.BinaryRW;
 using SynergyLib.Util.MathExtras;
 
@@ -17,6 +18,8 @@ public struct CompiledBone : ICryReadWrite {
     public int ParentOffset; // offset to the parent in number of CompiledBone structs (584 bytes)
     public int ChildOffset; // Offset to the first child to this bone in number of CompiledBone structs
     public int ChildCount; // Number of children to this bone
+
+    public uint ControllerIdComputed => Crc32.CryE.Get(Name);
 
     public void ReadFrom(NativeReader reader, int expectedSize) {
         if (expectedSize == 584) {

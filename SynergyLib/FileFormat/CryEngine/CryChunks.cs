@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Enums;
 using SynergyLib.Util.BinaryRW;
@@ -51,6 +52,7 @@ public class CryChunks : Dictionary<int, ICryChunk> {
                     (ChunkType.DataStream, 0x800) => new DataChunk(),
                     (ChunkType.Mesh, 0x800) => new MeshChunk(),
                     (ChunkType.Node, 0x823) => new NodeChunk(),
+                    (ChunkType.FoliageInfo, 1) => new FoliageInfoChunk(),
 
                     // dba, in order
                     (ChunkType.Controller, 0x905) => new ControllerChunk(),
@@ -102,35 +104,47 @@ public class CryChunks : Dictionary<int, ICryChunk> {
 
     public static CryChunks FromFile(string path) => FromBytes(File.ReadAllBytes(path));
 
-    public static CryChunks FromBytes(byte[] inBytes) {
-        var testfile = new CryChunks();
-        using (var f = new NativeReader(new MemoryStream(inBytes)))
-            testfile.ReadFrom(f);
+    public static CryChunks FromBytes(byte[] inBytes) => FromStream(new MemoryStream(inBytes, false));
 
-        byte[] outBytes;
-        using (var ms = new MemoryStream())
-        using (var f = new NativeWriter(ms)) {
-            testfile.WriteTo(f);
-            outBytes = ms.ToArray();
-        }
+    public static CryChunks FromStream(Stream stream, bool leaveOpen = false) {
+        try {
+            var inBytes = new byte[stream.Length];
+            stream.ReadExactly(inBytes);
+            stream.Position = 0;
 
-        var ignoreZones = new List<Tuple<int, int>>();
-        // seems that if boneId array is not full, garbage values remain in place of unused memory.
-        // ignore that from comparison.
-        foreach (var ignoreItem in testfile.Values.OfType<MeshSubsetsChunk>())
-            ignoreZones.Add(Tuple.Create(ignoreItem.Header.Offset, ignoreItem.Header.Offset + ignoreItem.WrittenSize));
+            var testfile = new CryChunks();
+            using (var f = new NativeReader(stream, Encoding.UTF8, true))
+                testfile.ReadFrom(f);
 
-        ignoreZones.Add(Tuple.Create(31, 32));
-        ignoreZones.Add(Tuple.Create(51, 52));
+            byte[] outBytes;
+            using (var ms = new MemoryStream())
+            using (var f = new NativeWriter(ms)) {
+                testfile.WriteTo(f);
+                outBytes = ms.ToArray();
+            }
 
-        for (int i = 0, to = Math.Min(inBytes.Length, outBytes.Length); i < to; i++) {
-            if (inBytes[i] != outBytes[i] && !ignoreZones.Any(x => x.Item1 <= i && i < x.Item2))
+            var ignoreZones = new List<Tuple<int, int>>();
+            // seems that if boneId array is not full, garbage values remain in place of unused memory.
+            // ignore that from comparison.
+            foreach (var ignoreItem in testfile.Values.OfType<MeshSubsetsChunk>())
+                ignoreZones.Add(
+                    Tuple.Create(ignoreItem.Header.Offset, ignoreItem.Header.Offset + ignoreItem.WrittenSize));
+
+            ignoreZones.Add(Tuple.Create(31, 32));
+            ignoreZones.Add(Tuple.Create(51, 52));
+
+            for (int i = 0, to = Math.Min(inBytes.Length, outBytes.Length); i < to; i++) {
+                if (inBytes[i] != outBytes[i] && !ignoreZones.Any(x => x.Item1 <= i && i < x.Item2))
+                    throw new InvalidDataException();
+            }
+
+            if (inBytes.Length != outBytes.Length)
                 throw new InvalidDataException();
+
+            return testfile;
+        } finally {
+            if (!leaveOpen)
+                stream.Dispose();
         }
-
-        if (inBytes.Length != outBytes.Length)
-            throw new InvalidDataException();
-
-        return testfile;
     }
 }

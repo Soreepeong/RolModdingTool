@@ -4,12 +4,6 @@ using System.IO;
 namespace SynergyLib.Util;
 
 public static class StreamExtensions {
-    public static int WriteAndHash(this Stream stream, Span<byte> data, ref uint hash) {
-        stream.Write(data);
-        hash = Crc32.Get(data, hash);
-        return data.Length;
-    }
-
     public static byte ReadByteOrThrow(this Stream stream) => stream.ReadByte() switch {
         -1 => throw new EndOfStreamException(),
         var r => (byte) r

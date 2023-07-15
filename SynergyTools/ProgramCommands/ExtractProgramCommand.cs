@@ -3,7 +3,6 @@ using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SynergyLib.FileFormat;
@@ -96,8 +95,8 @@ public class ExtractProgramCommand : RootProgramCommand {
                     try {
                         await using (var target = new FileStream(tempPath, FileMode.Create)) {
                             msr.BaseStream.Position = 0;
-                            if (!PreservePbxml && PbxmlFile.IsPbxmlFile(ms.GetBuffer().AsSpan()))
-                                PbxmlFile.Unpack(msr, new(target, new UTF8Encoding()));
+                            if (!PreservePbxml)
+                                PbxmlFile.FromReader(msr).WriteText(target);
                             else
                                 await target.WriteAsync(ms.GetBuffer().AsMemory(0, (int) ms.Length), cancellationToken);
                         }

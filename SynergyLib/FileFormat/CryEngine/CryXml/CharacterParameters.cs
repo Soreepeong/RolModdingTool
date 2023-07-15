@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Serialization;
-using SynergyLib.FileFormat.CryEngine.CryXml.ChrParamsSubElements;
+using SynergyLib.FileFormat.CryEngine.CryXml.CharacterParametersElements;
 
 namespace SynergyLib.FileFormat.CryEngine.CryXml;
 
 [XmlRoot(ElementName = "Params")]
-public class ChrParamsFile {
+public class CharacterParameters {
     [XmlArray(ElementName = "AnimationList")]
     [XmlArrayItem(ElementName = "Animation", Type = typeof(Animation))]
     [XmlArrayItem(ElementName = "Comment", Type = typeof(Comment))]
@@ -24,7 +24,7 @@ public class ChrParamsFile {
 
     [XmlIgnore]
     public string? TracksDatabasePath => Animations.SingleOrDefault(x => x.Name == "$TracksDatabase")?.Path;
-    
+
     [XmlIgnore]
     public string? FaceLibPath => Animations.SingleOrDefault(x => x.Name == "$facelib")?.Path;
 }

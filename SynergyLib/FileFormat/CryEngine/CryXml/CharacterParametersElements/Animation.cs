@@ -1,12 +1,12 @@
 using System.Xml.Serialization;
 
-namespace SynergyLib.FileFormat.CryEngine.CryXml.ChrParamsSubElements;
+namespace SynergyLib.FileFormat.CryEngine.CryXml.CharacterParametersElements;
 
 [XmlRoot(ElementName = "Animation")]
 public class Animation {
     [XmlAttribute(AttributeName = "name")]
-    public string Name { get; set; } = string.Empty;
+    public string? Name { get; set; }
 
     [XmlAttribute(AttributeName = "path")]
-    public string Path { get; set; } = string.Empty;
+    public string? Path { get; set; }
 }

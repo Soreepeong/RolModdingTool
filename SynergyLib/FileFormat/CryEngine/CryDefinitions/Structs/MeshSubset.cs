@@ -39,4 +39,9 @@ public struct MeshSubset : ICryReadWrite {
     }
 
     public int WrittenSize => 36;
+
+    public override string ToString() =>
+        $"{nameof(MeshSubset)}: Mat[{MatId}]" +
+        $" Vertex[{FirstVertId}..{FirstVertId + NumVerts}]" +
+        $" Index[{FirstIndexId}..{FirstIndexId + NumIndices}]";
 }

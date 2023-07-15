@@ -7,7 +7,7 @@ namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 
 public struct CompiledIntFacesChunk : ICryChunk {
     public ChunkHeader Header { get; set; }
-    public readonly List<CompiledIntFace> Vertices = new();
+    public readonly List<CompiledIntFace> Faces = new();
 
     public CompiledIntFacesChunk() { }
 
@@ -16,13 +16,13 @@ public struct CompiledIntFacesChunk : ICryChunk {
         Header = new(reader);
         using (reader.ScopedBigEndian(Header.IsBigEndian)) {
             var count = (int) ((expectedEnd - reader.BaseStream.Position) / 6);
-            Vertices.Clear();
-            Vertices.EnsureCapacity(count);
+            Faces.Clear();
+            Faces.EnsureCapacity(count);
 
             var vertex = new CompiledIntFace();
             for (var i = 0; i < count; i++) {
                 vertex.ReadFrom(reader, 6);
-                Vertices.Add(vertex);
+                Faces.Add(vertex);
             }
         }
 
@@ -32,12 +32,12 @@ public struct CompiledIntFacesChunk : ICryChunk {
     public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
         Header.WriteTo(writer, false);
         using (writer.ScopedBigEndian(useBigEndian)) {
-            foreach (var v in Vertices)
+            foreach (var v in Faces)
                 v.WriteTo(writer, useBigEndian);
         }
     }
 
-    public int WrittenSize => Header.WrittenSize + Vertices.Sum(x => x.WrittenSize);
+    public int WrittenSize => Header.WrittenSize + Faces.Sum(x => x.WrittenSize);
 
     public override string ToString() => $"{nameof(CompiledIntFacesChunk)}: {Header}";
 }

@@ -21,8 +21,12 @@ public struct BonesBoxesChunk : ICryChunk {
             var count = reader.ReadInt32();
             Indices.Clear();
             Indices.EnsureCapacity(count);
-            for (var i = 0; i < count; i++)
-                Indices.Add(reader.ReadUInt16());
+            // the write operation does not swap endianness but the read operation does
+            // does this information even get used?
+            using (reader.ScopedLittleEndian()) {
+                for (var i = 0; i < count; i++)
+                    Indices.Add(reader.ReadUInt16());
+            }
         }
 
         reader.EnsurePositionOrThrow(expectedEnd);
@@ -34,8 +38,10 @@ public struct BonesBoxesChunk : ICryChunk {
             writer.Write(BoneId);
             writer.Write(AaBb);
             writer.Write(Indices.Count);
-            foreach (var x in Indices)
-                writer.Write(x);
+            using (writer.ScopedLittleEndian()) {
+                foreach (var x in Indices)
+                    writer.Write(x);
+            }
         }
     }
 

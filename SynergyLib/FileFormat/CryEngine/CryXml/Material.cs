@@ -1,6 +1,6 @@
 ﻿using System.Numerics;
 using System.Xml.Serialization;
-using SynergyLib.FileFormat.CryEngine.CryXml.MaterialSubElements;
+using SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
 namespace SynergyLib.FileFormat.CryEngine.CryXml;
 
@@ -15,7 +15,7 @@ public class Material {
     internal string? SourceFileName { get; set; }
 
     [XmlAttribute(AttributeName = "Name")]
-    public string? Name { get; set; } = string.Empty;
+    public string? Name { get; set; }
 
     [XmlAttribute(AttributeName = "MtlFlags")]
     public string? MtlFlags {
@@ -76,7 +76,7 @@ public class Material {
     public Material[]? SubMaterials { get; set; }
 
     [XmlElement(ElementName = "PublicParams")]
-    internal PublicParams? PublicParams { get; set; }
+    public PublicParams? PublicParams { get; set; }
 
     [XmlArray(ElementName = "Textures")]
     [XmlArrayItem(ElementName = "Texture")]

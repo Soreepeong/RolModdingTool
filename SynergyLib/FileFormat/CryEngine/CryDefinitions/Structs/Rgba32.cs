@@ -6,11 +6,20 @@ namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
 
 [StructLayout(LayoutKind.Explicit)]
 public struct Rgba32 : ICryReadWrite {
-    [FieldOffset(0)] public byte R;
-    [FieldOffset(1)] public byte G;
-    [FieldOffset(2)] public byte B;
-    [FieldOffset(3)] public byte A;
-    [FieldOffset(0)] public uint Value;
+    [FieldOffset(0)]
+    public byte R;
+
+    [FieldOffset(1)]
+    public byte G;
+
+    [FieldOffset(2)]
+    public byte B;
+
+    [FieldOffset(3)]
+    public byte A;
+
+    [FieldOffset(0)]
+    public uint Value;
 
     public void ReadFrom(NativeReader reader, int expectedSize) {
         if (expectedSize != 4)

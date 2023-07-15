@@ -1,32 +1,17 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using SynergyLib.Util.BinaryRW;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
-
-public enum CgfStreamType {
-    Positions,
-    Normals,
-    TexCoords,
-    Colors,
-    Colors2,
-    Indices,
-    Tangents,
-    ShCoeffs,
-    ShapeDeformation,
-    BoneMapping,
-    FaceMap,
-    VertMats,
-    QTangents,
-    SkinData,
-    Ps3EdgeData,
-}
 
 public struct DataChunk : ICryChunk {
     public ChunkHeader Header { get; set; }
     public uint Flags;
     public CgfStreamType Type;
     public int ElementSize;
-    public byte[] Data = Array.Empty<byte>();
+    public byte[] NativeData = Array.Empty<byte>();
 
     public DataChunk() { }
 
@@ -39,9 +24,9 @@ public struct DataChunk : ICryChunk {
             reader.ReadInto(out int elementCount);
             reader.ReadInto(out ElementSize);
             reader.EnsureZeroesOrThrow(8);
-            Data = reader.ReadBytes(ElementSize * elementCount);
+            NativeData = reader.ReadBytes(ElementSize * elementCount);
             if (BitConverter.IsLittleEndian == Header.IsBigEndian) {
-                var dataSpan = Data.AsSpan();
+                var dataSpan = NativeData.AsSpan();
                 int flipUnit;
                 switch (Type) {
                     // byte
@@ -135,16 +120,16 @@ public struct DataChunk : ICryChunk {
     public readonly void WriteTo(NativeWriter writer, bool useBigEndian) {
         Header.WriteTo(writer, false);
         using (writer.ScopedBigEndian(useBigEndian)) {
-            var elementCount = Data.Length / ElementSize;
+            var elementCount = NativeData.Length / ElementSize;
             writer.Write(Flags);
             writer.WriteEnum(Type);
             writer.Write(elementCount);
             writer.Write(ElementSize);
             writer.FillZeroes(8);
             if (BitConverter.IsLittleEndian != Header.IsBigEndian)
-                writer.Write(Data);
+                writer.Write(NativeData);
             else {
-                var dataSpan = Data.AsSpan();
+                var dataSpan = NativeData.AsSpan();
                 int flipUnit;
                 switch (Type) {
                     // byte
@@ -240,7 +225,7 @@ public struct DataChunk : ICryChunk {
                     case 0:
                         break;
                     case 1:
-                        writer.Write(Data);
+                        writer.Write(NativeData);
                         break;
                     case 2:
                         unsafe {
@@ -279,7 +264,26 @@ public struct DataChunk : ICryChunk {
         }
     }
 
-    public int WrittenSize => Header.WrittenSize + 24 + Data.Length;
+    public int WrittenSize => Header.WrittenSize + 24 + NativeData.Length;
 
     public override string ToString() => $"{nameof(DataChunk)}: {Header}";
+
+    public unsafe T GetItem<T>(int index) where T : unmanaged {
+        if (sizeof(T) != ElementSize)
+            throw new ArgumentException(null, nameof(T));
+        if (index < 0 || index * ElementSize > NativeData.Length)
+            throw new ArgumentOutOfRangeException(nameof(index), index, null);
+        fixed (void* p = &NativeData[index * ElementSize])
+            return *(T*) p;
+    }
+
+    public unsafe T[] AsArray<T>() where T : unmanaged {
+        if (sizeof(T) != ElementSize)
+            throw new ArgumentException(null, nameof(T));
+
+        var res = new T[NativeData.Length / ElementSize];
+        fixed (void* p = res)
+            NativeData.CopyTo(new Span<byte>(p, NativeData.Length));
+        return res;
+    }
 }

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Xml.Serialization;
 
-namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialSubElements;
+namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
 [XmlRoot(ElementName = "SubMaterials")]
 public class SubMaterials {

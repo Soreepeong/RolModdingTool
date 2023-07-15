@@ -29,7 +29,7 @@ public class WiiuStreamFile {
             x => string.Compare(x.Header.InnerPath, path, StringComparison.InvariantCultureIgnoreCase) != 0);
         if (entry is not null)
             entry.Source = source;
-        
+
         entry = new(
             new() {
                 InnerPath = path,
@@ -129,7 +129,7 @@ public class WiiuStreamFile {
                 if (!saveConfig.PreserveXml && raw.StartsWith("<?xml"u8)) {
                     compressionBuffer.SetLength(compressionBuffer.Position = 0);
                     rawStream.Position = 0;
-                    PbxmlFile.Pack(rawStream, compressionBufferWriter);
+                    PbxmlFile.FromStream(rawStream).WriteBinary(compressionBufferWriter);
                     rawStream.SetLength(compressionBuffer.Length);
                     rawStream.Position = 0;
                     compressionBuffer.Position = 0;
@@ -154,10 +154,10 @@ public class WiiuStreamFile {
                 entry.Header.DecompressedSize = raw.Length;
                 if (useCompression) {
                     entry.Header.CompressedSize = checked((int) compressionBuffer.Length);
-                    entry.Header.Hash = Crc32.Get(compressionBuffer.GetBuffer(), 0, entry.Header.CompressedSize);
+                    entry.Header.Hash = Crc32.Brb.Get(compressionBuffer.GetBuffer(), 0, entry.Header.CompressedSize);
                 } else {
                     entry.Header.CompressedSize = 0;
-                    entry.Header.Hash = Crc32.Get(raw.Span);
+                    entry.Header.Hash = Crc32.Brb.Get(raw.Span);
                 }
 
                 entry.Header.WriteTo(writer);
@@ -382,7 +382,7 @@ public class WiiuStreamFile {
             Offset = 0;
             RawLength = StoredLength = data.Length;
             Data = data;
-            Hash = Crc32.Get(data);
+            Hash = Crc32.Brb.Get(data);
         }
 
         public readonly byte[] ReadRaw() {

@@ -1,6 +1,6 @@
 using System.Xml.Serialization;
 
-namespace SynergyLib.FileFormat.CryEngine.CryXml.CdfSubElements;
+namespace SynergyLib.FileFormat.CryEngine.CryXml.CharacterDefinitionElements;
 
 [XmlRoot(ElementName = "ShapeDeformation")]
 public class ShapeDeformation {

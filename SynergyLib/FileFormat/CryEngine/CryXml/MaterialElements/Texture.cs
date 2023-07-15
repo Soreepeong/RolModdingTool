@@ -2,16 +2,23 @@
 using System.ComponentModel;
 using System.Xml.Serialization;
 
-namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialSubElements;
+namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
 /// <summary>The texture object</summary>
 [XmlRoot(ElementName = "Texture")]
 public class Texture {
     public enum TypeEnum {
-        [XmlEnum("0")] Default = 0,
-        [XmlEnum("3")] Environment = 3,
-        [XmlEnum("5")] Interface = 5,
-        [XmlEnum("7")] CubeMap = 7,
+        [XmlEnum("0")]
+        Default = 0,
+
+        [XmlEnum("3")]
+        Environment = 3,
+
+        [XmlEnum("5")]
+        Interface = 5,
+
+        [XmlEnum("7")]
+        CubeMap = 7,
 
         [XmlEnum("Nearest Cube-Map probe for alpha blended")]
         NearestCubeMap = 8
@@ -37,7 +44,8 @@ public class Texture {
         Unknown,
     }
 
-    [XmlAttribute(AttributeName = "Map")] public string MapString = string.Empty;
+    [XmlAttribute(AttributeName = "Map")]
+    public string? MapString { get; set; }
 
     /// <summary>Diffuse, Specular, Bumpmap, Environment, HeightMamp or Custom</summary>
     [XmlIgnore]
@@ -91,13 +99,34 @@ public class Texture {
 
     /// <summary>Location of the texture</summary>
     [XmlAttribute(AttributeName = "File")]
-    public string File { get; set; } = string.Empty;
+    public string? File { get; set; }
 
     /// <summary>The type of the texture</summary>
     [XmlAttribute(AttributeName = "TexType")]
     [DefaultValue(TypeEnum.Default)]
     public TypeEnum TexType;
 
+    [XmlAttribute(AttributeName = "IsTileU")]
+    [DefaultValue(1)]
+    public int IsTileUInt { get; set; } = 1;
+
+    [XmlIgnore]
+    public bool IsTileU {
+        get => IsTileUInt != 0;
+        set => IsTileUInt = value ? 1 : 0;
+    }
+
+    [XmlAttribute(AttributeName = "IsTileV")]
+    [DefaultValue(1)]
+    public int IsTileVInt { get; set; } = 1;
+
+    [XmlIgnore]
+    public bool IsTileV {
+        get => IsTileVInt != 0;
+        set => IsTileVInt = value ? 1 : 0;
+    }
+
     /// <summary>The modifier to apply to the texture</summary>
-    [XmlElement(ElementName = "TexMod")] public TextureModifier? Modifier;
+    [XmlElement(ElementName = "TexMod")]
+    public TextureModifier? Modifier;
 }

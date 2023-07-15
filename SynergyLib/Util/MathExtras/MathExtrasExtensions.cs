@@ -54,6 +54,22 @@ public static class MathExtrasExtensions {
             _ => throw new ArgumentOutOfRangeException(nameof(inputType), inputType, null),
         };
 
+    public static Vector4 ReadVector4(this BinaryReader r, FloatSize inputType = FloatSize.Single) =>
+        inputType switch {
+            FloatSize.Half => new(
+                (float) r.ReadHalf(),
+                (float) r.ReadHalf(),
+                (float) r.ReadHalf(),
+                (float) r.ReadHalf()),
+            FloatSize.Single => new(r.ReadSingle(), r.ReadSingle(), r.ReadSingle(), r.ReadSingle()),
+            FloatSize.Double => new(
+                (float) r.ReadDouble(),
+                (float) r.ReadDouble(),
+                (float) r.ReadDouble(),
+                (float) r.ReadDouble()),
+            _ => throw new ArgumentOutOfRangeException(nameof(inputType), inputType, null),
+        };
+
     public static Quaternion ReadQuaternion(this BinaryReader r, FloatSize inputType = FloatSize.Single) =>
         inputType switch {
             FloatSize.Half => new(
@@ -239,6 +255,31 @@ public static class MathExtrasExtensions {
                 r.Write((double) value.X);
                 r.Write((double) value.Y);
                 r.Write((double) value.Z);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(inputType), inputType, null);
+        }
+    }
+
+    public static void Write(this BinaryWriter r, in Vector4 value, FloatSize inputType = FloatSize.Single) {
+        switch (inputType) {
+            case FloatSize.Half:
+                r.Write((Half) value.X);
+                r.Write((Half) value.Y);
+                r.Write((Half) value.Z);
+                r.Write((Half) value.W);
+                break;
+            case FloatSize.Single:
+                r.Write(value.X);
+                r.Write(value.Y);
+                r.Write(value.Z);
+                r.Write(value.W);
+                break;
+            case FloatSize.Double:
+                r.Write((double) value.X);
+                r.Write((double) value.Y);
+                r.Write((double) value.Z);
+                r.Write((double) value.W);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(inputType), inputType, null);

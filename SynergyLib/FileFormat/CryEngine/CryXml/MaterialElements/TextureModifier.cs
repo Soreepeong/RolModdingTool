@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Xml.Serialization;
 
-namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialSubElements;
+namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
 /// <summary>The texture modifier</summary>
 [XmlRoot(ElementName = "TexMod")]
@@ -32,7 +32,8 @@ public class TextureModifier {
     [XmlIgnore]
     public bool Projected { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_UOscillatorType")] [DefaultValue(0)]
+    [XmlAttribute(AttributeName = "TexMod_UOscillatorType")]
+    [DefaultValue(0)]
     public int __UOscillatorType;
 
     public ETexModMoveType UOscillatorType {
@@ -40,7 +41,8 @@ public class TextureModifier {
         set => __UOscillatorType = (int) value;
     }
 
-    [XmlAttribute(AttributeName = "TexMod_VOscillatorType")] [DefaultValue(0)]
+    [XmlAttribute(AttributeName = "TexMod_VOscillatorType")]
+    [DefaultValue(0)]
     public int __VOscillatorType;
 
     public ETexModMoveType VOscillatorType {

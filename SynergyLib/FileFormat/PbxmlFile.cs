@@ -1,49 +1,97 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Xml;
+using System.Xml.Serialization;
 using SynergyLib.FileFormat.CryEngine;
 using SynergyLib.Util.BinaryRW;
 
 namespace SynergyLib.FileFormat;
 
-public static class PbxmlFile {
+public class PbxmlFile {
     public static readonly ImmutableArray<byte> Magic = "pbxml\0"u8.ToArray().ToImmutableArray();
 
-    public static bool IsPbxmlFile(Span<byte> buffer) =>
+    public readonly XmlDocument Document;
+
+    public PbxmlFile() {
+        Document = new();
+    }
+
+    public PbxmlFile(XmlDocument document) {
+        Document = document;
+    }
+
+    public static PbxmlFile FromReader(BinaryReader reader, bool leaveOpen = false) {
+        try {
+            Span<byte> magicChecker = stackalloc byte[Magic.Length];
+            reader.BaseStream.ReadExactly(magicChecker);
+
+            var res = new PbxmlFile();
+            if (IsPbxmlFile(magicChecker))
+                res.Document.AppendChild(UnpackElement(reader, res.Document));
+            else {
+                reader.BaseStream.Position -= magicChecker.Length;
+                res.Document.Load(reader.BaseStream);
+            }
+
+            return res;
+        } finally {
+            if (!leaveOpen)
+                reader.Dispose();
+        }
+    }
+
+    public static PbxmlFile FromStream(Stream stream, bool leaveOpen = false) => FromReader(
+        new(stream, Encoding.UTF8, true),
+        leaveOpen);
+
+    public static PbxmlFile FromBytes(byte[] data) => FromStream(new MemoryStream(data));
+
+    public static PbxmlFile FromPath(params string[] path) {
+        using var stream = File.OpenRead(Path.Join(path));
+        return FromStream(stream);
+    }
+
+    public T DeserializeAs<T>(bool throwOnUnknown = true) where T : class {
+        var serializer = new XmlSerializer(typeof(T));
+        if (throwOnUnknown) {
+            serializer.UnknownNode += (sender, args) => {
+                Debugger.Break();
+                // throw new NotSupportedException();
+            };
+            serializer.UnknownAttribute += (sender, args) => {
+                Debugger.Break();
+                throw new NotSupportedException();
+            };
+            serializer.UnknownElement += (sender, args) => {
+                Debugger.Break();
+                throw new NotSupportedException();
+            };
+        }
+
+        using var reader = new XmlNodeReader(Document);
+        return serializer.Deserialize(reader) as T ?? throw new NullReferenceException();
+    }
+
+    public void WriteBinary(Stream stream) => WriteBinary(new BinaryWriter(stream, Encoding.UTF8, true));
+
+    public void WriteBinary(BinaryWriter target) {
+        target.Write(Magic.AsSpan());
+        PackElement(target, Document.ChildNodes.OfType<XmlElement>().Single());
+    }
+
+    public void WriteText(Stream target) => WriteText(new StreamWriter(target, new UTF8Encoding(), -1, true));
+
+    public void WriteText(StreamWriter target) =>
+        Document.Save(new XmlTextWriter(target) {Formatting = Formatting.Indented});
+
+    public static bool IsPbxmlFile(ReadOnlySpan<byte> buffer) =>
         buffer.Length >= Magic.Length &&
         buffer.CommonPrefixLength(Magic.AsSpan()) == Magic.Length;
-
-    public static void Unpack(BinaryReader source, StreamWriter target) {
-        if (!source.ReadBytes(Magic.Length).SequenceEqual(Magic))
-            throw new InvalidDataException("Unknown File Format");
-
-        var doc = new XmlDocument();
-        doc.AppendChild(UnpackElement(source, doc));
-        doc.Save(new XmlTextWriter(target) {Formatting = Formatting.Indented});
-    }
-
-    public static XmlDocument Load(byte[] s) {
-        var doc = new XmlDocument();
-        if (IsPbxmlFile(s.AsSpan()))
-            doc.AppendChild(UnpackElement(new(new MemoryStream(s, Magic.Length, s.Length - Magic.Length)), doc));
-        else
-            doc.Load(new MemoryStream(s));
-        return doc;
-    }
-
-    public static void Pack(Stream source, BinaryWriter target) {
-        var doc = new XmlDocument();
-        doc.Load(source);
-        Pack(doc, target);
-    }
-
-    public static void Pack(XmlDocument doc, BinaryWriter target) {
-        target.Write(Magic.AsSpan());
-        PackElement(target, doc.ChildNodes.OfType<XmlElement>().Single());
-    }
 
     private static XmlElement UnpackElement(BinaryReader reader, XmlDocument doc, XmlNamespaceManager? nsmgr = null) {
         nsmgr ??= new(new NameTable());

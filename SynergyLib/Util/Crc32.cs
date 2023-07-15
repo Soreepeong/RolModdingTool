@@ -8,22 +8,24 @@ namespace SynergyLib.Util;
 /// <summary>
 /// Calculate the CRC32
 /// </summary>
-public static class Crc32 {
-    private const uint CrcInitialSeed = 0xACABADB2;
-    private const uint Poly = 0xedb88320u;
+public class Crc32 {
+    public static Crc32 Brb => new(0xACABADB2u, 0xEDB88320); // todo: figure this out
+    public static Crc32 CryE => new(0, 0xEDB88320);
 
-    private static readonly uint[] CrcTable = new uint[16 * 256];
+    private readonly uint _seed;
+    private readonly uint[] _table;
 
-    static Crc32() {
-        var table = CrcTable;
+    public Crc32(uint initialSeed, uint polynomial) {
+        _seed = initialSeed;
+        _table = new uint[16 * 256];
         for (uint i = 0; i < 256; i++) {
             var res = i;
             for (var t = 0; t < 16; t++) {
                 for (var k = 0; k < 8; k++) {
-                    res = (res & 1) == 1 ? Poly ^ (res >> 1) : (res >> 1);
+                    res = (res & 1) == 1 ? polynomial ^ (res >> 1) : (res >> 1);
                 }
 
-                table[(t * 256) + i] = res;
+                _table[t * 256 + i] = res;
             }
         }
     }
@@ -32,13 +34,31 @@ public static class Crc32 {
     /// Calculate the CRC32 of the given string.
     /// </summary>
     /// <param name="value">The value to hash</param>
+    /// <param name="encoding">The encoding</param>
     /// <param name="crc">The initial seed/value</param>
     /// <returns>The CRC32 of the input data</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint Get(string value, uint crc = CrcInitialSeed) {
-        var data = Encoding.UTF8.GetBytes(value);
+    public uint Get(string value, Encoding encoding, uint crc) {
+        var data = encoding.GetBytes(value);
         return Get(data, 0, data.Length, crc);
     }
+
+    /// <summary>
+    /// Calculate the CRC32 of the given string.
+    /// </summary>
+    /// <param name="value">The value to hash</param>
+    /// <param name="encoding">The encoding</param>
+    /// <returns>The CRC32 of the input data</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public uint Get(string value, Encoding encoding) => Get(value, encoding, _seed);
+
+    /// <summary>
+    /// Calculate the CRC32 of the given string in UTF-8.
+    /// </summary>
+    /// <param name="value">The value to hash</param>
+    /// <returns>The CRC32 of the input data</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public uint Get(string value) => Get(value, Encoding.UTF8, _seed);
 
     /// <summary>
     /// Calculate the CRC32 of the given byte array.
@@ -47,9 +67,15 @@ public static class Crc32 {
     /// <param name="crc">The initial seed/value</param>
     /// <returns>The CRC32 of the input data</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint Get(byte[] buffer, uint crc = CrcInitialSeed) {
-        return Get(buffer, 0, buffer.Length, crc);
-    }
+    public uint Get(byte[] buffer, uint crc) => Get(buffer, 0, buffer.Length, crc);
+
+    /// <summary>
+    /// Calculate the CRC32 of the given byte array.
+    /// </summary>
+    /// <param name="buffer">The value to hash</param>
+    /// <returns>The CRC32 of the input data</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public uint Get(byte[] buffer) => Get(buffer, _seed);
 
     /// <summary>
     /// Calculate the CRC32 of the given span.
@@ -58,22 +84,28 @@ public static class Crc32 {
     /// <param name="crc">The initial seed/value</param>
     /// <returns>The CRC32 of the input data</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint Get(ReadOnlySpan<byte> buffer, uint crc = CrcInitialSeed) {
-        return Get(buffer, 0, buffer.Length, crc);
-    }
+    public uint Get(ReadOnlySpan<byte> buffer, uint crc) => Get(buffer, 0, buffer.Length, crc);
 
     /// <summary>
-    /// Calculate the CRC32 of the given span
+    /// Calculate the CRC32 of the given span.
+    /// </summary>
+    /// <param name="buffer">The value to hash</param>
+    /// <returns>The CRC32 of the input data</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public uint Get(ReadOnlySpan<byte> buffer) => Get(buffer, _seed);
+
+    /// <summary>
+    /// Calculate the CRC32 of the given span.
     /// </summary>
     /// <param name="buffer">The span to hash</param>
     /// <param name="start">The start index of the span to start hashing from</param>
     /// <param name="size">How many bytes to hash</param>
     /// <param name="crc">The initial seed/value</param>
     /// <returns>The CRC32 of the input data offset by <see cref="start"/> + <see cref="size"/> bytes long</returns>
-    public static uint Get(ReadOnlySpan<byte> buffer, int start, int size, uint crc = CrcInitialSeed) {
+    public uint Get(ReadOnlySpan<byte> buffer, int start, int size, uint crc) {
         var crcLocal = uint.MaxValue ^ crc;
 
-        var table = CrcTable;
+        var table = _table;
         while (size >= 16) {
             var a =
                 table[(3 * 256) + buffer[start + 12]]
@@ -107,6 +139,15 @@ public static class Crc32 {
         while (--size >= 0)
             crcLocal = table[(byte) (crcLocal ^ buffer[start++])] ^ crcLocal >> 8;
 
-        return ~(crcLocal ^ uint.MaxValue);
+        return crcLocal ^ uint.MaxValue;
     }
+
+    /// <summary>
+    /// Calculate the CRC32 of the given span.
+    /// </summary>
+    /// <param name="buffer">The span to hash</param>
+    /// <param name="start">The start index of the span to start hashing from</param>
+    /// <param name="size">How many bytes to hash</param>
+    /// <returns>The CRC32 of the input data offset by <see cref="start"/> + <see cref="size"/> bytes long</returns>
+    public uint Get(ReadOnlySpan<byte> buffer, int start, int size) => Get(buffer, start, size, _seed);
 }

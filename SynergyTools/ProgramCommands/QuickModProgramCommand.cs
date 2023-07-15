@@ -433,22 +433,22 @@ public class QuickModProgramCommand : RootProgramCommand {
             var sonicMtlAlt = level.GetEntry($"{SonicBaseName}.mtl", SkinFlag.Sonic_Alt);
             var replacementMtl = ReferenceLevel.GetEntry($"{ReferenceObjectBaseName}.mtl");
 
-            var sonicDoc = PbxmlFile.Load(sonicMtl.Source.ReadRaw());
-            var replacementDoc = PbxmlFile.Load(replacementMtl.Source.ReadRaw());
-            var existingNames = replacementDoc["Material"]!["SubMaterials"]!
+            var sonicDoc = PbxmlFile.FromBytes(sonicMtl.Source.ReadRaw());
+            var replacementDoc = PbxmlFile.FromBytes(replacementMtl.Source.ReadRaw());
+            var existingNames = replacementDoc.Document["Material"]!["SubMaterials"]!
                 .OfType<XmlElement>()
                 .Select(x => x.GetAttribute("Name"))
                 .ToHashSet();
-            foreach (var elem in sonicDoc["Material"]!["SubMaterials"]!.OfType<XmlElement>()) {
+            foreach (var elem in sonicDoc.Document["Material"]!["SubMaterials"]!.OfType<XmlElement>()) {
                 if (existingNames.Contains(elem.GetAttribute("Name")))
                     continue;
 
-                replacementDoc["Material"]!["SubMaterials"]!.AppendChild(replacementDoc.ImportNode(elem, true));
+                replacementDoc.Document["Material"]!["SubMaterials"]!.AppendChild(replacementDoc.Document.ImportNode(elem, true));
                 existingNames.Add(elem.GetAttribute("Name"));
             }
 
             using var targetMs = new MemoryStream();
-            PbxmlFile.Pack(replacementDoc, new(targetMs));
+            replacementDoc.WriteBinary(targetMs);
             sonicMtl.Source = sonicMtlAlt.Source = new(targetMs.ToArray());
         },
         cancellationToken);

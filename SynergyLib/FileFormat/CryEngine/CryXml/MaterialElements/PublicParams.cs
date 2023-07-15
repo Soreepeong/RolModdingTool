@@ -1,13 +1,14 @@
 ﻿using System.Numerics;
 using System.Xml.Serialization;
 
-namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialSubElements;
+namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
 [XmlRoot(ElementName = "PublicParams")]
 public class PublicParams {
     public Vector3? SilhouetteColor;
     public Vector3? IrisColor;
     public Vector3? IndirectColor;
+    public Vector3? WrapColor;
 
     [XmlAttribute(AttributeName = "IrisAspectRatio")]
     public float IrisAspectRatio { get; set; } = 1f;
@@ -68,4 +69,13 @@ public class PublicParams {
 
     [XmlAttribute(AttributeName = "Metalness")]
     public float Metalness { get; set; }
+
+    [XmlAttribute(AttributeName = "WrapColor")]
+    public string? WrapColorString {
+        get => WrapColor.ToXmlValue();
+        set => WrapColor = value.XmlToVector3();
+    }
+
+    [XmlAttribute(AttributeName = "WrapDiffuse")]
+    public float WrapDiffuse { get; set; }
 }

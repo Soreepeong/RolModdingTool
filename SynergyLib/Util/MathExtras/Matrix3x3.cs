@@ -32,6 +32,8 @@ public struct Matrix3x3 : IEquatable<Matrix3x3> {
         1f
     );
 
+    public static readonly Matrix3x3 Zero = new();
+
     public Matrix3x3(
         float m11,
         float m12,
@@ -137,4 +139,8 @@ public struct Matrix3x3 : IEquatable<Matrix3x3> {
         M23 == other.M23 &&
         M31 == other.M31 &&
         M32 == other.M32;
+
+    public static bool operator ==(Matrix3x3 a, Matrix3x3 b) => a.Equals(b);
+    
+    public static bool operator !=(Matrix3x3 a, Matrix3x3 b) => !a.Equals(b);
 }
