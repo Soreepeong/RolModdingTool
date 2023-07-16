@@ -13,12 +13,11 @@ public struct MeshTangent {
             1f * TangentRaw.Y / short.MaxValue,
             1f * TangentRaw.Z / short.MaxValue,
             1f * TangentRaw.W / short.MaxValue);
-        set => TangentRaw = new() {
-            X = (short) (value.X / short.MaxValue),
-            Y = (short) (value.Y / short.MaxValue),
-            Z = (short) (value.Z / short.MaxValue),
-            W = (short) (value.W / short.MaxValue)
-        };
+        set => TangentRaw = new(
+            (short) (value.X * short.MaxValue),
+            (short) (value.Y * short.MaxValue),
+            (short) (value.Z * short.MaxValue),
+            (short) (value.W * short.MaxValue));
     }
 
     public Vector4 Binormal {
@@ -27,11 +26,16 @@ public struct MeshTangent {
             1f * BinormalRaw.Y / short.MaxValue,
             1f * BinormalRaw.Z / short.MaxValue,
             1f * BinormalRaw.W / short.MaxValue);
-        set => BinormalRaw = new() {
-            X = (short) (value.X / short.MaxValue),
-            Y = (short) (value.Y / short.MaxValue),
-            Z = (short) (value.Z / short.MaxValue),
-            W = (short) (value.W / short.MaxValue)
-        };
+        set => BinormalRaw = new(
+            (short) (value.X * short.MaxValue),
+            (short) (value.Y * short.MaxValue),
+            (short) (value.Z * short.MaxValue),
+            (short) (value.W * short.MaxValue));
     }
+
+    public static MeshTangent FromNormalAndTangent(Vector3 normal, Vector4 tangent) =>
+        new() {
+            Tangent = tangent,
+            Binormal = new(Vector3.Cross(new(tangent.X, tangent.Y, tangent.Z), normal), tangent.W),
+        };
 }

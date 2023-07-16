@@ -37,28 +37,28 @@ public struct ControllerMotionParams : ICryReadWrite {
 
     public ControllerMotionParams() {
         AssetFlags = 0;
-        Compression = 0xFFFFFFFFu;
-        TicksPerFrame = 0;
-        SecsPerTick = 0;
-        Start = 0;
-        End = 0;
-        MoveSpeed = -1;
-        TurnSpeed = -1;
-        AssetTurn = -1;
-        Distance = -1;
-        Slope = -1;
+        Compression = 2;
+        TicksPerFrame = 1;
+        SecsPerTick = 1f / 30f;
+        Start = 1;
+        End = 1;
+        MoveSpeed = 0;
+        TurnSpeed = 1.14449864e-15f;
+        AssetTurn = 2.84217162e-14f;
+        Distance = 0;
+        Slope = 0;
         StartLocationQ = Quaternion.Identity;
-        StartLocationV = Vector3.One;
+        StartLocationV = Vector3.Zero;
         EndLocationQ = Quaternion.Identity;
-        EndLocationV = Vector3.One;
-        LHeelStart = -1;
-        LHeelEnd = -1;
-        LToe0Start = -1;
-        LToe0End = -1;
-        RHeelStart = -1;
-        RHeelEnd = -1;
-        RToe0Start = -1;
-        RToe0End = -1;
+        EndLocationV = Vector3.Zero;
+        LHeelStart = -10000;
+        LHeelEnd = -10000;
+        LToe0Start = -10000;
+        LToe0End = -10000;
+        RHeelStart = -10000;
+        RHeelEnd = -10000;
+        RToe0Start = -10000;
+        RToe0End = -10000;
     }
 
     public void ReadFrom(NativeReader reader, int expectedSize) {

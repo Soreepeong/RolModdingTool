@@ -130,4 +130,6 @@ public class ControllerKeyTime {
     public override string ToString() => Ticks.Length < 2
         ? $"{nameof(ControllerKeyTime)}<{Format}>: empty"
         : $"{nameof(ControllerKeyTime)}<{Format}>: {Ticks[0]}..{Ticks[^1]} ({Ticks.Length} frames)";
+
+    public static ControllerKeyTime FromArray(float[] data) => new() {Ticks = data, Format = KeyTimesFormat.UInt16};
 }

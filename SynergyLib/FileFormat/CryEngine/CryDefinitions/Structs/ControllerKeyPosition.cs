@@ -66,4 +66,7 @@ public class ControllerKeyPosition {
     };
 
     public override string ToString() => $"{nameof(ControllerKeyPosition)}<{Format}>: {Data.Length} items";
+
+    public static ControllerKeyPosition FromArray(Vector3[] data) =>
+        new() {Data = data, Format = VectorCompressionFormat.NoCompressVec3};
 }

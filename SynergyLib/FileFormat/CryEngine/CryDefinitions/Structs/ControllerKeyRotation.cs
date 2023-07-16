@@ -140,4 +140,14 @@ public class ControllerKeyRotation : IReadOnlyList<Quaternion> {
             VectorCompressionFormat.NoCompressVec3 => throw new ArgumentOutOfRangeException(nameof(format), format, null),
             _ => throw new ArgumentOutOfRangeException(nameof(format), format, null),
         };
+
+    public static ControllerKeyRotation FromArray(Quaternion[] data) {
+        var r = new ControllerKeyRotation {
+            RawData = new byte[6 * data.Length],
+            Format = VectorCompressionFormat.SmallTreeQuat48
+        };
+        for (var i = 0; i< data.Length;i++)
+            r.RawData.AsSpan().SetNativeStruct((SmallTreeQuat48) data[i], i);
+        return r;
+    }
 }

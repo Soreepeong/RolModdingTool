@@ -28,9 +28,6 @@ public class Material {
     [XmlAttribute(AttributeName = "Shader")]
     public string? Shader { get; set; }
 
-    [XmlIgnore]
-    public BrbGenMask GenMaskIllum => (BrbGenMask) (HexGenMask is { } v ? Convert.ToUInt64(v, 16) : 0);
-
     [XmlAttribute(AttributeName = "GenMask")]
     public string? HexGenMask { get; set; }
 

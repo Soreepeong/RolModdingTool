@@ -39,7 +39,7 @@ public static class BinaryReaderExtensions {
     }
 
     public static string ReadFString(this BinaryReader reader, int length, Encoding encoding) {
-        Span<byte> buf = stackalloc byte[length];
+        var buf = length < 4096 ? stackalloc byte[length] : new byte[length];
         buf = buf[..reader.Read(buf)];
         if (length != buf.Length)
             throw new IOException($"Incomplete read; expected {length} b, read {buf.Length}");

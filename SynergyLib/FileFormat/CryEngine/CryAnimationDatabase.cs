@@ -12,26 +12,15 @@ using SynergyLib.Util.BinaryRW;
 namespace SynergyLib.FileFormat.CryEngine;
 
 public class CryAnimationDatabase {
-    public CryChunks Chunks;
-    public Dictionary<string, Animation> Animations = new();
+    public readonly Dictionary<string, Animation> Animations = new();
 
-    public CryAnimationDatabase(Stream stream) {
-        Chunks = CryChunks.FromStream(stream);
-        foreach (var chunk in Chunks.Values.OfType<ControllerChunk>()) {
-            foreach (var anim in chunk.Animations) {
-                NotSupportedIfFalse(!anim.FootPlanBits.Any());
-                var a = new Animation {MotionParams = anim.MotionParams};
-                foreach (var track in anim.Controllers) {
-                    a.Tracks[track.ControllerId] = new() {
-                        Position = track.HasPosTrack ? chunk.KeyPositions[track.PosTrack] : null,
-                        Rotation = track.HasRotTrack ? chunk.KeyRotations[track.RotTrack] : null,
-                        PositionTime = track.HasPosTrack ? chunk.KeyTimes[track.PosKeyTimeTrack] : null,
-                        RotationTime = track.HasRotTrack ? chunk.KeyTimes[track.RotKeyTimeTrack] : null,
-                    };
-                }
-
-                Animations[anim.Name] = a;
-            }
+    public void Scale(float scale) {
+        foreach (var t in Animations.Values.SelectMany(x => x.Tracks.Values.Select(y => y.Position)).Distinct()) {
+            if (t is null)
+                continue;
+            
+            foreach (var i in Enumerable.Range(0, t.Data.Length))
+                t.Data[i] *= scale;
         }
     }
 
@@ -117,5 +106,28 @@ public class CryAnimationDatabase {
     private static void NotSupportedIfFalse(bool test, string? message = null) {
         if (!test)
             throw new NotSupportedException(message);
+    }
+    
+    public static CryAnimationDatabase FromStream(Stream stream, bool leaveOpen = false) {
+        var res = new CryAnimationDatabase();
+        var chunks = CryChunks.FromStream(stream, leaveOpen);
+        foreach (var chunk in chunks.Values.OfType<ControllerChunk>()) {
+            foreach (var anim in chunk.Animations) {
+                NotSupportedIfFalse(!anim.FootPlanBits.Any());
+                var a = new Animation {MotionParams = anim.MotionParams};
+                foreach (var track in anim.Controllers) {
+                    a.Tracks[track.ControllerId] = new() {
+                        Position = track.HasPosTrack ? chunk.KeyPositions[track.PosTrack] : null,
+                        Rotation = track.HasRotTrack ? chunk.KeyRotations[track.RotTrack] : null,
+                        PositionTime = track.HasPosTrack ? chunk.KeyTimes[track.PosKeyTimeTrack] : null,
+                        RotationTime = track.HasRotTrack ? chunk.KeyTimes[track.RotKeyTimeTrack] : null,
+                    };
+                }
+
+                res.Animations[anim.Name] = a;
+            }
+        }
+
+        return res;
     }
 }

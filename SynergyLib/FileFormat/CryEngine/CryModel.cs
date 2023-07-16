@@ -19,283 +19,30 @@ namespace SynergyLib.FileFormat.CryEngine;
 public class CryModel {
     public string Name;
     public Material Material;
-    public List<Controller> Controllers;
-    public List<Mesh> Meshes;
-    
-    public CryModel(string name, Material material, List<Controller> controllers, List<Mesh> meshes) {
+    public readonly List<Controller> Controllers = new();
+    public readonly List<Mesh> Meshes = new();
+    public readonly Dictionary<string, MemoryStream> ExtraTextures = new();
+
+    public CryModel(string name) {
         Name = name;
-        Material = material;
-        Controllers = controllers;
-        Meshes = meshes;
+        Material = new() {SubMaterials = new()};
     }
 
-    public static CryModel FromCryEngineFiles(Stream geom, Stream mtrl) {
-        var material = PbxmlFile.FromStream(mtrl).DeserializeAs<Material>();
-        var chunks = CryChunks.FromStream(geom);
+    public CryModel(string name, Material material) {
+        Name = name;
+        Material = material;
+    }
 
-        // Test: Ensure exportFlagsChunk is what we know
-        NotSupportedIfFalse(chunks.Values.OfType<ExportFlagsChunk>().Single().Flags == ExportFlags.UseCustomNormals);
-
-        var nodeChunk = chunks.Values.OfType<NodeChunk>().Single(x => x.ParentId == -1);
-        NotSupportedIfFalse(!nodeChunk.IsGroupHead);
-        NotSupportedIfFalse(!nodeChunk.IsGroupMember);
-        NotSupportedIfFalse(nodeChunk.Properties.Length == 0);
-        NotSupportedIfFalse(nodeChunk.Position == Vector3.Zero);
-        NotSupportedIfFalse((nodeChunk.Rotation - Quaternion.Identity).Length() < 1e-6);
-        NotSupportedIfFalse(nodeChunk.Scale == Vector3.One);
-        NotSupportedIfFalse(nodeChunk.Transform.M44 == 0 && (nodeChunk.Transform with {M44 = 1}).IsIdentity);
-        NotSupportedIfFalse(nodeChunk.ChildCount == 0);
-        NotSupportedIfFalse(chunks[nodeChunk.MaterialId] is MtlNameChunk);
-        var meshChunk = NotSupportedIfNull<MeshChunk>(chunks[nodeChunk.ObjectId]);
-        var subsetsChunk = NotSupportedIfNull<MeshSubsetsChunk>(chunks[meshChunk.SubsetsChunkId]);
-
-        // Test: Ensure MtlNameChunks are what we expect
-        var mtlNameChunks = chunks.Values.OfType<MtlNameChunk>().ToArray();
-        foreach (var chunk in mtlNameChunks) {
-            NotSupportedIfFalse(chunk.AdvancedDataChunkId == 0); // not implemented by us
-            NotSupportedIfFalse(chunk.PhysicsType == MtlNamePhysicsType.None); // not implemented by us
-            NotSupportedIfFalse(chunk.Flags2 == 0); // not implemented by CryEngine
-            if (chunk.Header.Id == nodeChunk.MaterialId) {
-                NotSupportedIfFalse(chunk.Flags == MtlNameFlags.MultiMaterial);
-                NotSupportedIfFalse(Equals(chunk.ShOpacity, 1f)); // not implemented by us
-                NotSupportedIfFalse(chunk.SubMaterialChunkIds.Count(x => x != 0) == mtlNameChunks.Length - 1);
-            } else {
-                NotSupportedIfFalse(chunk.Flags == MtlNameFlags.SubMaterial);
-                NotSupportedIfFalse(Equals(chunk.ShOpacity, 0f)); // not implemented by us
-                NotSupportedIfFalse(!chunk.SubMaterialChunkIds.Any());
-            }
+    public void Scale(float scale) {
+        foreach (var m in Meshes) {
+            for (var i = 0; i < m.Vertices.Length; i++)
+                m.Vertices[i].Position *= scale;
         }
 
-        // Test: Ensure consistency in bone existence
-        var hasBones = meshChunk.BoneMappingChunkId != 0;
-        NotSupportedIfFalse(hasBones == subsetsChunk.Flags.HasFlag(MeshSubsetsFlags.BoneIndices));
-
-        foreach (var ds in chunks.Values.OfType<DataChunk>())
-            NotSupportedIfFalse(ds.Flags == 0);
-
-        // Test: Ensure that there isn't anything we don't care defined
-        NotSupportedIfFalse(meshChunk.VertAnimId == 0);
-        NotSupportedIfFalse(meshChunk.Colors2ChunkId == 0);
-        NotSupportedIfFalse(meshChunk.ShCoeffsChunkId == 0);
-        NotSupportedIfFalse(meshChunk.FaceMapChunkId == 0);
-        NotSupportedIfFalse(meshChunk.VertMatsChunkId == 0);
-        NotSupportedIfFalse(meshChunk.QTangentsChunkId == 0);
-        NotSupportedIfFalse(meshChunk.SkinDataChunkId == 0);
-        NotSupportedIfFalse(meshChunk.Ps3EdgeDataChunkId == 0);
-        NotSupportedIfFalse(meshChunk.Reserved15ChunkId == 0);
-        NotSupportedIfFalse(meshChunk.PhysicsDataChunkId[1] == 0);
-        NotSupportedIfFalse(meshChunk.PhysicsDataChunkId[2] == 0);
-        NotSupportedIfFalse(meshChunk.PhysicsDataChunkId[3] == 0);
-
-        var vertices = new Vertex[meshChunk.VertexCount];
-        foreach (var i in Enumerable.Range(0, meshChunk.VertexCount)) {
-            vertices[i] = new() {
-                Position = ((DataChunk) chunks[meshChunk.PositionsChunkId]).GetItem<Vector3>(i),
-                Normal = ((DataChunk) chunks[meshChunk.NormalsChunkId]).GetItem<Vector3>(i),
-                TexCoord = ((DataChunk) chunks[meshChunk.TexCoordsChunkId]).GetItem<Vector2>(i),
-                Color = ((DataChunk) chunks[meshChunk.ColorsChunkId]).GetItem<Vector4<byte>>(i),
-                Tangent = ((DataChunk) chunks[meshChunk.TangentsChunkId]).GetItem<MeshTangent>(i),
-            };
+        foreach (var c in Controllers) {
+            var (tra, rot) = c.Decomposed;
+            c.Decomposed = Tuple.Create(tra * scale, rot);
         }
-
-        var shapeDeformations = meshChunk.ShapeDeformationChunkId == 0
-            ? Array.Empty<MeshShapeDeformation>()
-            : ((DataChunk) chunks[meshChunk.ShapeDeformationChunkId]).AsArray<MeshShapeDeformation>();
-        var boneMappings = !hasBones
-            ? Array.Empty<MeshBoneMapping>()
-            : ((DataChunk) chunks[meshChunk.BoneMappingChunkId]).AsArray<MeshBoneMapping>();
-
-        var indices = ((DataChunk) chunks[meshChunk.IndicesChunkId]).AsArray<ushort>();
-        // PhysicsData = meshChunk.PhysicsDataChunkId[0] == 0
-        //     ? Array.Empty<byte[]>()
-        //     : new[] {
-        //         ((MeshPhysicsDataChunk) Chunks[meshChunk.PhysicsDataChunkId[0]]).Data
-        //     };
-
-        // Test: ShapeDeformation.Index are all set to 0xFF
-        foreach (var sd in shapeDeformations)
-            NotSupportedIfFalse(sd.Index.All(x => x is 0xFF or 1));
-
-        // Test: Ensure subset counts match
-        NotSupportedIfFalse(subsetsChunk.Subsets.Count == meshChunk.SubsetsCount);
-
-        List<Controller> controllers;
-
-        if (hasBones) {
-            // Test: Bones are simple enough
-            var bones = chunks.Values.OfType<CompiledBonesChunk>().Single().Bones;
-            foreach (var bone in bones) {
-                var wtb = bone.LocalTransformMatrix.Transformation;
-                NotSupportedIfFalse(Matrix4x4.Invert(wtb, out var wtbi));
-                var btw = bone.WorldTransformMatrix.Transformation;
-                var diff = wtbi - btw;
-                foreach (var i in Enumerable.Range(0, 4))
-                foreach (var j in Enumerable.Range(0, 4))
-                    NotSupportedIfFalse(Math.Abs(diff[i, j]) < 1e-6);
-                NotSupportedIfFalse(bone.LimbId == uint.MaxValue);
-                NotSupportedIfFalse(bone.Mass == 0);
-                NotSupportedIfFalse(bone.PhysicsLive.IsDefault);
-                NotSupportedIfFalse(bone.PhysicsDead.IsEmpty);
-            }
-
-            controllers = Controller.ListFromCompiledBones(bones);
-
-            // Test: PhysicalBones are ordered as expected and all items have the default value
-            var bonesPhysical = chunks.Values.OfType<CompiledPhysicalBonesChunk>().Single().Bones;
-            NotSupportedIfFalse(bonesPhysical.Select(x => x.Physics.IsDefault).All(x => x));
-
-            // bones: BFS
-            // bonesPhysical: DFS
-            var bonesPhysicalTest = new List<uint>();
-
-            void TestBonesPhysical(in CompiledBone bone, int index) {
-                bonesPhysicalTest.Add(bone.ControllerId);
-                for (var i = index + bone.ChildOffset; i < index + bone.ChildOffset + bone.ChildCount; i++)
-                    TestBonesPhysical(bones[i], i);
-            }
-
-            TestBonesPhysical(bones[0], 0);
-            NotSupportedIfFalse(bonesPhysicalTest.SequenceEqual(bonesPhysical.Select(x => x.ControllerId)));
-
-            if (chunks.Values.OfType<CompiledPhysicalProxyChunk>().Single().Proxies.Any())
-                throw new NotSupportedException();
-            if (chunks.Values.OfType<CompiledMorphTargetsChunk>().Single().Targets.Any())
-                throw new NotSupportedException();
-            var intSkinVertices = chunks.Values.OfType<CompiledIntSkinVerticesChunk>().Single();
-            var intFaces = chunks.Values.OfType<CompiledIntFacesChunk>().Single();
-            var extToInt = chunks.Values.OfType<CompiledExtToIntMapChunk>().Single();
-
-            NotSupportedIfFalse(extToInt.Map.Count == meshChunk.VertexCount);
-            NotSupportedIfFalse(intSkinVertices.Vertices.Count - 1 == extToInt.Map.Max());
-            NotSupportedIfFalse(
-                intSkinVertices.Vertices.Count - 1 ==
-                intFaces.Faces.Max(x => Math.Max(Math.Max(x.Vertex0, x.Vertex1), x.Vertex2)));
-            NotSupportedIfFalse(intFaces.Faces.Count * 3 == meshChunk.IndexCount);
-            var boneBoxChunks = chunks.Values.OfType<BonesBoxesChunk>().ToArray();
-
-            // some bones might have no directly attached vertices
-            NotSupportedIfFalse(boneBoxChunks.Length <= controllers.Count);
-
-            foreach (var boneBox in boneBoxChunks) {
-                foreach (var extIndex in Enumerable.Range(0, extToInt.Map.Count)) {
-                    var intIndex = extToInt.Map[extIndex];
-                    var iv = intSkinVertices.Vertices[intIndex].BoneIds;
-                    if (boneBox.Indices.Contains((ushort) extIndex)) {
-                        if (!iv.Contains((ushort) boneBox.BoneId))
-                            throw new InvalidDataException();
-                    } else {
-                        if (iv.Contains((ushort) boneBox.BoneId))
-                            throw new InvalidDataException();
-                    }
-                }
-
-                var aabb = AaBb.FromVectorEnumerable(boneBox.Indices.Select(x => vertices[x].Position).ToArray());
-                NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Min.X - aabb.Min.X) < 1e-3);
-                NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Min.Y - aabb.Min.Y) < 1e-3);
-                NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Min.Z - aabb.Min.Z) < 1e-3);
-                NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Max.X - aabb.Max.X) < 1e-3);
-                NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Max.Y - aabb.Max.Y) < 1e-3);
-                NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Max.Z - aabb.Max.Z) < 1e-3);
-                foreach (var index in boneBox.Indices) {
-                    var bw = intSkinVertices.Vertices[extToInt.Map[index]].Weights;
-                    NotSupportedIfFalse(Math.Abs(bw.Sum(x => x) - 1f) < 1e-6);
-                    var bw2 = boneMappings[index].Weights;
-                    NotSupportedIfFalse(bw2.Sum(x => x) == 0xFF);
-                    foreach (var (a, b) in bw.Zip(bw2))
-                        NotSupportedIfFalse(Math.Abs(a - b / 255f) < 2f / 255f);
-
-                    vertices[index].Weights = bw;
-                    vertices[index].ControllerIds = new(
-                        bw.Zip(intSkinVertices.Vertices[extToInt.Map[index]].BoneIds)
-                            .Select(x => x.First == 0f ? 0u : bones[x.Second].ControllerId)
-                    );
-
-                    // var iv = intSkinVertices.Vertices[extToInt.Map[index]].BoneIds;
-                    // var subsetIndex = subsetsChunk.Subsets.Select((x, i) => (x, i))
-                    //     .Where(x => Enumerable.Range(x.x.FirstIndexId, x.x.NumIndices).Any(y => indices[y] == index))
-                    //     .Select(x => x.i)
-                    //     .ToArray();
-                    // var bm = boneMappings[index].BoneIds
-                    //     .Select(x => subsetIndex.Select(y => subsetsChunk.BoneIds[y][x]).Distinct().Single())
-                    //     .Select((x, i) => boneMappings[index].Weights[i] == 0 ? (ushort) 0 : x)
-                    //     .ToArray();
-                    // if (!bm.SequenceEqual(iv))
-                    //     throw new InvalidDataException();
-                }
-            }
-
-            foreach (var intIndex in Enumerable.Range(0, intSkinVertices.Vertices.Count)) {
-                NotSupportedIfFalse(
-                    extToInt.Map.Select((x, i) => (x, i))
-                        .Where(x => x.x == intIndex)
-                        .Select(x => vertices[x.i].Position)
-                        .Distinct()
-                        .Count() == 1);
-            }
-
-            var ind1 = indices.Chunk(3).Select(x => x.Select(y => extToInt.Map[y]).ToArray())
-                .Select(x => new CompiledIntFace(x[0], x[1], x[2])).Order().ToArray();
-            var ind2 = intFaces.Faces.Order().ToArray();
-            NotSupportedIfFalse(ind1.SequenceEqual(ind2));
-        } else
-            controllers = new();
-
-        var meshes = new List<Mesh>();
-        for (var i = 0; i < subsetsChunk.Subsets.Count;) {
-            var to = i + 1;
-            while (to < subsetsChunk.Subsets.Count
-                   && subsetsChunk.Subsets[to].MatId == subsetsChunk.Subsets[i].MatId)
-                to++;
-            for (var j = i; j < to - 1; j++) {
-                var expectedEndIndexId = i == subsetsChunk.Subsets.Count
-                    ? indices.Length
-                    : subsetsChunk.Subsets[i + 1].FirstIndexId;
-                NotSupportedIfFalse(
-                    subsetsChunk.Subsets[i].FirstIndexId + subsetsChunk.Subsets[i].NumIndices == expectedEndIndexId);
-            }
-
-            var vertexIdFrom =
-                checked((ushort) Enumerable.Range(i, to - i).Min(x => subsetsChunk.Subsets[x].FirstVertId));
-            var vertexIdTo = checked((ushort) Enumerable.Range(i, to - i)
-                .Max(x => subsetsChunk.Subsets[x].FirstVertId + subsetsChunk.Subsets[x].NumVerts));
-            var indexIdFrom = checked((ushort) subsetsChunk.Subsets[i].FirstIndexId);
-            var indexIdTo = checked((ushort) subsetsChunk.Subsets[to - 1].FirstIndexId +
-                subsetsChunk.Subsets[to - 1].NumIndices);
-
-            // Test: Ensure corresponding material is defined in the mtl file
-            var matName = material.SubMaterials![subsetsChunk.Subsets[i].MatId].Name!;
-            NotSupportedIfFalse(mtlNameChunks.Any(x => x.Name == matName));
-
-            var slicedIndices = new ushort[indexIdTo - indexIdFrom];
-            for (var j = indexIdFrom; j < indexIdTo; j++)
-                slicedIndices[j - indexIdFrom] = checked((ushort) (indices[j] - vertexIdFrom));
-
-            meshes.Add(new(matName, vertices[vertexIdFrom..vertexIdTo], slicedIndices));
-            i = to;
-        }
-
-        foreach (var foliageInfo in chunks.Values.OfType<FoliageInfoChunk>()) {
-            NotSupportedIfFalse(!foliageInfo.Spines.Any());
-            NotSupportedIfFalse(!foliageInfo.SpineVertices.Any());
-            NotSupportedIfFalse(!foliageInfo.SpineVertexSegDim.Any());
-            NotSupportedIfFalse(!foliageInfo.BoneMappings.Any());
-            NotSupportedIfFalse(!foliageInfo.BoneIds.Any());
-        }
-
-        // foreach (var subset in subsetsChunk.Subsets) {
-        //     // Test: Center/Radius is correctly defined
-        //     var aabb = new AaBb(Positions[Indices[subset.FirstIndexId]]);
-        //     foreach (var index in Enumerable.Range(subset.FirstIndexId + 1, subset.FirstIndexId + subset.NumIndices))
-        //         aabb.Expand(Positions[Indices[index]]);
-        //     
-        //     var diff = aabb.Center - subset.Center;
-        //     NotSupportedIfFalse(Math.Abs(diff.X) < 1e-6);
-        //     NotSupportedIfFalse(Math.Abs(diff.Y) < 1e-6);
-        //     NotSupportedIfFalse(Math.Abs(diff.Z) < 1e-6);
-        //     NotSupportedIfFalse(Math.Abs((aabb.Center - aabb.Min).Length() - subset.Radius) < 1e-6);
-        // }
-
-        return new(nodeChunk.Name, material, controllers, meshes);
     }
 
     public void WriteGeometryTo(NativeWriter writer) {
@@ -653,7 +400,7 @@ public class CryModel {
     }
 
     public void WriteGeometryTo(Stream stream) => WriteGeometryTo(new NativeWriter(stream, Encoding.UTF8, true));
-    
+
     public byte[] GetGeometryBytes() {
         var ms = new MemoryStream();
         WriteGeometryTo(ms);
@@ -666,6 +413,278 @@ public class CryModel {
         var ms = new MemoryStream();
         WriteMaterialTo(ms);
         return ms.ToArray();
+    }
+
+    public static CryModel FromCryEngineFiles(Stream geom, Stream mtrl) {
+        var material = PbxmlFile.FromStream(mtrl).DeserializeAs<Material>();
+        var chunks = CryChunks.FromStream(geom);
+
+        // Test: Ensure exportFlagsChunk is what we know
+        NotSupportedIfFalse(chunks.Values.OfType<ExportFlagsChunk>().Single().Flags == ExportFlags.UseCustomNormals);
+
+        var nodeChunk = chunks.Values.OfType<NodeChunk>().Single(x => x.ParentId == -1);
+        NotSupportedIfFalse(!nodeChunk.IsGroupHead);
+        NotSupportedIfFalse(!nodeChunk.IsGroupMember);
+        NotSupportedIfFalse(nodeChunk.Properties.Length == 0);
+        NotSupportedIfFalse(nodeChunk.Position == Vector3.Zero);
+        NotSupportedIfFalse((nodeChunk.Rotation - Quaternion.Identity).Length() < 1e-6);
+        NotSupportedIfFalse(nodeChunk.Scale == Vector3.One);
+        NotSupportedIfFalse(nodeChunk.Transform.M44 == 0 && (nodeChunk.Transform with {M44 = 1}).IsIdentity);
+        NotSupportedIfFalse(nodeChunk.ChildCount == 0);
+        NotSupportedIfFalse(chunks[nodeChunk.MaterialId] is MtlNameChunk);
+        var meshChunk = NotSupportedIfNull<MeshChunk>(chunks[nodeChunk.ObjectId]);
+        var subsetsChunk = NotSupportedIfNull<MeshSubsetsChunk>(chunks[meshChunk.SubsetsChunkId]);
+
+        // Test: Ensure MtlNameChunks are what we expect
+        var mtlNameChunks = chunks.Values.OfType<MtlNameChunk>().ToArray();
+        foreach (var chunk in mtlNameChunks) {
+            NotSupportedIfFalse(chunk.AdvancedDataChunkId == 0); // not implemented by us
+            NotSupportedIfFalse(chunk.PhysicsType == MtlNamePhysicsType.None); // not implemented by us
+            NotSupportedIfFalse(chunk.Flags2 == 0); // not implemented by CryEngine
+            if (chunk.Header.Id == nodeChunk.MaterialId) {
+                NotSupportedIfFalse(chunk.Flags == MtlNameFlags.MultiMaterial);
+                NotSupportedIfFalse(Equals(chunk.ShOpacity, 1f)); // not implemented by us
+                NotSupportedIfFalse(chunk.SubMaterialChunkIds.Count(x => x != 0) == mtlNameChunks.Length - 1);
+            } else {
+                NotSupportedIfFalse(chunk.Flags == MtlNameFlags.SubMaterial);
+                NotSupportedIfFalse(Equals(chunk.ShOpacity, 0f)); // not implemented by us
+                NotSupportedIfFalse(!chunk.SubMaterialChunkIds.Any());
+            }
+        }
+
+        // Test: Ensure consistency in bone existence
+        var hasBones = meshChunk.BoneMappingChunkId != 0;
+        NotSupportedIfFalse(hasBones == subsetsChunk.Flags.HasFlag(MeshSubsetsFlags.BoneIndices));
+
+        foreach (var ds in chunks.Values.OfType<DataChunk>())
+            NotSupportedIfFalse(ds.Flags == 0);
+
+        // Test: Ensure that there isn't anything we don't care defined
+        NotSupportedIfFalse(meshChunk.VertAnimId == 0);
+        NotSupportedIfFalse(meshChunk.Colors2ChunkId == 0);
+        NotSupportedIfFalse(meshChunk.ShCoeffsChunkId == 0);
+        NotSupportedIfFalse(meshChunk.FaceMapChunkId == 0);
+        NotSupportedIfFalse(meshChunk.VertMatsChunkId == 0);
+        NotSupportedIfFalse(meshChunk.QTangentsChunkId == 0);
+        NotSupportedIfFalse(meshChunk.SkinDataChunkId == 0);
+        NotSupportedIfFalse(meshChunk.Ps3EdgeDataChunkId == 0);
+        NotSupportedIfFalse(meshChunk.Reserved15ChunkId == 0);
+        NotSupportedIfFalse(meshChunk.PhysicsDataChunkId[1] == 0);
+        NotSupportedIfFalse(meshChunk.PhysicsDataChunkId[2] == 0);
+        NotSupportedIfFalse(meshChunk.PhysicsDataChunkId[3] == 0);
+
+        var vertices = new Vertex[meshChunk.VertexCount];
+        foreach (var i in Enumerable.Range(0, meshChunk.VertexCount)) {
+            vertices[i] = new() {
+                Position = ((DataChunk) chunks[meshChunk.PositionsChunkId]).GetItem<Vector3>(i),
+                Normal = ((DataChunk) chunks[meshChunk.NormalsChunkId]).GetItem<Vector3>(i),
+                TexCoord = ((DataChunk) chunks[meshChunk.TexCoordsChunkId]).GetItem<Vector2>(i),
+                Color = ((DataChunk) chunks[meshChunk.ColorsChunkId]).GetItem<Vector4<byte>>(i),
+                Tangent = ((DataChunk) chunks[meshChunk.TangentsChunkId]).GetItem<MeshTangent>(i),
+            };
+        }
+
+        var shapeDeformations = meshChunk.ShapeDeformationChunkId == 0
+            ? Array.Empty<MeshShapeDeformation>()
+            : ((DataChunk) chunks[meshChunk.ShapeDeformationChunkId]).AsArray<MeshShapeDeformation>();
+        var boneMappings = !hasBones
+            ? Array.Empty<MeshBoneMapping>()
+            : ((DataChunk) chunks[meshChunk.BoneMappingChunkId]).AsArray<MeshBoneMapping>();
+
+        var indices = ((DataChunk) chunks[meshChunk.IndicesChunkId]).AsArray<ushort>();
+        // PhysicsData = meshChunk.PhysicsDataChunkId[0] == 0
+        //     ? Array.Empty<byte[]>()
+        //     : new[] {
+        //         ((MeshPhysicsDataChunk) Chunks[meshChunk.PhysicsDataChunkId[0]]).Data
+        //     };
+
+        // Test: ShapeDeformation.Index are all set to 0xFF
+        foreach (var sd in shapeDeformations)
+            NotSupportedIfFalse(sd.Index.All(x => x is 0xFF or 1));
+
+        // Test: Ensure subset counts match
+        NotSupportedIfFalse(subsetsChunk.Subsets.Count == meshChunk.SubsetsCount);
+
+        List<Controller> controllers;
+
+        if (hasBones) {
+            // Test: Bones are simple enough
+            var bones = chunks.Values.OfType<CompiledBonesChunk>().Single().Bones;
+            foreach (var bone in bones) {
+                var wtb = bone.LocalTransformMatrix.Transformation;
+                NotSupportedIfFalse(Matrix4x4.Invert(wtb, out var wtbi));
+                var btw = bone.WorldTransformMatrix.Transformation;
+                var diff = wtbi - btw;
+                foreach (var i in Enumerable.Range(0, 4))
+                foreach (var j in Enumerable.Range(0, 4))
+                    NotSupportedIfFalse(Math.Abs(diff[i, j]) < 1e-6);
+                NotSupportedIfFalse(bone.LimbId == uint.MaxValue);
+                NotSupportedIfFalse(bone.Mass == 0);
+                NotSupportedIfFalse(bone.PhysicsLive.IsDefault);
+                NotSupportedIfFalse(bone.PhysicsDead.IsEmpty);
+            }
+
+            controllers = Controller.ListFromCompiledBones(bones);
+
+            // Test: PhysicalBones are ordered as expected and all items have the default value
+            var bonesPhysical = chunks.Values.OfType<CompiledPhysicalBonesChunk>().Single().Bones;
+            NotSupportedIfFalse(bonesPhysical.Select(x => x.Physics.IsDefault).All(x => x));
+
+            // bones: BFS
+            // bonesPhysical: DFS
+            var bonesPhysicalTest = new List<uint>();
+
+            void TestBonesPhysical(in CompiledBone bone, int index) {
+                bonesPhysicalTest.Add(bone.ControllerId);
+                for (var i = index + bone.ChildOffset; i < index + bone.ChildOffset + bone.ChildCount; i++)
+                    TestBonesPhysical(bones[i], i);
+            }
+
+            TestBonesPhysical(bones[0], 0);
+            NotSupportedIfFalse(bonesPhysicalTest.SequenceEqual(bonesPhysical.Select(x => x.ControllerId)));
+
+            if (chunks.Values.OfType<CompiledPhysicalProxyChunk>().Single().Proxies.Any())
+                throw new NotSupportedException();
+            if (chunks.Values.OfType<CompiledMorphTargetsChunk>().Single().Targets.Any())
+                throw new NotSupportedException();
+            var intSkinVertices = chunks.Values.OfType<CompiledIntSkinVerticesChunk>().Single();
+            var intFaces = chunks.Values.OfType<CompiledIntFacesChunk>().Single();
+            var extToInt = chunks.Values.OfType<CompiledExtToIntMapChunk>().Single();
+
+            NotSupportedIfFalse(extToInt.Map.Count == meshChunk.VertexCount);
+            NotSupportedIfFalse(intSkinVertices.Vertices.Count - 1 == extToInt.Map.Max());
+            NotSupportedIfFalse(
+                intSkinVertices.Vertices.Count - 1 ==
+                intFaces.Faces.Max(x => Math.Max(Math.Max(x.Vertex0, x.Vertex1), x.Vertex2)));
+            NotSupportedIfFalse(intFaces.Faces.Count * 3 == meshChunk.IndexCount);
+            var boneBoxChunks = chunks.Values.OfType<BonesBoxesChunk>().ToArray();
+
+            // some bones might have no directly attached vertices
+            NotSupportedIfFalse(boneBoxChunks.Length <= controllers.Count);
+
+            foreach (var boneBox in boneBoxChunks) {
+                foreach (var extIndex in Enumerable.Range(0, extToInt.Map.Count)) {
+                    var intIndex = extToInt.Map[extIndex];
+                    var iv = intSkinVertices.Vertices[intIndex].BoneIds;
+                    if (boneBox.Indices.Contains((ushort) extIndex)) {
+                        if (!iv.Contains((ushort) boneBox.BoneId))
+                            throw new InvalidDataException();
+                    } else {
+                        if (iv.Contains((ushort) boneBox.BoneId))
+                            throw new InvalidDataException();
+                    }
+                }
+
+                var aabb = AaBb.FromVectorEnumerable(boneBox.Indices.Select(x => vertices[x].Position).ToArray());
+                NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Min.X - aabb.Min.X) < 1e-3);
+                NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Min.Y - aabb.Min.Y) < 1e-3);
+                NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Min.Z - aabb.Min.Z) < 1e-3);
+                NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Max.X - aabb.Max.X) < 1e-3);
+                NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Max.Y - aabb.Max.Y) < 1e-3);
+                NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Max.Z - aabb.Max.Z) < 1e-3);
+                foreach (var index in boneBox.Indices) {
+                    var bw = intSkinVertices.Vertices[extToInt.Map[index]].Weights;
+                    NotSupportedIfFalse(Math.Abs(bw.Sum(x => x) - 1f) < 1e-6);
+                    var bw2 = boneMappings[index].Weights;
+                    NotSupportedIfFalse(bw2.Sum(x => x) == 0xFF);
+                    foreach (var (a, b) in bw.Zip(bw2))
+                        NotSupportedIfFalse(Math.Abs(a - b / 255f) < 2f / 255f);
+
+                    vertices[index].Weights = bw;
+                    vertices[index].ControllerIds = new(
+                        bw.Zip(intSkinVertices.Vertices[extToInt.Map[index]].BoneIds)
+                            .Select(x => x.First == 0f ? 0u : bones[x.Second].ControllerId)
+                    );
+
+                    // var iv = intSkinVertices.Vertices[extToInt.Map[index]].BoneIds;
+                    // var subsetIndex = subsetsChunk.Subsets.Select((x, i) => (x, i))
+                    //     .Where(x => Enumerable.Range(x.x.FirstIndexId, x.x.NumIndices).Any(y => indices[y] == index))
+                    //     .Select(x => x.i)
+                    //     .ToArray();
+                    // var bm = boneMappings[index].BoneIds
+                    //     .Select(x => subsetIndex.Select(y => subsetsChunk.BoneIds[y][x]).Distinct().Single())
+                    //     .Select((x, i) => boneMappings[index].Weights[i] == 0 ? (ushort) 0 : x)
+                    //     .ToArray();
+                    // if (!bm.SequenceEqual(iv))
+                    //     throw new InvalidDataException();
+                }
+            }
+
+            foreach (var intIndex in Enumerable.Range(0, intSkinVertices.Vertices.Count)) {
+                NotSupportedIfFalse(
+                    extToInt.Map.Select((x, i) => (x, i))
+                        .Where(x => x.x == intIndex)
+                        .Select(x => vertices[x.i].Position)
+                        .Distinct()
+                        .Count() == 1);
+            }
+
+            var ind1 = indices.Chunk(3).Select(x => x.Select(y => extToInt.Map[y]).ToArray())
+                .Select(x => new CompiledIntFace(x[0], x[1], x[2])).Order().ToArray();
+            var ind2 = intFaces.Faces.Order().ToArray();
+            NotSupportedIfFalse(ind1.SequenceEqual(ind2));
+        } else
+            controllers = new();
+
+        var meshes = new List<Mesh>();
+        for (var i = 0; i < subsetsChunk.Subsets.Count;) {
+            var to = i + 1;
+            while (to < subsetsChunk.Subsets.Count
+                   && subsetsChunk.Subsets[to].MatId == subsetsChunk.Subsets[i].MatId)
+                to++;
+            for (var j = i; j < to - 1; j++) {
+                var expectedEndIndexId = i == subsetsChunk.Subsets.Count
+                    ? indices.Length
+                    : subsetsChunk.Subsets[i + 1].FirstIndexId;
+                NotSupportedIfFalse(
+                    subsetsChunk.Subsets[i].FirstIndexId + subsetsChunk.Subsets[i].NumIndices == expectedEndIndexId);
+            }
+
+            var vertexIdFrom =
+                checked((ushort) Enumerable.Range(i, to - i).Min(x => subsetsChunk.Subsets[x].FirstVertId));
+            var vertexIdTo = checked((ushort) Enumerable.Range(i, to - i)
+                .Max(x => subsetsChunk.Subsets[x].FirstVertId + subsetsChunk.Subsets[x].NumVerts));
+            var indexIdFrom = checked((ushort) subsetsChunk.Subsets[i].FirstIndexId);
+            var indexIdTo = checked((ushort) subsetsChunk.Subsets[to - 1].FirstIndexId +
+                subsetsChunk.Subsets[to - 1].NumIndices);
+
+            // Test: Ensure corresponding material is defined in the mtl file
+            var matName = material.SubMaterials![subsetsChunk.Subsets[i].MatId].Name!;
+            NotSupportedIfFalse(mtlNameChunks.Any(x => x.Name == matName));
+
+            var slicedIndices = new ushort[indexIdTo - indexIdFrom];
+            for (var j = indexIdFrom; j < indexIdTo; j++)
+                slicedIndices[j - indexIdFrom] = checked((ushort) (indices[j] - vertexIdFrom));
+
+            meshes.Add(new(matName, vertices[vertexIdFrom..vertexIdTo], slicedIndices));
+            i = to;
+        }
+
+        foreach (var foliageInfo in chunks.Values.OfType<FoliageInfoChunk>()) {
+            NotSupportedIfFalse(!foliageInfo.Spines.Any());
+            NotSupportedIfFalse(!foliageInfo.SpineVertices.Any());
+            NotSupportedIfFalse(!foliageInfo.SpineVertexSegDim.Any());
+            NotSupportedIfFalse(!foliageInfo.BoneMappings.Any());
+            NotSupportedIfFalse(!foliageInfo.BoneIds.Any());
+        }
+
+        // foreach (var subset in subsetsChunk.Subsets) {
+        //     // Test: Center/Radius is correctly defined
+        //     var aabb = new AaBb(Positions[Indices[subset.FirstIndexId]]);
+        //     foreach (var index in Enumerable.Range(subset.FirstIndexId + 1, subset.FirstIndexId + subset.NumIndices))
+        //         aabb.Expand(Positions[Indices[index]]);
+        //     
+        //     var diff = aabb.Center - subset.Center;
+        //     NotSupportedIfFalse(Math.Abs(diff.X) < 1e-6);
+        //     NotSupportedIfFalse(Math.Abs(diff.Y) < 1e-6);
+        //     NotSupportedIfFalse(Math.Abs(diff.Z) < 1e-6);
+        //     NotSupportedIfFalse(Math.Abs((aabb.Center - aabb.Min).Length() - subset.Radius) < 1e-6);
+        // }
+
+        var res = new CryModel(nodeChunk.Name, material);
+        res.Controllers.AddRange(controllers);
+        res.Meshes.AddRange(meshes);
+        return res;
     }
 
     private static void NotSupportedIfFalse(bool test, string? message = null) {

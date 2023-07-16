@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 using System.Text;
 using Newtonsoft.Json;
@@ -21,14 +22,17 @@ public class GltfTuple {
     public readonly GltfRoot Root;
     public readonly MemoryStream DataStream;
 
-    public GltfTuple() {
-        Root = new();
-        DataStream = new();
+    public GltfTuple() : this(new()) {
         Root.Buffers.Add(new());
         Root.Scene = Root.Scenes.AddAndGetIndex(new());
     }
 
-    public GltfTuple(Stream glbStream, bool leaveOpen = false) {
+    public GltfTuple(GltfRoot root) {
+        Root = root;
+        DataStream = new();
+    }
+
+    public static GltfTuple FromStream(Stream glbStream, bool leaveOpen = false) {
         using var lbr = new NativeReader(glbStream, Encoding.UTF8, leaveOpen);
         if (lbr.ReadUInt32() != GlbMagic)
             throw new InvalidDataException("Not a glb file.");
@@ -41,16 +45,17 @@ public class GltfTuple {
         if (lbr.ReadUInt32() != GlbJsonMagic)
             throw new InvalidDataException("First entry must be a JSON file.");
 
-        Root = JsonConvert.DeserializeObject<GltfRoot>(lbr.ReadFString(jsonLength, Encoding.UTF8))
+        var root = JsonConvert.DeserializeObject<GltfRoot>(lbr.ReadFString(jsonLength, Encoding.UTF8))
             ?? throw new InvalidDataException("JSON was empty.");
 
         var dataLength = lbr.ReadInt32();
         if (lbr.ReadUInt32() != GlbDataMagic)
             throw new InvalidDataException("Second entry must be a data file.");
 
-        DataStream = new();
-        DataStream.SetLength(dataLength);
-        glbStream.ReadExactly(DataStream.GetBuffer().AsSpan(0, dataLength));
+        var res = new GltfTuple(root);
+        res.DataStream.SetLength(dataLength);
+        glbStream.ReadExactly(res.DataStream.GetBuffer().AsSpan(0, dataLength));
+        return res;
     }
 
     public ReadOnlySpan<byte> Data => DataStream.GetBuffer().AsSpan(0, (int) DataStream.Length);
@@ -232,4 +237,100 @@ public class GltfTuple {
                     }),
             });
     }
+
+    public byte[] ReadBufferView(int bufferViewIndex) {
+        var bufferView = Root.BufferViews[bufferViewIndex];
+        var buffer = Root.Buffers[bufferView.Buffer];
+        if (buffer.Uri is not null)
+            throw new NotImplementedException();
+        return DataStream.GetBuffer()[(int)bufferView.ByteOffset .. (int)bufferView.ByteOffsetTo];
+    }
+
+    public unsafe T[] ReadTypedArray<T>(int accessorIndex) where T : unmanaged {
+        var accessor = Root.Accessors[accessorIndex];
+        var bufferView = Root.BufferViews[accessor.BufferView];
+        var buffer = Root.Buffers[bufferView.Buffer];
+        if (buffer.Uri is not null)
+            throw new NotImplementedException();
+
+        var scalarSize = accessor.ComponentType switch {
+            GltfAccessorComponentTypes.s8 => 1,
+            GltfAccessorComponentTypes.u8 => 1,
+            GltfAccessorComponentTypes.s16 => 2,
+            GltfAccessorComponentTypes.u16 => 2,
+            GltfAccessorComponentTypes.u32 => 4,
+            GltfAccessorComponentTypes.f32 => 4,
+            _ => throw new NotSupportedException(),
+        };
+        var scalarCount = accessor.Type switch {
+            GltfAccessorTypes.Scalar => 1,
+            GltfAccessorTypes.Vec2 => 2,
+            GltfAccessorTypes.Vec3 => 3,
+            GltfAccessorTypes.Vec4 => 4,
+            GltfAccessorTypes.Mat2 => 4,
+            GltfAccessorTypes.Mat3 => 9,
+            GltfAccessorTypes.Mat4 => 16,
+            _ => throw new NotSupportedException(),
+        };
+        var elementSize = scalarCount * scalarSize;
+        if (elementSize != sizeof(T))
+            throw new InvalidOperationException();
+
+        var bytesSpan = DataStream.GetBuffer().AsSpan((int) bufferView.ByteOffset, (int) bufferView.ByteLength);
+        bytesSpan = bytesSpan.Slice((int) accessor.ByteOffset, accessor.Count * elementSize);
+
+        var res = new T[accessor.Count];
+        fixed (void* p = res)
+            bytesSpan.CopyTo(new(p, bytesSpan.Length));
+        return res;
+    }
+
+    public float[] ReadSingleArray(int accessorIndex) => Root.Accessors[accessorIndex].ComponentType switch {
+        GltfAccessorComponentTypes.f32 => ReadTypedArray<float>(accessorIndex),
+        _ => throw new InvalidOperationException(),
+    };
+
+    public Vector2[] ReadVector2Array(int accessorIndex) => Root.Accessors[accessorIndex].ComponentType switch {
+        GltfAccessorComponentTypes.f32 => ReadTypedArray<Vector2>(accessorIndex),
+        _ => throw new InvalidOperationException(),
+    };
+
+    public Vector3[] ReadVector3Array(int accessorIndex) => Root.Accessors[accessorIndex].ComponentType switch {
+        GltfAccessorComponentTypes.f32 => ReadTypedArray<Vector3>(accessorIndex),
+        _ => throw new InvalidOperationException(),
+    };
+
+    public Vector4[] ReadVector4Array(int accessorIndex) => Root.Accessors[accessorIndex].ComponentType switch {
+        GltfAccessorComponentTypes.f32 => ReadTypedArray<Vector4>(accessorIndex),
+        _ => throw new InvalidOperationException(),
+    };
+
+    public Quaternion[] ReadQuaternionArray(int accessorIndex) => Root.Accessors[accessorIndex].ComponentType switch {
+        GltfAccessorComponentTypes.f32 => ReadTypedArray<Quaternion>(accessorIndex),
+        _ => throw new InvalidOperationException(),
+    };
+
+    public Vector4<float>[] ReadVector4SingleArray(int accessorIndex) =>
+        Root.Accessors[accessorIndex].ComponentType switch {
+            GltfAccessorComponentTypes.f32 => ReadTypedArray<Vector4<float>>(accessorIndex),
+            _ => throw new InvalidOperationException(),
+        };
+
+    public Vector4<ushort>[] ReadVector4UInt16Array(int accessorIndex) =>
+        Root.Accessors[accessorIndex].ComponentType switch {
+            GltfAccessorComponentTypes.u8 => ReadTypedArray<Vector4<byte>>(accessorIndex)
+                .Select(x => new Vector4<ushort>(x.Select(y => (ushort) y))).ToArray(),
+            GltfAccessorComponentTypes.u16 => ReadTypedArray<Vector4<ushort>>(accessorIndex).ToArray(),
+            GltfAccessorComponentTypes.u32 => ReadTypedArray<Vector4<uint>>(accessorIndex)
+                .Select(x => new Vector4<ushort>(x.Select(y => checked((ushort) y)))).ToArray(),
+            _ => throw new InvalidOperationException(),
+        };
+
+    public ushort[] ReadUInt16Array(int accessorIndex) => Root.Accessors[accessorIndex].ComponentType switch {
+        GltfAccessorComponentTypes.u8 => ReadTypedArray<byte>(accessorIndex).Select(x => (ushort) x).ToArray(),
+        GltfAccessorComponentTypes.u16 => ReadTypedArray<ushort>(accessorIndex).Select(x => x).ToArray(),
+        GltfAccessorComponentTypes.u32 =>
+            ReadTypedArray<uint>(accessorIndex).Select(x => checked((ushort) x)).ToArray(),
+        _ => throw new InvalidOperationException(),
+    };
 }
