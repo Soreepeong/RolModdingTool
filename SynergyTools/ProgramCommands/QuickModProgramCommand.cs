@@ -136,7 +136,7 @@ public class QuickModProgramCommand : RootProgramCommand {
             "animations/characters/5_minibosses/metal_sonic/test/run.caf",
         ["animations/characters/1_heroes/sonic/final/run_8_notran.caf"] =
             "animations/characters/5_minibosses/metal_sonic/test/run.caf",
-        
+
         ["animations/characters/1_heroes/sonic/final/run_16.caf"] =
             "animations/characters/5_minibosses/metal_sonic/test/run.caf",
         ["animations/characters/1_heroes/sonic/final/run_30.caf"] =
@@ -527,9 +527,21 @@ public class QuickModProgramCommand : RootProgramCommand {
             }
 
             foreach (var refController in reference.Model.Controllers) {
-                if (sonic.Model.Controllers.SingleOrDefault(x => x.Id == refController.Id) is not null)
+                if (sonic.Model.Controllers.SingleOrDefault(x => x.Id == refController.Id) is { } existingController) {
+                    if (Mode == SonicClones.Metal && existingController.Name
+                            is not "L_ball_joint"
+                            and not "R_ball_joint"
+                            and not "L_ankle_joint"
+                            and not "R_ankle_joint"
+                            and not "_L_toe_joint"
+                            and not "_R_toe_joint"
+                            and not "C_pelvis_joint"
+                            and not "C_spine_1_joint"
+                            and not "C_torso_joint")
+                        existingController.BindPoseMatrix = refController.BindPoseMatrix;
                     continue;
-                
+                }
+
                 var parent = sonic.Model.Controllers.Single(x => x.Id == refController.Parent!.Id);
                 refController.CloneInto(parent, sonic.Model.Controllers);
             }
@@ -542,7 +554,7 @@ public class QuickModProgramCommand : RootProgramCommand {
                 var sonicMtl = level.GetEntry(sonic.Definition.Model!.Material!, SkinFlag.Sonic_Default);
                 var sonicMtlAlt = level.GetEntry(sonic.Definition.Model!.Material!, SkinFlag.Sonic_Alt);
                 var sonicDba = level.GetEntry(sonic.CharacterParameters!.TracksDatabasePath!);
-                
+
                 sonicChr.Source = new(geoBytes);
                 sonicMtl.Source = sonicMtlAlt.Source = new(matBytes);
                 sonicDba.Source = new(dbaBytes);
