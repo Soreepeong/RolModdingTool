@@ -538,7 +538,7 @@ public class QuickModProgramCommand : RootProgramCommand {
                             and not "C_pelvis_joint"
                             and not "C_spine_1_joint"
                             and not "C_torso_joint") {
-                        existingController.RelativeBindPoseMatrix = refController.RelativeBindPoseMatrix;
+                        existingController.AbsoluteBindPoseMatrix = refController.AbsoluteBindPoseMatrix;
                     }
 
                     continue;
