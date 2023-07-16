@@ -6,11 +6,9 @@ using SynergyLib.Util.MathExtras;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
 
-public struct ControllerKeyPosition {
+public class ControllerKeyPosition {
     public CompressionFormat Format;
     public Vector3[] Data = Array.Empty<Vector3>();
-
-    public ControllerKeyPosition() { }
 
     public void ReadFrom(NativeReader b, CompressionFormat format, int length) {
         var data = new Vector3[length];

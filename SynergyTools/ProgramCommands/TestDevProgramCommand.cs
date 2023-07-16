@@ -1,4 +1,5 @@
-﻿using System.CommandLine;
+﻿using System.Collections.Generic;
+using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO;
@@ -7,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using SynergyLib.FileFormat;
 using SynergyLib.FileFormat.CryEngine;
-using SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 
 namespace SynergyTools.ProgramCommands;
 
@@ -28,8 +28,10 @@ public class TestDevProgramCommand : RootProgramCommand {
     }
 
     public async Task<int> Handle(CancellationToken cancellationToken) {
+        // const string strmPath = @"C:\Tools\cemu\mlc01\usr\title\00050000\10175b00\content\Sonic_Crytek\Levels\level05_sunkenruins.wiiu.stream";
+        const string strmPath = @"C:\Tools\cemu\mlc01\usr\title\0005000e\10175b00\content\Sonic_Crytek\Levels\hub01_excavationsite.wiiu.stream";
         var wiiu = new WiiuStreamFile();
-        wiiu.ReadFrom(null, @"C:\Tools\cemu\mlc01\usr\title\00050000\10175b00\content\Sonic_Crytek\Levels\level05_sunkenruins.wiiu.stream.bak", cancellationToken);
+        wiiu.ReadFrom(null, $"{strmPath}.bak", cancellationToken);
 
         var sonicBase = Path.Join("objects", "characters", "1_heroes", "sonic", "sonic");
         var sonic = new CryCharacter(
@@ -51,10 +53,64 @@ public class TestDevProgramCommand : RootProgramCommand {
         sonic.Attachments.AddRange(shadow.Attachments);
         sonic.Definition!.Attachments!.AddRange(shadow.Definition!.Attachments!);
 
+        var animMaps = new Dictionary<string, string> {
+            ["animations/characters/1_heroes/sonic/final/additive/rec_add.caf"] =
+                "animations/characters/5_minibosses/shadow/final/additive/rec_high_add.caf",
+            
+            ["animations/characters/1_heroes/sonic/final/msc_taunt.caf"] =
+                "animations/characters/5_minibosses/shadow/final/msc/msc_taunt01.caf",
+            
+            ["animations/characters/1_heroes/sonic/final/combat_idle.caf"] =
+                "animations/characters/5_minibosses/shadow/final/nav/nav_idle.caf",
+            
+            ["animations/characters/1_heroes/sonic/final/atk_pri_01.caf"] =
+                "animations/characters/5_minibosses/shadow/final/atk/atk_flip_kick.caf",
+            ["animations/characters/1_heroes/sonic/final/atk_pri_02.caf"] =
+                "animations/characters/5_minibosses/shadow/final/atk/atk_roundhouse.caf",
+            ["animations/characters/1_heroes/sonic/final/atk_pri_03.caf"] =
+                "animations/characters/5_minibosses/shadow/final/atk/atk_rush.caf",
+            
+            ["animations/characters/1_heroes/sonic/final/run_fast.caf"] =
+                "animations/characters/5_minibosses/shadow/final/nav/nav_skate_fwd.caf",
+            ["animations/characters/1_heroes/sonic/final/run_fast_attack.caf"] =
+                "animations/characters/5_minibosses/shadow/final/atk/atk_rush.caf",
+            ["animations/characters/1_heroes/sonic/final/run_fast_dash_left.caf"] =
+                "animations/characters/5_minibosses/shadow/final/nav/nav_skate_left.caf",
+            ["animations/characters/1_heroes/sonic/final/run_fast_dash_right.caf"] =
+                "animations/characters/5_minibosses/shadow/final/nav/nav_skate_right.caf",
+            
+            ["animations/characters/1_heroes/sonic/final/run_16.caf"] =
+                "animations/characters/5_minibosses/shadow/final/nav/nav_fly_strafe_f.caf",
+            ["animations/characters/1_heroes/sonic/final/run_16_left.caf"] =
+                "animations/characters/5_minibosses/shadow/final/nav/nav_fly_strafe_l.caf",
+            ["animations/characters/1_heroes/sonic/final/run_16_right.caf"] =
+                "animations/characters/5_minibosses/shadow/final/nav/nav_fly_strafe_r.caf",
+            ["animations/characters/1_heroes/sonic/final/run_30.caf"] =
+                "animations/characters/5_minibosses/shadow/final/nav/nav_fly_strafe_f.caf",
+            ["animations/characters/1_heroes/sonic/final/run_30_left.caf"] =
+                "animations/characters/5_minibosses/shadow/final/nav/nav_fly_strafe_l.caf",
+            ["animations/characters/1_heroes/sonic/final/run_30_right.caf"] =
+                "animations/characters/5_minibosses/shadow/final/nav/nav_fly_strafe_r.caf",
+            
+            ["animations/characters/1_heroes/sonic/final/warthog_idle.caf"] = "animations/characters/5_minibosses/shadow/final/nav/nav_fly_idle.caf",
+            ["animations/characters/1_heroes/sonic/final/warthog_run.caf"] = "animations/characters/5_minibosses/shadow/final/nav/nav_fly_strafe_f.caf",
+            ["animations/characters/1_heroes/sonic/final/warthog_run_lean_left.caf"] = "animations/characters/5_minibosses/shadow/final/nav/nav_fly_strafe_l.caf",
+            ["animations/characters/1_heroes/sonic/final/warthog_run_lean_right.caf"] = "animations/characters/5_minibosses/shadow/final/nav/nav_fly_strafe_r.caf",
+        };
+
+        foreach (var (a, b) in animMaps) {
+            sonic.CryAnimationDatabase!.Animations[a] = shadow.CryAnimationDatabase!.Animations[b];
+        }
+        
         wiiu.GetEntry(sonicBase + ".chr").Source = new(sonic.Model.GetGeometryBytes());
+        wiiu.GetEntry(sonic.CharacterParameters!.TracksDatabasePath!).Source = new(sonic.CryAnimationDatabase!.GetBytes());
+        var test = new CryAnimationDatabase(new MemoryStream(sonic.CryAnimationDatabase!.GetBytes()));
+        
+        Debugger.Break();
+
         wiiu.GetEntry(sonicBase + ".mtl", SkinFlag.Sonic_Default).Source = new(sonic.Model.GetMaterialBytes());
         await CompressProgramCommand.WriteAndPrintProgress(
-            @"C:\Tools\cemu\mlc01\usr\title\00050000\10175b00\content\Sonic_Crytek\Levels\level05_sunkenruins.wiiu.stream",
+            strmPath,
             wiiu,
             default,
             cancellationToken);

@@ -10,15 +10,13 @@ using SynergyLib.Util.BinaryRW;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
 
-public struct ControllerKeyRotation : IReadOnlyList<Quaternion> {
+public class ControllerKeyRotation : IReadOnlyList<Quaternion> {
     public CompressionFormat Format;
     public byte[] RawData = Array.Empty<byte>();
 
     static ControllerKeyRotation() {
         Debug.Assert(Unsafe.SizeOf<Quaternion>() == 16);
     }
-
-    public ControllerKeyRotation() { }
 
     public Quaternion this[int index] {
         get => Format switch {

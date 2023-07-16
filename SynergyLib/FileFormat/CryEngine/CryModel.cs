@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Text;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Enums;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
@@ -646,7 +647,7 @@ public class CryModel {
         chunks.WriteTo(writer);
     }
 
-    public void WriteGeometryTo(Stream stream) => WriteGeometryTo(new NativeWriter(stream));
+    public void WriteGeometryTo(Stream stream) => WriteGeometryTo(new NativeWriter(stream, Encoding.UTF8, true));
     
     public byte[] GetGeometryBytes() {
         var ms = new MemoryStream();

@@ -12,10 +12,10 @@ namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 
 public class ControllerChunk : ICryChunk {
     public ChunkHeader Header { get; set; } = new();
-    public readonly List<ControllerKeyTime> KeyTimes = new();
-    public readonly List<ControllerKeyPosition> KeyPositions = new();
-    public readonly List<ControllerKeyRotation> KeyRotations = new();
-    public readonly List<ControllerGroup> Animations = new();
+    public List<ControllerKeyTime> KeyTimes = new();
+    public List<ControllerKeyPosition> KeyPositions = new();
+    public List<ControllerKeyRotation> KeyRotations = new();
+    public List<ControllerGroup> Animations = new();
     public int TrailingPaddingSize;
 
     public void ReadFrom(NativeReader reader, int expectedSize) {

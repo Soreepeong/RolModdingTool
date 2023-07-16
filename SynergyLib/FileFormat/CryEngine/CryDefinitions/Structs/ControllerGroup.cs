@@ -10,7 +10,7 @@ public struct ControllerGroup : ICryReadWrite {
     public string Name = string.Empty;
     public ControllerMotionParams MotionParams;
     public byte[] FootPlanBits = Array.Empty<byte>();
-    public readonly List<ControllerTrack> Controllers = new();
+    public List<ControllerTrack> Controllers = new();
 
     public ControllerGroup() { }
 

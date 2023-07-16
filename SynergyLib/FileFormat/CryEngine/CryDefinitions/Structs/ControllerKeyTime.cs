@@ -6,11 +6,9 @@ using SynergyLib.Util.BinaryRW;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
 
-public struct ControllerKeyTime {
+public class ControllerKeyTime {
     public KeyTimesFormat Format;
     public float[] Data = Array.Empty<float>();
-
-    public ControllerKeyTime() { }
 
     public void ReadFrom(NativeReader b, KeyTimesFormat format, int length) {
         float[] data;

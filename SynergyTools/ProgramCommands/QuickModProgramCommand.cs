@@ -77,6 +77,72 @@ public class QuickModProgramCommand : RootProgramCommand {
         ["Sonic_warthog_running"] = "",
     };
 
+    public static readonly Dictionary<string, string> SonicToShadowAnimationMap = new() {
+        ["animations/characters/1_heroes/sonic/final/additive/rec_add.caf"] =
+            "animations/characters/5_minibosses/shadow/final/additive/rec_high_add.caf",
+
+        ["animations/characters/1_heroes/sonic/final/msc_taunt.caf"] =
+            "animations/characters/5_minibosses/shadow/final/msc/msc_taunt01.caf",
+
+        ["animations/characters/1_heroes/sonic/final/combat_idle.caf"] =
+            "animations/characters/5_minibosses/shadow/final/nav/nav_idle.caf",
+
+        ["animations/characters/1_heroes/sonic/final/atk_pri_01.caf"] =
+            "animations/characters/5_minibosses/shadow/final/atk/atk_flip_kick.caf",
+        ["animations/characters/1_heroes/sonic/final/atk_pri_02.caf"] =
+            "animations/characters/5_minibosses/shadow/final/atk/atk_roundhouse.caf",
+        ["animations/characters/1_heroes/sonic/final/atk_pri_03.caf"] =
+            "animations/characters/5_minibosses/shadow/final/atk/atk_rush.caf",
+
+        ["animations/characters/1_heroes/sonic/final/run_fast.caf"] =
+            "animations/characters/5_minibosses/shadow/final/nav/nav_skate_fwd.caf",
+        ["animations/characters/1_heroes/sonic/final/run_fast_attack.caf"] =
+            "animations/characters/5_minibosses/shadow/final/atk/atk_rush.caf",
+        ["animations/characters/1_heroes/sonic/final/run_fast_dash_left.caf"] =
+            "animations/characters/5_minibosses/shadow/final/nav/nav_skate_left.caf",
+        ["animations/characters/1_heroes/sonic/final/run_fast_dash_right.caf"] =
+            "animations/characters/5_minibosses/shadow/final/nav/nav_skate_right.caf",
+
+        ["animations/characters/1_heroes/sonic/final/run_16.caf"] =
+            "animations/characters/5_minibosses/shadow/final/nav/nav_fly_strafe_f.caf",
+        ["animations/characters/1_heroes/sonic/final/run_16_left.caf"] =
+            "animations/characters/5_minibosses/shadow/final/nav/nav_fly_strafe_l.caf",
+        ["animations/characters/1_heroes/sonic/final/run_16_right.caf"] =
+            "animations/characters/5_minibosses/shadow/final/nav/nav_fly_strafe_r.caf",
+        ["animations/characters/1_heroes/sonic/final/run_30.caf"] =
+            "animations/characters/5_minibosses/shadow/final/nav/nav_fly_strafe_f.caf",
+        ["animations/characters/1_heroes/sonic/final/run_30_left.caf"] =
+            "animations/characters/5_minibosses/shadow/final/nav/nav_fly_strafe_l.caf",
+        ["animations/characters/1_heroes/sonic/final/run_30_right.caf"] =
+            "animations/characters/5_minibosses/shadow/final/nav/nav_fly_strafe_r.caf",
+
+        ["animations/characters/1_heroes/sonic/final/warthog_idle.caf"] =
+            "animations/characters/5_minibosses/shadow/final/nav/nav_fly_idle.caf",
+        ["animations/characters/1_heroes/sonic/final/warthog_run.caf"] =
+            "animations/characters/5_minibosses/shadow/final/nav/nav_fly_strafe_f.caf",
+        ["animations/characters/1_heroes/sonic/final/warthog_run_lean_left.caf"] =
+            "animations/characters/5_minibosses/shadow/final/nav/nav_fly_strafe_l.caf",
+        ["animations/characters/1_heroes/sonic/final/warthog_run_lean_right.caf"] =
+            "animations/characters/5_minibosses/shadow/final/nav/nav_fly_strafe_r.caf",
+    };
+
+    public static readonly Dictionary<string, string> SonicToMetalAnimationMap = new() {
+        ["animations/characters/1_heroes/sonic/final/combat_idle.caf"] =
+            "animations/characters/5_minibosses/metal_sonic/test/combat_idle.caf",
+
+        ["animations/characters/1_heroes/sonic/final/run_5.caf"] =
+            "animations/characters/5_minibosses/metal_sonic/test/run.caf",
+        ["animations/characters/1_heroes/sonic/final/run_8.caf"] =
+            "animations/characters/5_minibosses/metal_sonic/test/run.caf",
+        ["animations/characters/1_heroes/sonic/final/run_8_notran.caf"] =
+            "animations/characters/5_minibosses/metal_sonic/test/run.caf",
+        
+        ["animations/characters/1_heroes/sonic/final/run_16.caf"] =
+            "animations/characters/5_minibosses/metal_sonic/test/run.caf",
+        ["animations/characters/1_heroes/sonic/final/run_30.caf"] =
+            "animations/characters/5_minibosses/metal_sonic/test/run.caf",
+    };
+
     static QuickModProgramCommand() {
         Command.AddAlias("qm");
         Command.AddAlias("metadow");
@@ -436,6 +502,8 @@ public class QuickModProgramCommand : RootProgramCommand {
                 ReferenceObjectBaseName);
             var sonicMaterials = sonic.Model.Material.SubMaterials ?? throw new InvalidDataException();
             var referenceMaterials = reference.Model.Material.SubMaterials ?? throw new InvalidDataException();
+            sonicMaterials.RemoveAll(x => referenceMaterials.Any(y => y.Name == x.Name));
+            sonicMaterials.AddRange(referenceMaterials);
 
             sonic.Model.Meshes.Clear();
             sonic.Model.Meshes.AddRange(reference.Model.Meshes.Select(x => x.Clone()));
@@ -446,19 +514,12 @@ public class QuickModProgramCommand : RootProgramCommand {
                 sonic.Definition.Attachments.AddRange(reference.Definition.Attachments);
             switch (Mode) {
                 case SonicClones.Shadow:
-                    sonicMaterials.RemoveAll(x => x.Name == "SonicHead_M");
-                    sonicMaterials.RemoveAll(x => x.Name == "SonicBody_M1");
-                    sonicMaterials.Add(referenceMaterials.Single(x => x.Name == "Shadow_Head_M"));
-                    sonicMaterials.Add(referenceMaterials.Single(x => x.Name == "Shadow_Body_M"));
+                    foreach (var (a, b) in SonicToShadowAnimationMap)
+                        sonic.CryAnimationDatabase!.Animations[a] = reference.CryAnimationDatabase!.Animations[b];
                     break;
                 case SonicClones.MetalSonic:
-                    sonicMaterials.RemoveAll(x => x.Name == "eyeL_m");
-                    sonicMaterials.RemoveAll(x => x.Name == "eyeR_m");
-                    sonicMaterials.RemoveAll(x => x.Name == "SonicHead_M");
-                    sonicMaterials.RemoveAll(x => x.Name == "SonicBody_M1");
-                    sonicMaterials.Add(referenceMaterials.Single(x => x.Name == "L_eye_M"));
-                    sonicMaterials.Add(referenceMaterials.Single(x => x.Name == "R_eye_M"));
-                    sonicMaterials.Add(referenceMaterials.Single(x => x.Name == "Metal_Sonic_M"));
+                    foreach (var (a, b) in SonicToMetalAnimationMap)
+                        sonic.CryAnimationDatabase!.Animations[a] = reference.CryAnimationDatabase!.Animations[b];
                     break;
                 case SonicClones.Sonic:
                 default:
@@ -475,12 +536,16 @@ public class QuickModProgramCommand : RootProgramCommand {
 
             var geoBytes = sonic.Model.GetGeometryBytes();
             var matBytes = sonic.Model.GetMaterialBytes();
+            var dbaBytes = sonic.CryAnimationDatabase!.GetBytes();
             foreach (var level in Levels.Values) {
-                var sonicChr = level.GetEntry($"{SonicBaseName}.chr");
-                var sonicMtl = level.GetEntry($"{SonicBaseName}.mtl", SkinFlag.Sonic_Default);
-                var sonicMtlAlt = level.GetEntry($"{SonicBaseName}.mtl", SkinFlag.Sonic_Alt);
+                var sonicChr = level.GetEntry(sonic.Definition.Model!.File!);
+                var sonicMtl = level.GetEntry(sonic.Definition.Model!.Material!, SkinFlag.Sonic_Default);
+                var sonicMtlAlt = level.GetEntry(sonic.Definition.Model!.Material!, SkinFlag.Sonic_Alt);
+                var sonicDba = level.GetEntry(sonic.CharacterParameters!.TracksDatabasePath!);
+                
                 sonicChr.Source = new(geoBytes);
                 sonicMtl.Source = sonicMtlAlt.Source = new(matBytes);
+                sonicDba.Source = new(dbaBytes);
             }
         },
         cancellationToken);
