@@ -1,9 +1,6 @@
-﻿using System.Collections.Generic;
-using System.CommandLine;
+﻿using System.CommandLine;
 using System.CommandLine.Parsing;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SynergyLib.FileFormat;
@@ -53,7 +50,7 @@ public class TestDevProgramCommand : RootProgramCommand {
         // var shadow = new CryCharacter(
         //     x => File.OpenRead(Path.Join(InPath, "Sonic_Crytek", "Levels", "level02_ancientfactorypresent_a", x)),
         //     Path.Join("objects", "characters", "5_minibosses", "shadow", "shadow"));
-        var metal = new CryCharacter(
+        var metal = CryCharacter.FromCryEngineFiles(
             CascadingReader,
             Path.Join("objects", "characters", "5_minibosses", "metal_sonic", "metal_sonic"));
         await using var os = File.Create("Z:/ROL3D/metal.glb");

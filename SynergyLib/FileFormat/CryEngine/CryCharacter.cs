@@ -24,35 +24,51 @@ public class CryCharacter {
     public CharacterParameters? CharacterParameters;
     public CryAnimationDatabase? CryAnimationDatabase;
     public List<CryModel> Attachments = new();
+    
+    public CryCharacter(CryModel model) {
+        Model = model;
+    }
 
-    public CryCharacter(Func<string, Stream> streamOpener, string baseName) {
+    public static CryCharacter FromCryEngineFiles(Func<string, Stream> streamOpener, string baseName) {
+        CharacterDefinition? definition = null;
+        CryModel model;
         try {
-            Definition = PbxmlFile.FromStream(streamOpener($"{baseName}.cdf")).DeserializeAs<CharacterDefinition>();
-            if (Definition.Model is null)
+            definition = PbxmlFile.FromStream(streamOpener($"{baseName}.cdf")).DeserializeAs<CharacterDefinition>();
+            if (definition.Model is null)
                 throw new InvalidDataException("Definition.Model should not be null");
-            if (Definition.Model.File is null)
+            if (definition.Model.File is null)
                 throw new InvalidDataException("Definition.Model.File should not be null");
-            if (Definition.Model.Material is null)
+            if (definition.Model.Material is null)
                 throw new InvalidDataException("Definition.Model.Material should not be null");
 
-            Model = new(streamOpener(Definition.Model.File), streamOpener(Definition.Model.Material));
-            foreach (var d in (IEnumerable<Attachment>?) Definition.Attachments ?? Array.Empty<Attachment>()) {
+            model = CryModel.FromCryEngineFiles(
+                streamOpener(definition.Model.File),
+                streamOpener(definition.Model.Material));
+        } catch (FileNotFoundException) {
+            model = CryModel.FromCryEngineFiles(streamOpener($"{baseName}.chr"), streamOpener($"{baseName}.mtl"));
+        }
+        
+        var res = new CryCharacter(model) {
+            Definition = definition
+        };
+        if (definition is not null) {
+            foreach (var d in (IEnumerable<Attachment>?) definition.Attachments ?? Array.Empty<Attachment>()) {
                 if (d.Binding is null)
                     throw new InvalidDataException("Attachment.Binding should not be null");
                 if (d.Material is null)
                     throw new InvalidDataException("Attachment.Material should not be null");
-                Attachments.Add(new(streamOpener(d.Binding), streamOpener(d.Material)));
+                res.Attachments.Add(CryModel.FromCryEngineFiles(streamOpener(d.Binding), streamOpener(d.Material)));
             }
-        } catch (FileNotFoundException) {
-            Model = new(streamOpener($"{baseName}.chr"), streamOpener($"{baseName}.mtl"));
         }
 
         try {
-            CharacterParameters = PbxmlFile.FromStream(streamOpener($"{baseName}.chrparams"))
+            res.CharacterParameters = PbxmlFile.FromStream(streamOpener($"{baseName}.chrparams"))
                 .DeserializeAs<CharacterParameters>();
-            if (CharacterParameters.TracksDatabasePath is not null)
-                CryAnimationDatabase = new(streamOpener(CharacterParameters.TracksDatabasePath));
+            if (res.CharacterParameters.TracksDatabasePath is not null)
+                res.CryAnimationDatabase = new(streamOpener(res.CharacterParameters.TracksDatabasePath));
         } catch (FileNotFoundException) { }
+
+        return res;
     }
 
     public GltfTuple ToGltf(Func<string, Stream> streamOpener) {
@@ -61,14 +77,13 @@ public class CryCharacter {
         res.Root.ExtensionsUsed.Add("KHR_materials_pbrSpecularGlossiness");
         res.Root.ExtensionsUsed.Add("KHR_materials_emissive_strength");
 
-        var cryModel = Model;
         var rootNode = new GltfNode {
-            Name = cryModel.Name,
-            Skin = cryModel.Controllers.Any() ? res.Root.Skins.AddAndGetIndex(new() {Joints = new()}) : null
+            Name = Model.Name,
+            Skin = Model.Controllers.Any() ? res.Root.Skins.AddAndGetIndex(new() {Joints = new()}) : null
         };
-        var controllerIdToNodeIndex = new Dictionary<uint, int>(cryModel.Controllers.Count);
+        var controllerIdToNodeIndex = new Dictionary<uint, int>(Model.Controllers.Count);
         if (rootNode.Skin is { } skinIndex) {
-            var controllersSorted = cryModel.Controllers.OrderBy(x => x.Depth).ToArray();
+            var controllersSorted = Model.Controllers.OrderBy(x => x.Depth).ToArray();
             var controllerIdToBindPoseMatrices = new Dictionary<uint, Matrix4x4>(controllersSorted.Length);
             foreach (var i in Enumerable.Range(0, controllersSorted.Length)) {
                 ref var controller = ref controllersSorted[i];
@@ -109,19 +124,19 @@ public class CryCharacter {
                 controllersSorted.Select(x => SwapAxes(x.BindPoseMatrix).Normalize()).ToArray().AsSpan());
         }
 
-        var fullIndices = new ushort[cryModel.Meshes.Sum(x => x.Indices.Length)];
-        for (int i = 0, baseIndex = 0, baseVertex = 0; i < cryModel.Meshes.Count; i++) {
-            for (var j = 0; j < cryModel.Meshes[i].Indices.Length; j++)
-                fullIndices[baseIndex + j] = (ushort) (baseVertex + cryModel.Meshes[i].Indices[j]);
+        var fullIndices = new ushort[Model.Meshes.Sum(x => x.Indices.Length)];
+        for (int i = 0, baseIndex = 0, baseVertex = 0; i < Model.Meshes.Count; i++) {
+            for (var j = 0; j < Model.Meshes[i].Indices.Length; j++)
+                fullIndices[baseIndex + j] = (ushort) (baseVertex + Model.Meshes[i].Indices[j]);
 
-            baseIndex += cryModel.Meshes[i].Indices.Length;
-            baseVertex += cryModel.Meshes[i].Vertices.Length;
+            baseIndex += Model.Meshes[i].Indices.Length;
+            baseVertex += Model.Meshes[i].Vertices.Length;
         }
 
         var mesh = new GltfMesh();
         var decoder = new BcDecoder();
-        foreach (var cryMesh in cryModel.Meshes) {
-            var cryMaterial = cryModel.Material.SubMaterials!.Single(x => x.Name == cryMesh.MaterialName);
+        foreach (var cryMesh in Model.Meshes) {
+            var cryMaterial = Model.Material.SubMaterials!.Single(x => x.Name == cryMesh.MaterialName);
 
             Image<Rgba32>? diffuseRaw = null;
             Image<Rgba32>? normalRaw = null;
@@ -139,13 +154,16 @@ public class CryCharacter {
 
                 switch (texture.Map) {
                     case Texture.MapTypeEnum.Diffuse:
-                        diffuseRaw = decoder.DecodeToImageRgba32(streamOpener(Path.ChangeExtension(texture.File, ".dds")));
+                        diffuseRaw =
+                            decoder.DecodeToImageRgba32(streamOpener(Path.ChangeExtension(texture.File, ".dds")));
                         break;
                     case Texture.MapTypeEnum.Normals:
-                        normalRaw = decoder.DecodeToImageRgba32(streamOpener(Path.ChangeExtension(texture.File, ".dds")));
+                        normalRaw = decoder.DecodeToImageRgba32(
+                            streamOpener(Path.ChangeExtension(texture.File, ".dds")));
                         break;
                     case Texture.MapTypeEnum.Specular:
-                        specularRaw = decoder.DecodeToImageRgba32(streamOpener(Path.ChangeExtension(texture.File, ".dds")));
+                        specularRaw =
+                            decoder.DecodeToImageRgba32(streamOpener(Path.ChangeExtension(texture.File, ".dds")));
                         break;
                 }
             }

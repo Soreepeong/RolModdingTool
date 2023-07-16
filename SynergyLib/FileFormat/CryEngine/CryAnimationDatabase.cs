@@ -55,7 +55,7 @@ public class CryAnimationDatabase {
             .SelectMany(x => x.Tracks.Values.Select(y => y.Rotation))
             .Distinct()
             .Where(x => x is not null)
-            .OrderBy(x => x.Format)
+            .OrderBy(x => x!.Format)
             .Cast<ControllerKeyRotation>()
             .ToList();
         var rotDict = rot
@@ -67,7 +67,7 @@ public class CryAnimationDatabase {
                     .Concat(x.Tracks.Values.Select(y => y.RotationTime)))
             .Distinct()
             .Where(x => x is not null)
-            .OrderBy(x => x.Format)
+            .OrderBy(x => x!.Format)
             .Cast<ControllerKeyTime>()
             .ToList();
         var timeDict = time

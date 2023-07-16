@@ -492,12 +492,12 @@ public class QuickModProgramCommand : RootProgramCommand {
 
     private Task PatchSonicModel(CancellationToken cancellationToken) => Task.Run(
         () => {
-            var sonic = new CryCharacter(
+            var sonic = CryCharacter.FromCryEngineFiles(
                 x => new MemoryStream(
                     (ReferenceLevel.TryGetEntry(out var e, x, SkinFlag.Sonic_Default) ? e : ReferenceLevel.GetEntry(x))
                     .Source.ReadRaw()),
                 SonicBaseName);
-            var reference = new CryCharacter(
+            var reference = CryCharacter.FromCryEngineFiles(
                 x => new MemoryStream(ReferenceLevel.GetEntry(x).Source.ReadRaw()),
                 ReferenceObjectBaseName);
             var sonicMaterials = sonic.Model.Material.SubMaterials ?? throw new InvalidDataException();
