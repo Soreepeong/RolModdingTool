@@ -432,6 +432,8 @@ public class CryCharacter {
     }
 
     public static CryCharacter FromCryEngineFiles(Func<string, Stream> streamOpener, string baseName) {
+        if (Path.GetExtension(baseName).ToLowerInvariant() is ".cdf" or ".cgf" or ".chr")
+            baseName = Path.ChangeExtension(baseName, null);
         CharacterDefinition? definition = null;
         CryModel model;
         try {
