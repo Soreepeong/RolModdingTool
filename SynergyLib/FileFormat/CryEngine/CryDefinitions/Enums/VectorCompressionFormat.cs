@@ -1,6 +1,6 @@
 ﻿namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Enums;
 
-public enum CompressionFormat {
+public enum VectorCompressionFormat {
     NoCompress = 0,
     NoCompressQuat = 1,
     NoCompressVec3 = 2,

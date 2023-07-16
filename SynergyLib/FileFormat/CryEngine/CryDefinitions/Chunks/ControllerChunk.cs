@@ -39,8 +39,8 @@ public class ControllerChunk : ICryChunk {
             var keyPosLengths = new ushort[numKeyPos];
             var keyRotLengths = new ushort[numKeyRot];
             var keyTimeFormats = new int[(int) KeyTimesFormat.Bitset + 1];
-            var keyPosFormats = new int[(int) CompressionFormat.SmallTreeQuat64Ext + 1];
-            var keyRotFormats = new int[(int) CompressionFormat.SmallTreeQuat64Ext + 1];
+            var keyPosFormats = new int[(int) VectorCompressionFormat.SmallTreeQuat64Ext + 1];
+            var keyRotFormats = new int[(int) VectorCompressionFormat.SmallTreeQuat64Ext + 1];
 
             reader.ReadIntoSpan(keyTimeLengths);
             reader.ReadIntoSpan(keyTimeFormats);
@@ -101,7 +101,7 @@ public class ControllerChunk : ICryChunk {
                 keyPosFormats[j]--;
 
                 var c = new ControllerKeyPosition();
-                c.ReadFrom(reader, (CompressionFormat) j, keyPosLengths[i]);
+                c.ReadFrom(reader, (VectorCompressionFormat) j, keyPosLengths[i]);
                 KeyPositions.Add(c);
             }
 
@@ -119,7 +119,7 @@ public class ControllerChunk : ICryChunk {
                 keyRotFormats[j]--;
 
                 var c = new ControllerKeyRotation();
-                c.ReadFrom(reader, (CompressionFormat) j, keyRotLengths[i]);
+                c.ReadFrom(reader, (VectorCompressionFormat) j, keyRotLengths[i]);
                 KeyRotations.Add(c);
             }
 
@@ -156,12 +156,12 @@ public class ControllerChunk : ICryChunk {
 
             foreach (var x in KeyPositions)
                 writer.Write(checked((ushort) x.Data.Length));
-            for (var i = 0; i <= (int) CompressionFormat.SmallTreeQuat64Ext; i++)
+            for (var i = 0; i <= (int) VectorCompressionFormat.SmallTreeQuat64Ext; i++)
                 writer.Write(KeyPositions.Count(x => (int) x.Format == i));
 
             foreach (var x in KeyRotations)
                 writer.Write(checked((ushort) x.Count));
-            for (var i = 0; i <= (int) CompressionFormat.SmallTreeQuat64Ext; i++)
+            for (var i = 0; i <= (int) VectorCompressionFormat.SmallTreeQuat64Ext; i++)
                 writer.Write(KeyRotations.Count(x => (int) x.Format == i));
 
             var innerOffset = 0;
@@ -214,7 +214,7 @@ public class ControllerChunk : ICryChunk {
                 // Lengths
                 2 * (KeyTimes.Count + KeyPositions.Count + KeyRotations.Count) +
                 // Formats
-                4 * ((int) KeyTimesFormat.Bitset + 1 + (int) CompressionFormat.SmallTreeQuat64Ext * 2 + 2) +
+                4 * ((int) KeyTimesFormat.Bitset + 1 + (int) VectorCompressionFormat.SmallTreeQuat64Ext * 2 + 2) +
                 // Offsets
                 4 * (KeyTimes.Count + KeyPositions.Count + KeyRotations.Count) +
                 // Track Length

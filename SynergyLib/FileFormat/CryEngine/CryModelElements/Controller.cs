@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
-using SynergyLib.Util;
 using SynergyLib.Util.MathExtras;
 
 namespace SynergyLib.FileFormat.CryEngine.CryModelElements;
@@ -27,6 +26,8 @@ public class Controller {
         Parent?.Children.Add(this);
     }
 
+    public int Depth => 1 + (Parent?.Depth ?? 0);
+
     public Matrix4x4 InverseBindPoseMatrix =>
         Matrix4x4.Invert(BindPoseMatrix, out var res) ? res : throw new InvalidOperationException();
 
@@ -45,7 +46,7 @@ public class Controller {
                 new(
                     compiledBone.ControllerId,
                     compiledBone.Name,
-                    compiledBone.LocalTransformMatrix.Transformation,
+                    Matrix4x4.Transpose(compiledBone.LocalTransformMatrix.Transformation),
                     compiledBone.ParentOffset == 0
                         ? null
                         : controllers[controllers.Count + compiledBone.ParentOffset]));
@@ -71,13 +72,13 @@ public class Controller {
                     ChildOffset = 0,
                     ControllerId = controller.Id,
                     LimbId = uint.MaxValue,
-                    LocalTransformMatrix = Matrix3x4.CreateFromMatrix4x4(controller.BindPoseMatrix),
+                    LocalTransformMatrix = Matrix3x4.CreateFromMatrix4x4(Matrix4x4.Transpose(controller.BindPoseMatrix)),
                     Mass = 0,
                     Name = controller.Name,
                     ParentOffset = controller.Parent is null ? bones.Count : parentIndex - bones.Count,
                     PhysicsLive = new(),
                     PhysicsDead = default,
-                    WorldTransformMatrix = Matrix3x4.CreateFromMatrix4x4(controller.InverseBindPoseMatrix),
+                    WorldTransformMatrix = Matrix3x4.CreateFromMatrix4x4(Matrix4x4.Transpose(controller.InverseBindPoseMatrix)),
                 });
             pendingControllers.AddRange(controller.Children.Select(x => (controller: x, bones.Count - 1)));
         }

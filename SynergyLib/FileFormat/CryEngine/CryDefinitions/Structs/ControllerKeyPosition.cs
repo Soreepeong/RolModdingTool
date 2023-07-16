@@ -7,24 +7,24 @@ using SynergyLib.Util.MathExtras;
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
 
 public class ControllerKeyPosition {
-    public CompressionFormat Format;
+    public VectorCompressionFormat Format;
     public Vector3[] Data = Array.Empty<Vector3>();
 
-    public void ReadFrom(NativeReader b, CompressionFormat format, int length) {
+    public void ReadFrom(NativeReader b, VectorCompressionFormat format, int length) {
         var data = new Vector3[length];
         switch (format) {
-            case CompressionFormat.NoCompressVec3:
+            case VectorCompressionFormat.NoCompressVec3:
                 for (var i = 0; i < length; i++)
                     data[i] = b.ReadVector3();
                 break;
-            case CompressionFormat.NoCompress:
-            case CompressionFormat.NoCompressQuat:
-            case CompressionFormat.ShortInt3Quat:
-            case CompressionFormat.SmallTreeQuat32:
-            case CompressionFormat.SmallTreeQuat48:
-            case CompressionFormat.SmallTreeQuat64:
-            case CompressionFormat.PolarQuat:
-            case CompressionFormat.SmallTreeQuat64Ext:
+            case VectorCompressionFormat.NoCompress:
+            case VectorCompressionFormat.NoCompressQuat:
+            case VectorCompressionFormat.ShortInt3Quat:
+            case VectorCompressionFormat.SmallTreeQuat32:
+            case VectorCompressionFormat.SmallTreeQuat48:
+            case VectorCompressionFormat.SmallTreeQuat64:
+            case VectorCompressionFormat.PolarQuat:
+            case VectorCompressionFormat.SmallTreeQuat64Ext:
             default:
                 throw new ArgumentOutOfRangeException(nameof(format), format, null);
         }
@@ -35,33 +35,33 @@ public class ControllerKeyPosition {
 
     public void WriteTo(NativeWriter w) {
         switch (Format) {
-            case CompressionFormat.NoCompressVec3:
+            case VectorCompressionFormat.NoCompressVec3:
                 foreach (var v in Data)
                     w.Write(v);
                 break;
-            case CompressionFormat.NoCompress:
-            case CompressionFormat.NoCompressQuat:
-            case CompressionFormat.ShortInt3Quat:
-            case CompressionFormat.SmallTreeQuat32:
-            case CompressionFormat.SmallTreeQuat48:
-            case CompressionFormat.SmallTreeQuat64:
-            case CompressionFormat.PolarQuat:
-            case CompressionFormat.SmallTreeQuat64Ext:
+            case VectorCompressionFormat.NoCompress:
+            case VectorCompressionFormat.NoCompressQuat:
+            case VectorCompressionFormat.ShortInt3Quat:
+            case VectorCompressionFormat.SmallTreeQuat32:
+            case VectorCompressionFormat.SmallTreeQuat48:
+            case VectorCompressionFormat.SmallTreeQuat64:
+            case VectorCompressionFormat.PolarQuat:
+            case VectorCompressionFormat.SmallTreeQuat64Ext:
             default:
                 throw new InvalidOperationException();
         }
     }
 
     public int WrittenSize => Format switch {
-        CompressionFormat.NoCompressVec3 => Data.Length * 12,
-        CompressionFormat.NoCompress => throw new NotSupportedException(),
-        CompressionFormat.NoCompressQuat => throw new NotSupportedException(),
-        CompressionFormat.ShortInt3Quat => throw new NotSupportedException(),
-        CompressionFormat.SmallTreeQuat32 => throw new NotSupportedException(),
-        CompressionFormat.SmallTreeQuat48 => throw new NotSupportedException(),
-        CompressionFormat.SmallTreeQuat64 => throw new NotSupportedException(),
-        CompressionFormat.PolarQuat => throw new NotSupportedException(),
-        CompressionFormat.SmallTreeQuat64Ext => throw new NotSupportedException(),
+        VectorCompressionFormat.NoCompressVec3 => Data.Length * 12,
+        VectorCompressionFormat.NoCompress => throw new NotSupportedException(),
+        VectorCompressionFormat.NoCompressQuat => throw new NotSupportedException(),
+        VectorCompressionFormat.ShortInt3Quat => throw new NotSupportedException(),
+        VectorCompressionFormat.SmallTreeQuat32 => throw new NotSupportedException(),
+        VectorCompressionFormat.SmallTreeQuat48 => throw new NotSupportedException(),
+        VectorCompressionFormat.SmallTreeQuat64 => throw new NotSupportedException(),
+        VectorCompressionFormat.PolarQuat => throw new NotSupportedException(),
+        VectorCompressionFormat.SmallTreeQuat64Ext => throw new NotSupportedException(),
         _ => throw new ArgumentOutOfRangeException(nameof(Format), Format, null),
     };
 

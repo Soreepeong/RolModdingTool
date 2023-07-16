@@ -92,9 +92,6 @@ public class CryModel {
                 TexCoord = ((DataChunk) Chunks[meshChunk.TexCoordsChunkId]).GetItem<Vector2>(i),
                 Color = ((DataChunk) Chunks[meshChunk.ColorsChunkId]).GetItem<Vector4<byte>>(i),
                 Tangent = ((DataChunk) Chunks[meshChunk.TangentsChunkId]).GetItem<MeshTangent>(i),
-                BoneMapping = meshChunk.BoneMappingChunkId == 0
-                    ? default
-                    : ((DataChunk) Chunks[meshChunk.BoneMappingChunkId]).GetItem<MeshBoneMapping>(i),
             };
         }
 

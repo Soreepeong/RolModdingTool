@@ -1,10 +1,37 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 
 namespace SynergyLib.Util.MathExtras;
 
 public static class MathExtrasExtensions {
+    public static Matrix4x4 Normalize(this Matrix4x4 m) {
+        if (m.M44 == 0)
+            return default;
+        for (var i = 0; i < 4; i++)
+        for (var j = 0; j < 4; j++)
+            m[i, j] /= m.M44;
+        return m;
+    }
+
+    public static List<float>? ToFloatList(this Vector3 val, Vector3 defaultValue, float threshold) {
+        if (Math.Abs(val.X - defaultValue.X) < threshold &&
+            Math.Abs(val.Y - defaultValue.Y) < threshold &&
+            Math.Abs(val.Z - defaultValue.Z) < threshold)
+            return null;
+        return new() {val.X, val.Y, val.Z};
+    }
+
+    public static List<float>? ToFloatList(this Quaternion val, Quaternion defaultValue, float threshold) {
+        if (Math.Abs(val.X - defaultValue.X) < threshold &&
+            Math.Abs(val.Y - defaultValue.Y) < threshold &&
+            Math.Abs(val.Z - defaultValue.Z) < threshold &&
+            Math.Abs(val.W - defaultValue.W) < threshold)
+            return null;
+        return new() {val.X, val.Y, val.Z, val.W};
+    }
+
     public static float GetComponent(this Quaternion q, int index) => index switch {
         0 => q.X,
         1 => q.Y,

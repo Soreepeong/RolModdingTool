@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Numerics;
 using System.Xml.Serialization;
 using SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
@@ -27,8 +28,11 @@ public class Material {
     [XmlAttribute(AttributeName = "Shader")]
     public string? Shader { get; set; }
 
+    [XmlIgnore]
+    public BrbGenMask GenMaskIllum => (BrbGenMask) (HexGenMask is { } v ? Convert.ToUInt64(v, 16) : 0);
+
     [XmlAttribute(AttributeName = "GenMask")]
-    public string? GenMask { get; set; }
+    public string? HexGenMask { get; set; }
 
     [XmlAttribute(AttributeName = "StringGenMask")]
     public string? StringGenMask { get; set; }

@@ -15,7 +15,7 @@ public struct Vertex : IEquatable<Vertex> {
     public Vector4<float> Weights;
 
     // public MeshShapeDeformation ShapeDeformation;
-    public MeshBoneMapping BoneMapping;
+    // public MeshBoneMapping BoneMapping;
 
     public bool Equals(Vertex other) =>
         Position.Equals(other.Position)

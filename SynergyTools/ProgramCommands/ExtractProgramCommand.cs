@@ -64,7 +64,7 @@ public class ExtractProgramCommand : RootProgramCommand {
                 strm.ReadFrom(null, inPath, cancellationToken);
 
                 Directory.CreateDirectory(outPath);
-                await using (var s = File.OpenWrite(Path.Join(outPath, WiiuStreamFile.MetadataFilename)))
+                await using (var s = File.Create(Path.Join(outPath, WiiuStreamFile.MetadataFilename)))
                     await strm.WriteMetadata(s);
 
                 var maxProgress = strm.Entries.Sum(x => x.Source.StoredLength);

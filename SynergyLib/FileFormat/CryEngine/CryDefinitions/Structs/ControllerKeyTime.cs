@@ -8,7 +8,7 @@ namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
 
 public class ControllerKeyTime {
     public KeyTimesFormat Format;
-    public float[] Data = Array.Empty<float>();
+    public float[] Ticks = Array.Empty<float>();
 
     public void ReadFrom(NativeReader b, KeyTimesFormat format, int length) {
         float[] data;
@@ -63,21 +63,21 @@ public class ControllerKeyTime {
                 throw new InvalidDataException();
 
         Format = format;
-        Data = data;
+        Ticks = data;
     }
 
     public void WriteTo(NativeWriter w) {
         switch (Format) {
             case KeyTimesFormat.F32:
-                foreach (var f in Data)
+                foreach (var f in Ticks)
                     w.Write(f);
                 break;
             case KeyTimesFormat.UInt16:
-                foreach (var f in Data)
+                foreach (var f in Ticks)
                     w.Write((ushort) f);
                 break;
             case KeyTimesFormat.Byte:
-                foreach (var f in Data)
+                foreach (var f in Ticks)
                     w.Write((byte) f);
                 break;
             case KeyTimesFormat.F32StartStop:
@@ -85,13 +85,13 @@ public class ControllerKeyTime {
             case KeyTimesFormat.ByteStartStop:
                 throw new NotSupportedException();
             case KeyTimesFormat.Bitset: {
-                w.Write((ushort) Data[0]);
-                w.Write((ushort) Data[^1]);
-                w.Write(checked((ushort) Data.Length));
+                w.Write((ushort) Ticks[0]);
+                w.Write((ushort) Ticks[^1]);
+                w.Write(checked((ushort) Ticks.Length));
 
-                Span<ushort> tmp = stackalloc ushort[1 + ((ushort) Data[^1] - (ushort) Data[0]) / 16];
-                foreach (var f in Data) {
-                    var index = Math.DivRem((int) f - (int) Data[0], 16, out var shift);
+                Span<ushort> tmp = stackalloc ushort[1 + ((ushort) Ticks[^1] - (ushort) Ticks[0]) / 16];
+                foreach (var f in Ticks) {
+                    var index = Math.DivRem((int) f - (int) Ticks[0], 16, out var shift);
                     tmp[index] |= (ushort) (1 << shift);
                 }
 
@@ -117,17 +117,17 @@ public class ControllerKeyTime {
     };
 
     public int LengthMarker => Format switch {
-        KeyTimesFormat.F32 => Data.Length,
-        KeyTimesFormat.UInt16 => Data.Length,
-        KeyTimesFormat.Byte => Data.Length,
+        KeyTimesFormat.F32 => Ticks.Length,
+        KeyTimesFormat.UInt16 => Ticks.Length,
+        KeyTimesFormat.Byte => Ticks.Length,
         KeyTimesFormat.F32StartStop => throw new NotSupportedException(),
         KeyTimesFormat.UInt16StartStop => throw new NotSupportedException(),
         KeyTimesFormat.ByteStartStop => throw new NotSupportedException(),
-        KeyTimesFormat.Bitset when Data.Length >= 2 => 4 + ((ushort) Data[^1] - (ushort) Data[0]) / 16,
+        KeyTimesFormat.Bitset when Ticks.Length >= 2 => 4 + ((ushort) Ticks[^1] - (ushort) Ticks[0]) / 16,
         _ => throw new ArgumentOutOfRangeException(nameof(Format), Format, null),
     };
 
-    public override string ToString() => Data.Length < 2
+    public override string ToString() => Ticks.Length < 2
         ? $"{nameof(ControllerKeyTime)}<{Format}>: empty"
-        : $"{nameof(ControllerKeyTime)}<{Format}>: {Data[0]}..{Data[^1]} ({Data.Length} frames)";
+        : $"{nameof(ControllerKeyTime)}<{Format}>: {Ticks[0]}..{Ticks[^1]} ({Ticks.Length} frames)";
 }
