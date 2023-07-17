@@ -231,7 +231,7 @@ public class QuickModProgramCommand : RootProgramCommand {
             }
 
             foreach (var levelPath in Directory.GetFiles(levelsPath)) {
-                if (!levelPath.EndsWith(".wiiu.stream", StringComparison.InvariantCultureIgnoreCase))
+                if (!levelPath.EndsWith(".wiiu.stream", StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 var bakFile = levelPath + ".bak";
@@ -345,9 +345,9 @@ public class QuickModProgramCommand : RootProgramCommand {
 
         using var ms = new MemoryStream();
         foreach (var (filename, divisor) in DesaturationTargetTextures) {
-            var entry = Heroes!.GetEntry(filename);
+            var entry = Heroes!.GetEntry(filename, false);
             var image = await decoder.DecodeToImageRgba32Async(
-                new MemoryStream(entry.Source.ReadRaw()),
+                new MemoryStream(entry.Source.ReadRaw(cancellationToken)),
                 cancellationToken);
 
             var hasAlpha = false;
@@ -484,85 +484,83 @@ public class QuickModProgramCommand : RootProgramCommand {
             foreach (var entry in ReferenceLevel.Entries.Where(
                          entry => entry.Header.InnerPath.StartsWith(
                              ReferenceTexturePathPrefix,
-                             StringComparison.InvariantCultureIgnoreCase))) {
+                             StringComparison.OrdinalIgnoreCase))) {
                 Heroes!.PutEntry(-1, entry.Header.InnerPath, entry.Source);
             }
         },
         cancellationToken);
 
-    private Task PatchSonicModel(CancellationToken cancellationToken) => Task.Run(
-        () => {
-            var sonic = CryCharacter.FromCryEngineFiles(
-                x => new MemoryStream(
-                    (ReferenceLevel.TryGetEntry(out var e, x, SkinFlag.Sonic_Default) ? e : ReferenceLevel.GetEntry(x))
-                    .Source.ReadRaw()),
-                SonicBaseName);
-            var reference = CryCharacter.FromCryEngineFiles(
-                x => new MemoryStream(ReferenceLevel.GetEntry(x).Source.ReadRaw()),
-                ReferenceObjectBaseName);
-            var sonicMaterials = sonic.Model.Material.SubMaterials ?? throw new InvalidDataException();
-            var referenceMaterials = reference.Model.Material.SubMaterials ?? throw new InvalidDataException();
-            sonicMaterials.RemoveAll(x => referenceMaterials.Any(y => y.Name == x.Name));
-            sonicMaterials.AddRange(referenceMaterials);
+    private async Task PatchSonicModel(CancellationToken cancellationToken) {
+        var sonic = await CryCharacter.FromCryEngineFiles(
+            ReferenceLevel.AsFunc(SkinFlag.Default),
+            SonicBaseName,
+            cancellationToken);
+        var reference = await CryCharacter.FromCryEngineFiles(
+            ReferenceLevel.AsFunc(SkinFlag.Default),
+            ReferenceObjectBaseName,
+            cancellationToken);
+        var sonicMaterials = sonic.Model.Material.SubMaterials ?? throw new InvalidDataException();
+        var referenceMaterials = reference.Model.Material.SubMaterials ?? throw new InvalidDataException();
+        sonicMaterials.RemoveAll(x => referenceMaterials.Any(y => y.Name == x.Name));
+        sonicMaterials.AddRange(referenceMaterials);
 
-            sonic.Model.Meshes.Clear();
-            sonic.Model.Meshes.AddRange(reference.Model.Meshes.Select(x => x.Clone()));
-            sonic.Attachments.AddRange(reference.Attachments);
-            sonic.Definition ??= new();
-            sonic.Definition.Attachments ??= new();
-            if (reference.Definition?.Attachments is not null)
-                sonic.Definition.Attachments.AddRange(reference.Definition.Attachments);
-            switch (Mode) {
-                case SonicClones.Shadow:
-                    foreach (var (a, b) in SonicToShadowAnimationMap)
-                        sonic.CryAnimationDatabase!.Animations[a] = reference.CryAnimationDatabase!.Animations[b];
-                    break;
-                case SonicClones.MetalSonic:
-                    foreach (var (a, b) in SonicToMetalAnimationMap)
-                        sonic.CryAnimationDatabase!.Animations[a] = reference.CryAnimationDatabase!.Animations[b];
-                    break;
-                case SonicClones.Sonic:
-                default:
-                    throw new InvalidOperationException();
-            }
+        sonic.Model.Meshes.Clear();
+        sonic.Model.Meshes.AddRange(reference.Model.Meshes.Select(x => x.Clone()));
+        sonic.Attachments.AddRange(reference.Attachments);
+        sonic.Definition ??= new();
+        sonic.Definition.Attachments ??= new();
+        if (reference.Definition?.Attachments is not null)
+            sonic.Definition.Attachments.AddRange(reference.Definition.Attachments);
+        switch (Mode) {
+            case SonicClones.Shadow:
+                foreach (var (a, b) in SonicToShadowAnimationMap)
+                    sonic.CryAnimationDatabase!.Animations[a] = reference.CryAnimationDatabase!.Animations[b];
+                break;
+            case SonicClones.MetalSonic:
+                foreach (var (a, b) in SonicToMetalAnimationMap)
+                    sonic.CryAnimationDatabase!.Animations[a] = reference.CryAnimationDatabase!.Animations[b];
+                break;
+            case SonicClones.Sonic:
+            default:
+                throw new InvalidOperationException();
+        }
 
-            foreach (var refController in reference.Model.Controllers) {
-                if (sonic.Model.Controllers.SingleOrDefault(x => x.Id == refController.Id) is { } existingController) {
-                    if (Mode == SonicClones.Metal && existingController.Name
-                            is not "L_ball_joint"
-                            and not "R_ball_joint"
-                            and not "L_ankle_joint"
-                            and not "R_ankle_joint"
-                            and not "_L_toe_joint"
-                            and not "_R_toe_joint"
-                            and not "C_pelvis_joint"
-                            and not "C_spine_1_joint"
-                            and not "C_torso_joint") {
-                        existingController.AbsoluteBindPoseMatrix = refController.AbsoluteBindPoseMatrix;
-                    }
-
-                    continue;
+        foreach (var refController in reference.Model.Controllers) {
+            if (sonic.Model.Controllers.SingleOrDefault(x => x.Id == refController.Id) is { } existingController) {
+                if (Mode == SonicClones.Metal && existingController.Name
+                        is not "L_ball_joint"
+                        and not "R_ball_joint"
+                        and not "L_ankle_joint"
+                        and not "R_ankle_joint"
+                        and not "_L_toe_joint"
+                        and not "_R_toe_joint"
+                        and not "C_pelvis_joint"
+                        and not "C_spine_1_joint"
+                        and not "C_torso_joint") {
+                    existingController.AbsoluteBindPoseMatrix = refController.AbsoluteBindPoseMatrix;
                 }
 
-                var parent = sonic.Model.Controllers.Single(x => x.Id == refController.Parent!.Id);
-                refController.CloneInto(parent, sonic.Model.Controllers);
+                continue;
             }
 
-            var geoBytes = sonic.Model.GetGeometryBytes();
-            var matBytes = sonic.Model.GetMaterialBytes();
-            var dbaBytes = sonic.CryAnimationDatabase!.GetBytes();
-            foreach (var level in Levels.Values) {
-                var sonicChr = level.GetEntry(sonic.Definition.Model!.File!);
-                var sonicMtl = level.GetEntry(sonic.Definition.Model!.Material!, SkinFlag.Sonic_Default);
-                var sonicMtlAlt = level.GetEntry(sonic.Definition.Model!.Material!, SkinFlag.Sonic_Alt);
-                var sonicDba = level.GetEntry(sonic.CharacterParameters!.TracksDatabasePath!);
+            var parent = sonic.Model.Controllers.Single(x => x.Id == refController.Parent!.Id);
+            refController.CloneInto(parent, sonic.Model.Controllers);
+        }
 
-                sonicChr.Source = new(geoBytes);
-                sonicMtl.Source = sonicMtlAlt.Source = new(matBytes);
-                sonicDba.Source = new(dbaBytes);
-            }
-        },
-        cancellationToken);
+        var geoBytes = sonic.Model.GetGeometryBytes();
+        var matBytes = sonic.Model.GetMaterialBytes();
+        var dbaBytes = sonic.CryAnimationDatabase!.GetBytes();
+        foreach (var level in Levels.Values) {
+            var sonicChr = level.GetEntry(sonic.Definition.Model!.File!, false);
+            var sonicMtl = level.GetEntry(sonic.Definition.Model!.Material!, false);
+            var sonicMtlAlt = level.GetEntry(sonic.Definition.Model!.Material!, true);
+            var sonicDba = level.GetEntry(sonic.CharacterParameters!.TracksDatabasePath!, false);
+
+            sonicChr.Source = new(geoBytes);
+            sonicMtl.Source = sonicMtlAlt.Source = new(matBytes);
+            sonicDba.Source = new(dbaBytes);
+        }
+    }
 
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public enum SonicClones {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using SynergyLib.FileFormat.CryEngine.CryDefinitions.Enums;
 using SynergyLib.Util.BinaryRW;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;

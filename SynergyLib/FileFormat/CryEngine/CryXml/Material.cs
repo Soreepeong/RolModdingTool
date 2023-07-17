@@ -13,9 +13,6 @@ public class Material {
     public Vector3? EmissiveColor;
     public MaterialFlags MaterialFlags;
 
-    [XmlIgnore]
-    internal string? SourceFileName { get; set; }
-
     [XmlAttribute(AttributeName = "Name")]
     public string? Name { get; set; }
 
@@ -33,6 +30,17 @@ public class Material {
 
     [XmlAttribute(AttributeName = "StringGenMask")]
     public string? StringGenMask { get; set; }
+
+    public bool ContainsGenMask(string name) {
+        if (StringGenMask is null)
+            return false;
+        var i = StringGenMask.IndexOf("%" + name, StringComparison.OrdinalIgnoreCase);
+        if (i < 0)
+            return false;
+        if (i + 1 + name.Length != StringGenMask.Length && StringGenMask[i + 1 + name.Length] != '%')
+            return false;
+        return true;
+    }
 
     [XmlAttribute(AttributeName = "SurfaceType")]
     public string? SurfaceType { get; set; }

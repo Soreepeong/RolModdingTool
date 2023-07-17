@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -7,6 +8,7 @@ using Newtonsoft.Json;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
+using SynergyLib.FileFormat.DirectDrawSurface;
 using SynergyLib.FileFormat.GltfInterop.Models;
 using SynergyLib.Util;
 using SynergyLib.Util.BinaryRW;
@@ -20,16 +22,16 @@ public class GltfTuple {
     public const uint GlbDataMagic = 0x004E4942;
 
     public readonly GltfRoot Root;
-    public readonly MemoryStream DataStream;
+    public readonly List<MemoryStream> DataStreams = new();
+
+    private int _defaultDataStreamIndex = -1;
 
     public GltfTuple() : this(new()) {
-        Root.Buffers.Add(new());
         Root.Scene = Root.Scenes.AddAndGetIndex(new());
     }
 
     public GltfTuple(GltfRoot root) {
         Root = root;
-        DataStream = new();
     }
 
     public static GltfTuple FromStream(Stream glbStream, bool leaveOpen = false) {
@@ -53,55 +55,135 @@ public class GltfTuple {
             throw new InvalidDataException("Second entry must be a data file.");
 
         var res = new GltfTuple(root);
-        res.DataStream.SetLength(dataLength);
-        glbStream.ReadExactly(res.DataStream.GetBuffer().AsSpan(0, dataLength));
+        var ms = new MemoryStream();
+        ms.SetLength(dataLength);
+        glbStream.ReadExactly(ms.GetBuffer().AsSpan(0, dataLength));
+        res.DataStreams.Add(ms);
         return res;
     }
 
-    public ReadOnlySpan<byte> Data => DataStream.GetBuffer().AsSpan(0, (int) DataStream.Length);
-
     public void Compile(Stream target) {
-        Root.Buffers[0].ByteLength = DataStream.Length;
+        var oldBufferViews = Root.BufferViews;
+        var oldBuffers = Root.Buffers;
+        try {
+            Root.BufferViews = new();
 
-        var json = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(Root));
-        if (json.Length % 4 != 0) {
-            var rv = new byte[(json.Length + 3) / 4 * 4];
-            Buffer.BlockCopy(json, 0, rv, 0, json.Length);
-            for (var i = json.Length; i < rv.Length; i++)
-                rv[i] = 0x20; // space
-            json = rv;
+            var bufferOffset = 0L;
+            foreach (var bv in oldBufferViews) {
+                bufferOffset = (bufferOffset + 3) / 4 * 4;
+                Root.BufferViews.Add(
+                    new() {
+                        Name = bv.Name,
+                        Buffer = 0,
+                        ByteOffset = bufferOffset,
+                        ByteLength = bv.ByteLength,
+                        Target = bv.Target,
+                    });
+                bufferOffset += bv.ByteLength;
+            }
+
+            Root.Buffers = new() {new() {ByteLength = bufferOffset}};
+
+            var json = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(Root));
+            if (json.Length % 4 != 0) {
+                var rv = new byte[(json.Length + 3) / 4 * 4];
+                Buffer.BlockCopy(json, 0, rv, 0, json.Length);
+                for (var i = json.Length; i < rv.Length; i++)
+                    rv[i] = 0x20; // space
+                json = rv;
+            }
+
+            using var writer = new NativeWriter(target, Encoding.UTF8, true) {IsBigEndian = false};
+            writer.Write(GlbMagic);
+            writer.Write(2);
+            writer.Write(checked(12 + 8 + json.Length + 8 + (int) bufferOffset));
+            writer.Write(json.Length);
+            writer.Write(GlbJsonMagic);
+            writer.Write(json);
+
+            writer.Write(checked((int) bufferOffset));
+            writer.Write(GlbDataMagic);
+
+            bufferOffset = 0L;
+            Span<byte> zeroes = stackalloc byte[4];
+            foreach (var bv in oldBufferViews) {
+                var alignment = (4 - (int) bufferOffset % 4) % 4;
+                bufferOffset += alignment;
+                target.Write(zeroes[..alignment]);
+                target.Write(DataStreams[bv.Buffer].GetBuffer(), (int) bv.ByteOffset, (int) bv.ByteLength);
+                Root.BufferViews.Add(
+                    new() {
+                        Name = bv.Name,
+                        Buffer = 0,
+                        ByteOffset = bufferOffset,
+                        ByteLength = bv.ByteLength,
+                        Target = bv.Target,
+                    });
+                bufferOffset += bv.ByteLength;
+            }
+        } finally {
+            Root.BufferViews = oldBufferViews;
+            Root.Buffers = oldBuffers;
         }
-
-        using var writer = new NativeWriter(target, Encoding.UTF8, true) {IsBigEndian = false};
-        writer.Write(GlbMagic);
-        writer.Write(2);
-        writer.Write(checked(12 + 8 + json.Length + 8 + (int) DataStream.Length));
-        writer.Write(json.Length);
-        writer.Write(GlbJsonMagic);
-        writer.Write(json);
-
-        writer.Write(checked((int) DataStream.Length));
-        writer.Write(GlbDataMagic);
-        DataStream.Position = 0;
-        DataStream.CopyTo(target);
     }
 
-    public unsafe int AddBufferView<T>(
+    public IEnumerable<Tuple<string, MemoryStream>> CompileToFiles(string gltfName) {
+        var oldBuffers = Root.Buffers;
+        try {
+            Root.Buffers = oldBuffers.Select(
+                (x, i) => new GltfBuffer {
+                    ByteLength = x.ByteLength,
+                    Uri = x.Uri ?? (i == 0 ? $"{gltfName}.bin" : $"{gltfName}.bin{i}")
+                }).ToList();
+            yield return Tuple.Create(
+                gltfName + ".gltf",
+                new MemoryStream(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(Root))));
+        } finally {
+            Root.Buffers = oldBuffers;
+        }
+
+        for (var i = 0; i < Root.Buffers.Count; i++) {
+            DataStreams[i].Position = 0;
+            yield return Tuple.Create(
+                Root.Buffers[i].Uri ?? (i == 0 ? $"{gltfName}.bin" : $"{gltfName}.bin{i}"),
+                DataStreams[i]);
+        }
+    }
+
+    private unsafe int AddBufferView<T>(
+        string? uri,
         string? baseName,
         GltfBufferViewTarget? target,
         ReadOnlySpan<T> data)
         where T : unmanaged {
+        if (Root.Buffers.Count != DataStreams.Count)
+            throw new InvalidOperationException("len(Buffers) != len(DataStreams)");
+
+        var dataStreamIndex = _defaultDataStreamIndex;
+        if (dataStreamIndex == -1 && uri is null) {
+            dataStreamIndex = _defaultDataStreamIndex = DataStreams.AddAndGetIndex(new());
+            Root.Buffers.Add(new());
+        } else if (uri is not null) {
+            dataStreamIndex = DataStreams.AddAndGetIndex(new());
+            Root.Buffers.Add(new() {Uri = uri});
+        }
+
+        var targetStream = DataStreams[dataStreamIndex];
+
         var byteLength = sizeof(T) * data.Length;
         var index = Root.BufferViews.AddAndGetIndex(
             new() {
                 Name = baseName is null ? null : $"{baseName}/bufferView",
-                ByteOffset = checked((int) (DataStream.Position = (DataStream.Length + 3) / 4 * 4)),
+                Buffer = dataStreamIndex,
+                ByteOffset = checked((int) (targetStream.Position = (targetStream.Length + 3) / 4 * 4)),
                 ByteLength = byteLength,
                 Target = target,
             });
 
         fixed (void* src = data)
-            DataStream.Write(new((byte*) src, byteLength));
+            targetStream.Write(new((byte*) src, byteLength));
+
+        Root.Buffers[dataStreamIndex].ByteLength = targetStream.Length;
 
         return index;
     }
@@ -123,7 +205,7 @@ public class GltfTuple {
         int? bufferView = null,
         GltfBufferViewTarget? target = null)
         where T : unmanaged {
-        bufferView ??= AddBufferView(baseName, target, data);
+        bufferView ??= AddBufferView(null, baseName, target, data);
 
         {
             var (componentType, type) = typeof(T) switch {
@@ -213,45 +295,60 @@ public class GltfTuple {
         }
     }
 
-    public void AddToScene(int nodeIndex) => Root.Scenes[Root.Scene].Nodes.Add(nodeIndex);
-
-    public int AddTexture(string name, Image<Rgba32> image) {
+    public int AddTexture<TPixel>(string name, Image<TPixel> image, PngColorType colorType, DdsFile? ddsFile = null)
+        where TPixel : unmanaged, IPixel<TPixel> {
         for (var i = 0; i < Root.Textures.Count; i++)
             if (Root.Textures[i].Name == name)
                 return i;
 
         using var pngStream = new MemoryStream();
-        image.Save(pngStream, new PngEncoder());
+        image.Save(pngStream, new PngEncoder {ColorType = colorType});
 
+        if (ddsFile is not null)
+            Root.ExtensionsUsed.Add("MSFT_texture_dds");
+
+        var pngName = Path.GetFileNameWithoutExtension(name) + ".png";
+        var ddsName = "dds/" + Path.GetFileNameWithoutExtension(name) + ".dds";
         return Root.Textures.AddAndGetIndex(
             new() {
                 Name = name,
                 Source = Root.Images.AddAndGetIndex(
                     new() {
-                        Name = Path.ChangeExtension(name, ".png"),
+                        Name = pngName,
                         MimeType = "image/png",
                         BufferView = AddBufferView(
-                            name + ".png",
+                            pngName,
+                            pngName,
                             null,
                             new ReadOnlySpan<byte>(pngStream.GetBuffer(), 0, (int) pngStream.Length)),
                     }),
+                Extensions = ddsFile is null
+                    ? null
+                    : new() {
+                        MsftTextureDds = new() {
+                            Source = Root.Images.AddAndGetIndex(
+                                new() {
+                                    Name = ddsName,
+                                    MimeType = "image/vnd-ms.dds",
+                                    BufferView = AddBufferView(
+                                        ddsName,
+                                        ddsName,
+                                        null,
+                                        ddsFile.Data),
+                                }),
+                        },
+                    },
             });
     }
 
     public byte[] ReadBufferView(int bufferViewIndex) {
         var bufferView = Root.BufferViews[bufferViewIndex];
-        var buffer = Root.Buffers[bufferView.Buffer];
-        if (buffer.Uri is not null)
-            throw new NotImplementedException();
-        return DataStream.GetBuffer()[(int)bufferView.ByteOffset .. (int)bufferView.ByteOffsetTo];
+        return DataStreams[bufferView.Buffer].GetBuffer()[(int) bufferView.ByteOffset .. (int) bufferView.ByteOffsetTo];
     }
 
     public unsafe T[] ReadTypedArray<T>(int accessorIndex) where T : unmanaged {
         var accessor = Root.Accessors[accessorIndex];
         var bufferView = Root.BufferViews[accessor.BufferView];
-        var buffer = Root.Buffers[bufferView.Buffer];
-        if (buffer.Uri is not null)
-            throw new NotImplementedException();
 
         var scalarSize = accessor.ComponentType switch {
             GltfAccessorComponentTypes.s8 => 1,
@@ -276,7 +373,9 @@ public class GltfTuple {
         if (elementSize != sizeof(T))
             throw new InvalidOperationException();
 
-        var bytesSpan = DataStream.GetBuffer().AsSpan((int) bufferView.ByteOffset, (int) bufferView.ByteLength);
+        var bytesSpan = DataStreams[bufferView.Buffer].GetBuffer().AsSpan(
+            (int) bufferView.ByteOffset,
+            (int) bufferView.ByteLength);
         bytesSpan = bytesSpan.Slice((int) accessor.ByteOffset, accessor.Count * elementSize);
 
         var res = new T[accessor.Count];

@@ -88,7 +88,7 @@ public class ExtractProgramCommand : RootProgramCommand {
 
                     ms.SetLength(entry.Header.DecompressedSize);
                     ms.Position = 0;
-                    entry.Source.ReadRawInto(ms);
+                    entry.Source.ReadRawInto(ms, cancellationToken);
 
                     Directory.CreateDirectory(Path.GetDirectoryName(localPath)!);
                     var tempPath = $"{localPath}.tmp{Environment.TickCount64:X}";

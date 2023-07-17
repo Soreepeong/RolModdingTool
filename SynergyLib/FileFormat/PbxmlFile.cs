@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -26,11 +27,19 @@ public class PbxmlFile {
     }
 
     public static PbxmlFile FromObject<T>(T obj) where T : class {
-        var serializer = new XmlSerializer(typeof(T));
-        var doc = new XmlDocument();
-        using (var w = doc.CreateNavigator()!.AppendChild())
-            serializer.Serialize(w, obj);
-        return new(doc);
+        var oldCulture = CultureInfo.CurrentCulture;
+        try {
+            CultureInfo.CurrentCulture = (CultureInfo) oldCulture.Clone();
+            CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator = ".";
+            CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator = ",";
+            var serializer = new XmlSerializer(typeof(T));
+            var doc = new XmlDocument();
+            using (var w = doc.CreateNavigator()!.AppendChild())
+                serializer.Serialize(w, obj);
+            return new(doc);
+        } finally {
+            CultureInfo.CurrentCulture = oldCulture;
+        }
     }
 
     public static PbxmlFile FromReader(BinaryReader reader, bool leaveOpen = false) {
@@ -65,24 +74,32 @@ public class PbxmlFile {
     }
 
     public T DeserializeAs<T>(bool throwOnUnknown = true) where T : class {
-        var serializer = new XmlSerializer(typeof(T));
-        if (throwOnUnknown) {
-            serializer.UnknownNode += (sender, args) => {
-                Debugger.Break();
-                // throw new NotSupportedException();
-            };
-            serializer.UnknownAttribute += (sender, args) => {
-                Debugger.Break();
-                throw new NotSupportedException();
-            };
-            serializer.UnknownElement += (sender, args) => {
-                Debugger.Break();
-                throw new NotSupportedException();
-            };
-        }
+        var oldCulture = CultureInfo.CurrentCulture;
+        try {
+            CultureInfo.CurrentCulture = (CultureInfo) oldCulture.Clone();
+            CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator = ".";
+            CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator = ",";
+            var serializer = new XmlSerializer(typeof(T));
+            if (throwOnUnknown) {
+                serializer.UnknownNode += (sender, args) => {
+                    Debugger.Break();
+                    // throw new NotSupportedException();
+                };
+                serializer.UnknownAttribute += (sender, args) => {
+                    Debugger.Break();
+                    throw new NotSupportedException();
+                };
+                serializer.UnknownElement += (sender, args) => {
+                    Debugger.Break();
+                    throw new NotSupportedException();
+                };
+            }
 
-        using var reader = new XmlNodeReader(Document);
-        return serializer.Deserialize(reader) as T ?? throw new NullReferenceException();
+            using var reader = new XmlNodeReader(Document);
+            return serializer.Deserialize(reader) as T ?? throw new NullReferenceException();
+        } finally {
+            CultureInfo.CurrentCulture = oldCulture;
+        }
     }
 
     public void WriteBinary(Stream stream) => WriteBinary(new BinaryWriter(stream, Encoding.UTF8, true));

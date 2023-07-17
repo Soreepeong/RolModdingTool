@@ -21,28 +21,32 @@ public class WiiuStreamFile {
 
     public readonly List<FileEntry> Entries = new();
 
-    public FileEntry GetEntry(string path, SkinFlag skinFlag = SkinFlag.Default) {
-        path = path.Replace('\\', '/');
-        return Entries.FirstOrDefault(
-            x => string.Compare(x.Header.InnerPath, path, StringComparison.InvariantCultureIgnoreCase) == 0
-                && x.Header.SkinFlag == skinFlag) ?? throw new FileNotFoundException();
-    }
+    public FileEntry GetEntry(string path, SkinFlag lookupSkinFlag) =>
+        TryGetEntry(out var entry, path, lookupSkinFlag) ? entry : throw new FileNotFoundException();
 
-    public bool TryGetEntry(
-        [NotNullWhen(true)] out FileEntry? entry,
-        string path,
-        SkinFlag skinFlag = SkinFlag.Default) {
+    public bool TryGetEntry([NotNullWhen(true)] out FileEntry? entry, string path, SkinFlag lookupSkinFlag) {
         path = path.Replace('\\', '/');
         entry = Entries.FirstOrDefault(
-            x => string.Compare(x.Header.InnerPath, path, StringComparison.InvariantCultureIgnoreCase) == 0
-                && x.Header.SkinFlag == skinFlag);
+            x => string.Compare(x.Header.InnerPath, path, StringComparison.OrdinalIgnoreCase) == 0
+                && x.Header.SkinFlag.MatchesLookup(lookupSkinFlag));
         return entry is not null;
     }
+
+    public FileEntry GetEntry(string path, bool useAltSkin) =>
+        GetEntry(path, useAltSkin ? SkinFlag.LookupAlt : SkinFlag.LookupDefault);
+
+    public bool TryGetEntry([NotNullWhen(true)] out FileEntry? entry, string path, bool useAltSkin) =>
+        TryGetEntry(out entry, path, useAltSkin ? SkinFlag.LookupAlt : SkinFlag.LookupDefault);
+
+    public Func<string, CancellationToken, Task<Stream>> AsFunc(SkinFlag lookupSkinFlag) =>
+        (path, cancellationToken) => !TryGetEntry(out var entry, path, lookupSkinFlag)
+            ? Task.FromException<Stream>(new FileNotFoundException())
+            : Task.FromResult<Stream>(new MemoryStream(entry.Source.ReadRaw(cancellationToken)));
 
     public void PutEntry(int position, string path, FileEntrySource source, SkinFlag skinFlag = SkinFlag.Default) {
         path = path.Replace('\\', '/');
         var entry = Entries.SingleOrDefault(
-            x => string.Compare(x.Header.InnerPath, path, StringComparison.InvariantCultureIgnoreCase) == 0
+            x => string.Compare(x.Header.InnerPath, path, StringComparison.OrdinalIgnoreCase) == 0
                 && x.Header.SkinFlag == skinFlag);
         if (entry is not null)
             entry.Source = source;
@@ -126,6 +130,8 @@ public class WiiuStreamFile {
         using var compressionBuffer = new MemoryStream();
         await using var compressionBufferWriter = new BinaryWriter(compressionBuffer);
         for (var i = 0; i < Entries.Count; i++) {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var entry = Entries[i];
             yield return (progress: i, max: Entries.Count, entry, entryComplete: false);
 
@@ -139,7 +145,7 @@ public class WiiuStreamFile {
             } else {
                 rawStream.SetLength(entry.Source.RawLength);
                 rawStream.Position = 0;
-                entry.Source.ReadRawInto(rawStream);
+                entry.Source.ReadRawInto(rawStream, cancellationToken);
 
                 var raw = rawStream.GetBuffer().AsMemory(0, checked((int) rawStream.Length));
 
@@ -309,14 +315,21 @@ public class WiiuStreamFile {
         }
     }
 
-    public static void DecompressOne(Stream source, Stream target, int decompressedSize, int compressedSize) {
+    public static void DecompressOne(
+        Stream source,
+        Stream target,
+        int decompressedSize,
+        int compressedSize,
+        CancellationToken cancellationToken) {
         if (compressedSize == 0) {
-            source.CopyToLength(target, decompressedSize);
+            source.CopyToLength(target, decompressedSize, cancellationToken);
         } else {
             var endOffset = source.Position + compressedSize;
             var buffer = new byte[decompressedSize];
             using var ms = new MemoryStream(buffer, true);
             while (ms.Position < buffer.Length && source.Position < endOffset) {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 var size = source.ReadCryIntWithFlag(out var backFlag);
 
                 if (backFlag) {
@@ -336,6 +349,12 @@ public class WiiuStreamFile {
                 throw new EndOfStreamException();
             target.Write(buffer);
         }
+    }
+
+    public static WiiuStreamFile FromFile(string path, CancellationToken cancellationToken = default) {
+        var s = new WiiuStreamFile();
+        s.ReadFrom(null, path, cancellationToken);
+        return s;
     }
 
     public struct FileEntryHeader {
@@ -402,14 +421,14 @@ public class WiiuStreamFile {
             Hash = Crc32.Brb.Get(data);
         }
 
-        public readonly byte[] ReadRaw() {
+        public readonly byte[] ReadRaw(CancellationToken cancellationToken) {
             var buf = new byte[RawLength];
             using var ms = new MemoryStream(buf);
-            ReadRawInto(ms);
+            ReadRawInto(ms, cancellationToken);
             return buf;
         }
 
-        public readonly void ReadRawInto(Stream into) {
+        public readonly void ReadRawInto(Stream into, CancellationToken cancellationToken) {
             switch (SourceType) {
                 case FileEntrySourceType.RawFile: {
                     using var f = File.OpenRead(Path!);
@@ -417,6 +436,7 @@ public class WiiuStreamFile {
 
                     Span<byte> buffer = stackalloc byte[4096];
                     for (var remaining = RawLength; remaining > 0; remaining -= buffer.Length) {
+                        cancellationToken.ThrowIfCancellationRequested();
                         buffer = buffer[..Math.Min(buffer.Length, remaining)];
                         f.ReadExactly(buffer);
                         into.Write(buffer);
@@ -430,12 +450,12 @@ public class WiiuStreamFile {
                     into.Write(Data);
                     return;
                 case FileEntrySourceType.CompressedBytes:
-                    DecompressOne(new MemoryStream(Data!), into, RawLength, StoredLength);
+                    DecompressOne(new MemoryStream(Data!), into, RawLength, StoredLength, cancellationToken);
                     return;
                 case FileEntrySourceType.CompressedFile: {
                     using var f = File.OpenRead(Path!);
                     f.Position = Offset;
-                    DecompressOne(f, into, RawLength, StoredLength);
+                    DecompressOne(f, into, RawLength, StoredLength, cancellationToken);
                     return;
                 }
                 default:
