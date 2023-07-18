@@ -1,35 +1,41 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using System.Xml.Serialization;
 using SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
 namespace SynergyLib.FileFormat.CryEngine.CryXml;
 
-[XmlRoot(ElementName = "Material")]
+[XmlRoot("Material")]
 public class Material {
     public Vector3? DiffuseColor;
     public Vector3? SpecularColor;
     public Vector3? EmissiveColor;
     public MaterialFlags MaterialFlags;
 
-    [XmlAttribute(AttributeName = "Name")]
+    [XmlAttribute("Name")]
     public string? Name { get; set; }
 
-    [XmlAttribute(AttributeName = "MtlFlags")]
+    [XmlAttribute("MtlFlags")]
     public string? MtlFlags {
         get => MaterialFlags == 0 ? null : ((int) MaterialFlags).ToString();
         set => MaterialFlags = value is null ? 0 : (MaterialFlags) int.Parse(value);
     }
 
-    [XmlAttribute(AttributeName = "Shader")]
+    [XmlAttribute("Shader")]
     public string? Shader { get; set; }
 
-    [XmlAttribute(AttributeName = "GenMask")]
+    [XmlAttribute("GenMask")]
     public string? HexGenMask { get; set; }
 
-    [XmlAttribute(AttributeName = "StringGenMask")]
+    [XmlAttribute("StringGenMask")]
     public string? StringGenMask { get; set; }
+
+    public HashSet<string> GenMaskSet {
+        get => (StringGenMask ?? "").Split("%", StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+        set => StringGenMask = value.Any() ? "%" + string.Join('%', value) : null;
+    }
 
     public bool ContainsGenMask(string name) {
         if (StringGenMask is null)
@@ -42,54 +48,60 @@ public class Material {
         return true;
     }
 
-    [XmlAttribute(AttributeName = "SurfaceType")]
+    [XmlAttribute("SurfaceType")]
     public string? SurfaceType { get; set; }
 
-    [XmlAttribute(AttributeName = "MatTemplate")]
+    [XmlAttribute("MatTemplate")]
     public string? MatTemplate { get; set; }
 
-    [XmlAttribute(AttributeName = "Diffuse")]
+    [XmlAttribute("Diffuse")]
     public string? Diffuse {
         get => DiffuseColor.ToXmlValue();
         set => DiffuseColor = value.XmlToVector3();
     }
 
-    [XmlAttribute(AttributeName = "Specular")]
+    [XmlAttribute("Specular")]
     public string? Specular {
         get => SpecularColor.ToXmlValue();
         set => SpecularColor = value.XmlToVector3();
     }
 
-    [XmlAttribute(AttributeName = "Emissive")]
+    [XmlAttribute("Emissive")]
     public string? Emissive {
         get => EmissiveColor.ToXmlValue();
         set => EmissiveColor = value.XmlToVector3();
     }
 
-    [XmlAttribute(AttributeName = "Shininess")]
+    [XmlAttribute("Shininess")]
     public float Shininess { get; set; }
 
-    [XmlAttribute(AttributeName = "Opacity")]
+    [XmlAttribute("Opacity")]
     public float Opacity { get; set; } = 1f;
 
-    [XmlAttribute(AttributeName = "Glossiness")]
+    [XmlAttribute("Glossiness")]
     public float Glossiness { get; set; }
 
-    [XmlAttribute(AttributeName = "GlowAmount")]
+    [XmlAttribute("GlowAmount")]
     public float GlowAmount { get; set; }
 
-    [XmlAttribute(AttributeName = "AlphaTest")]
+    [XmlAttribute("AlphaTest")]
     public float AlphaTest { get; set; }
+    
+    [XmlAttribute("vertModifType")]
+    public int VertModifType { get; set; }
 
-    [XmlArray(ElementName = "SubMaterials")]
-    [XmlArrayItem(ElementName = "Material")]
+    [XmlArray("SubMaterials")]
+    [XmlArrayItem("Material")]
     public List<Material>? SubMaterials { get; set; }
 
-    [XmlElement(ElementName = "PublicParams")]
+    [XmlElement("PublicParams")]
     public PublicParams? PublicParams { get; set; }
+    
+    [XmlElement("VertexDeform")]
+    public VertexDeform? VertexDeform { get; set; }
 
-    [XmlArray(ElementName = "Textures")]
-    [XmlArrayItem(ElementName = "Texture")]
+    [XmlArray("Textures")]
+    [XmlArrayItem("Texture")]
     public List<Texture>? Textures { get; set; }
 
     public override string ToString() => $"Name: {Name}, Shader: {Shader}, Submaterials: {SubMaterials?.Count ?? 0}";

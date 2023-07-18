@@ -78,5 +78,5 @@ public class FoliageInfoChunk : ICryChunk {
 
     public int WrittenSize => Header.WrittenSize + 16;
 
-    public override string ToString() => $"{nameof(ExportFlagsChunk)}: {Header}";
+    public override string ToString() => $"{nameof(FoliageInfoChunk)}: {Header}";
 }

@@ -4,25 +4,25 @@ using System.Xml.Serialization;
 namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
 /// <summary>The texture modifier</summary>
-[XmlRoot(ElementName = "TexMod")]
+[XmlRoot("TexMod")]
 public class TextureModifier {
-    [XmlAttribute(AttributeName = "TileU")]
+    [XmlAttribute("TileU")]
     [DefaultValue(0)]
     public float TileU { get; set; }
 
-    [XmlAttribute(AttributeName = "TileV")]
+    [XmlAttribute("TileV")]
     [DefaultValue(0)]
     public float TileV { get; set; }
 
-    [XmlAttribute(AttributeName = "OffsetU")]
+    [XmlAttribute("OffsetU")]
     [DefaultValue(0)]
     public float OffsetU { get; set; }
 
-    [XmlAttribute(AttributeName = "OffsetV")]
+    [XmlAttribute("OffsetV")]
     [DefaultValue(0)]
     public float OffsetV { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_bTexGenProjected")]
+    [XmlAttribute("TexMod_bTexGenProjected")]
     [DefaultValue(1)]
     public int __Projected {
         get => Projected ? 1 : 0;
@@ -32,7 +32,7 @@ public class TextureModifier {
     [XmlIgnore]
     public bool Projected { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_UOscillatorType")]
+    [XmlAttribute("TexMod_UOscillatorType")]
     [DefaultValue(0)]
     public int __UOscillatorType;
 
@@ -41,7 +41,7 @@ public class TextureModifier {
         set => __UOscillatorType = (int) value;
     }
 
-    [XmlAttribute(AttributeName = "TexMod_VOscillatorType")]
+    [XmlAttribute("TexMod_VOscillatorType")]
     [DefaultValue(0)]
     public int __VOscillatorType;
 
@@ -50,7 +50,7 @@ public class TextureModifier {
         set => __VOscillatorType = (int) value;
     }
 
-    [XmlAttribute(AttributeName = "TexMod_RotateType")]
+    [XmlAttribute("TexMod_RotateType")]
     [DefaultValue(ETexModRotateType.NoChange)]
     public int __RotateType { get; set; }
 
@@ -59,7 +59,7 @@ public class TextureModifier {
         set => __RotateType = (int) value;
     }
 
-    [XmlAttribute(AttributeName = "TexMod_TexGenType")]
+    [XmlAttribute("TexMod_TexGenType")]
     [DefaultValue(ETexGenType.Stream)]
     public int __GenType { get; set; }
 
@@ -68,69 +68,69 @@ public class TextureModifier {
         set => __GenType = (int) value;
     }
 
-    [XmlAttribute(AttributeName = "RotateU")]
+    [XmlAttribute("RotateU")]
     [DefaultValue(0)]
     public float RotateU { get; set; }
 
-    [XmlAttribute(AttributeName = "RotateV")]
+    [XmlAttribute("RotateV")]
     [DefaultValue(0)]
     public float RotateV { get; set; }
 
-    [XmlAttribute(AttributeName = "RotateW")]
+    [XmlAttribute("RotateW")]
     [DefaultValue(0)]
     public float RotateW { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_URotateRate")]
+    [XmlAttribute("TexMod_URotateRate")]
     public float URotateRate { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_VRotateRate")]
+    [XmlAttribute("TexMod_VRotateRate")]
     public float VRotateRate { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_WRotateRate")]
+    [XmlAttribute("TexMod_WRotateRate")]
     public float WRotateRate { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_URotatePhase")]
+    [XmlAttribute("TexMod_URotatePhase")]
     public float URotatePhase { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_VRotatePhase")]
+    [XmlAttribute("TexMod_VRotatePhase")]
     public float VRotatePhase { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_WRotatePhase")]
+    [XmlAttribute("TexMod_WRotatePhase")]
     public float WRotatePhase { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_URotateAmplitude")]
+    [XmlAttribute("TexMod_URotateAmplitude")]
     public float URotateAmplitude { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_VRotateAmplitude")]
+    [XmlAttribute("TexMod_VRotateAmplitude")]
     public float VRotateAmplitude { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_WRotateAmplitude")]
+    [XmlAttribute("TexMod_WRotateAmplitude")]
     public float WRotateAmplitude { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_URotateCenter")]
+    [XmlAttribute("TexMod_URotateCenter")]
     public float URotateCenter { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_VRotateCenter")]
+    [XmlAttribute("TexMod_VRotateCenter")]
     public float VRotateCenter { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_WRotateCenter")]
+    [XmlAttribute("TexMod_WRotateCenter")]
     public float WRotateCenter { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_UOscillatorRate")]
+    [XmlAttribute("TexMod_UOscillatorRate")]
     public float UOscillatorRate { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_VOscillatorRate")]
+    [XmlAttribute("TexMod_VOscillatorRate")]
     public float VOscillatorRate { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_UOscillatorPhase")]
+    [XmlAttribute("TexMod_UOscillatorPhase")]
     public float UOscillatorPhase { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_VOscillatorPhase")]
+    [XmlAttribute("TexMod_VOscillatorPhase")]
     public float VOscillatorPhase { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_UOscillatorAmplitude")]
+    [XmlAttribute("TexMod_UOscillatorAmplitude")]
     public float UOscillatorAmplitude { get; set; }
 
-    [XmlAttribute(AttributeName = "TexMod_VOscillatorAmplitude")]
+    [XmlAttribute("TexMod_VOscillatorAmplitude")]
     public float VOscillatorAmplitude { get; set; }
 }

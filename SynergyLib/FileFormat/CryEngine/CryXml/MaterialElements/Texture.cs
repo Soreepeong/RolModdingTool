@@ -1,11 +1,10 @@
-﻿using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Xml.Serialization;
 
 namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
 /// <summary>The texture object</summary>
-[XmlRoot(ElementName = "Texture")]
+[XmlRoot("Texture")]
 public class Texture {
     public enum TypeEnum {
         [XmlEnum("0")]
@@ -38,7 +37,7 @@ public class Texture {
         Custom2,
     }
 
-    [XmlAttribute(AttributeName = "Map")]
+    [XmlAttribute("Map")]
     public string? MapString { get; set; }
 
     /// <summary>Diffuse, Specular, Bumpmap, Environment, HeightMamp or Custom</summary>
@@ -73,15 +72,15 @@ public class Texture {
     }
 
     /// <summary>Location of the texture</summary>
-    [XmlAttribute(AttributeName = "File")]
+    [XmlAttribute("File")]
     public string? File { get; set; }
 
     /// <summary>The type of the texture</summary>
-    [XmlAttribute(AttributeName = "TexType")]
+    [XmlAttribute("TexType")]
     [DefaultValue(TypeEnum.Default)]
     public TypeEnum TexType;
 
-    [XmlAttribute(AttributeName = "IsTileU")]
+    [XmlAttribute("IsTileU")]
     [DefaultValue(1)]
     public int IsTileUInt { get; set; } = 1;
 
@@ -91,7 +90,7 @@ public class Texture {
         set => IsTileUInt = value ? 1 : 0;
     }
 
-    [XmlAttribute(AttributeName = "IsTileV")]
+    [XmlAttribute("IsTileV")]
     [DefaultValue(1)]
     public int IsTileVInt { get; set; } = 1;
 
@@ -102,6 +101,6 @@ public class Texture {
     }
 
     /// <summary>The modifier to apply to the texture</summary>
-    [XmlElement(ElementName = "TexMod")]
+    [XmlElement("TexMod")]
     public TextureModifier? Modifier;
 }

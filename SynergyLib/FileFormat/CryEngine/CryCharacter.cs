@@ -36,8 +36,10 @@ public partial class CryCharacter {
 
     public Task<GltfTuple> ToGltf(
         Func<string, CancellationToken, Task<Stream>> getStream,
+        bool useAnimation,
+        bool exportOnlyRequiredTextures,
         CancellationToken cancellationToken) =>
-        new GltfExporter(this, getStream, cancellationToken).Convert();
+        new GltfExporter(this, getStream, useAnimation, exportOnlyRequiredTextures, cancellationToken).Convert();
 
     public static async Task<CryCharacter> FromCryEngineFiles(
         Func<string, CancellationToken, Task<Stream>> streamOpener,
@@ -46,6 +48,7 @@ public partial class CryCharacter {
         if (Path.GetExtension(baseName).ToLowerInvariant() is ".cdf" or ".cgf" or ".chr")
             baseName = Path.ChangeExtension(baseName, null);
         CharacterDefinition? definition = null;
+
         CryModel model;
         try {
             await using (var definitionStream = await streamOpener($"{baseName}.cdf", cancellationToken))
@@ -57,18 +60,20 @@ public partial class CryCharacter {
             if (definition.Model.Material is null)
                 throw new InvalidDataException("Definition.Model.Material should not be null");
 
-            model = CryModel.FromCryEngineFiles(
-                await streamOpener(definition.Model.File, cancellationToken),
-                await streamOpener(definition.Model.Material, cancellationToken));
+            model = await CryModel.FromCryEngineFiles(
+                streamOpener,
+                definition.Model.File,
+                definition.Model.Material,
+                cancellationToken);
         } catch (FileNotFoundException) {
-            model = CryModel.FromCryEngineFiles(
-                await streamOpener($"{baseName}.chr", cancellationToken),
-                await streamOpener($"{baseName}.mtl", cancellationToken));
+            try {
+                model = await CryModel.FromCryEngineFiles(streamOpener, $"{baseName}.chr", null, cancellationToken);
+            } catch (FileNotFoundException) {
+                model = await CryModel.FromCryEngineFiles(streamOpener, $"{baseName}.cgf", null, cancellationToken);
+            }
         }
 
-        var res = new CryCharacter(model) {
-            Definition = definition
-        };
+        var res = new CryCharacter(model) {Definition = definition};
         if (definition is not null) {
             foreach (var d in (IEnumerable<Attachment>?) definition.Attachments ?? Array.Empty<Attachment>()) {
                 if (d.Binding is null)
@@ -76,9 +81,7 @@ public partial class CryCharacter {
                 if (d.Material is null)
                     throw new InvalidDataException("Attachment.Material should not be null");
                 res.Attachments.Add(
-                    CryModel.FromCryEngineFiles(
-                        await streamOpener(d.Binding, cancellationToken),
-                        await streamOpener(d.Material, cancellationToken)));
+                    await CryModel.FromCryEngineFiles(streamOpener, d.Binding, d.Material, cancellationToken));
             }
         }
 

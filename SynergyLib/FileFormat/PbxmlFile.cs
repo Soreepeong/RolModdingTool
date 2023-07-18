@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -81,18 +80,10 @@ public class PbxmlFile {
             CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator = ",";
             var serializer = new XmlSerializer(typeof(T));
             if (throwOnUnknown) {
-                serializer.UnknownNode += (sender, args) => {
-                    Debugger.Break();
-                    // throw new NotSupportedException();
-                };
-                serializer.UnknownAttribute += (sender, args) => {
-                    Debugger.Break();
-                    throw new NotSupportedException();
-                };
-                serializer.UnknownElement += (sender, args) => {
-                    Debugger.Break();
-                    throw new NotSupportedException();
-                };
+                serializer.UnknownAttribute += (_, args) =>
+                    throw new NotSupportedException($"Unknown attribute: {args.Attr.Name}");
+                serializer.UnknownElement += (_, args) =>
+                    throw new NotSupportedException($"Unknown element: {args.Element.Name}");
             }
 
             using var reader = new XmlNodeReader(Document);

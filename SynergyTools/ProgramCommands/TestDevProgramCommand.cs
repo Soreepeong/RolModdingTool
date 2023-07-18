@@ -50,7 +50,7 @@ public class TestDevProgramCommand : RootProgramCommand {
             aabbSonic.Expand(p.Position);
 
         await using (var os = File.Create("Z:/ROL3D/sonic.glb"))
-            (await sonic.ToGltf(rfn, cancellationToken)).Compile(os);
+            (await sonic.ToGltf(rfn, true, false, cancellationToken)).Compile(os);
         // var char2 = CryCharacter.FromGltf(GltfTuple.FromStream(File.OpenRead("Z:/ROL3D/sonic.glb")));
         // foreach (var k in sonic.CryAnimationDatabase.Animations.Keys.ToArray()) {
         //     // var orig = sonic.CryAnimationDatabase.Animations[k];

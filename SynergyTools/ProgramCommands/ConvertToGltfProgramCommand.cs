@@ -40,10 +40,20 @@ public class ConvertToGltfProgramCommand : RootProgramCommand {
         () => false,
         "Use alternative costume (luminous suits.)");
 
+    public static readonly Option<bool> DisableAnimationsOption = new(
+        "--disable-animation",
+        () => false,
+        "Do not export animations.");
+
     public static readonly Option<bool> UseSingleFileOption = new(
         "--single-file",
         () => false,
         "Use single file output (.glb instead of .gltf).");
+
+    public static readonly Option<bool> ExportOnlyRequiredTexturesOption = new(
+        "--export-required-textures-only",
+        () => false,
+        "Only export required textures.");
 
     public static readonly Option<string?> BaseOutPathOption = new(
         "--out-path",
@@ -58,8 +68,12 @@ public class ConvertToGltfProgramCommand : RootProgramCommand {
         Command.AddOption(SubPathOption);
         UseAltSkinsOption.AddAlias("-a");
         Command.AddOption(UseAltSkinsOption);
+        DisableAnimationsOption.AddAlias("-d");
+        Command.AddOption(DisableAnimationsOption);
         UseSingleFileOption.AddAlias("-s");
         Command.AddOption(UseSingleFileOption);
+        ExportOnlyRequiredTexturesOption.AddAlias("-r");
+        Command.AddOption(ExportOnlyRequiredTexturesOption);
         Command.SetHandler(ic => new ConvertToGltfProgramCommand(ic.ParseResult).Handle(ic.GetCancellationToken()));
     }
 
@@ -67,14 +81,18 @@ public class ConvertToGltfProgramCommand : RootProgramCommand {
     public readonly string[] SubPathArray;
     public readonly string? BaseOutPath;
     public readonly bool UseAltSkins;
+    public readonly bool DisableAnimations;
     public readonly bool UseSingleFile;
+    public readonly bool ExportOnlyRequiredTextures;
 
     public ConvertToGltfProgramCommand(ParseResult parseResult) : base(parseResult) {
         InPathArray = parseResult.GetValueForArgument(PathArgument);
         SubPathArray = parseResult.GetValueForOption(SubPathOption) ?? Array.Empty<string>();
         BaseOutPath = parseResult.GetValueForOption(BaseOutPathOption);
         UseAltSkins = parseResult.GetValueForOption(UseAltSkinsOption);
+        DisableAnimations = parseResult.GetValueForOption(DisableAnimationsOption);
         UseSingleFile = parseResult.GetValueForOption(UseSingleFileOption);
+        ExportOnlyRequiredTextures = parseResult.GetValueForOption(ExportOnlyRequiredTexturesOption);
     }
 
     public async Task<int> Handle(CancellationToken cancellationToken) {
@@ -106,13 +124,16 @@ public class ConvertToGltfProgramCommand : RootProgramCommand {
                 }
 
                 var chr = await CryCharacter.FromCryEngineFiles(readerFunc, p, cancellationToken);
-                var gltf = await chr.ToGltf(readerFunc, cancellationToken);
+                var gltf = await chr.ToGltf(
+                    readerFunc,
+                    !DisableAnimations,
+                    ExportOnlyRequiredTextures,
+                    cancellationToken);
                 if (UseSingleFile) {
                     await using var s = File.Create(outPath);
                     gltf.Compile(s);
                 } else {
-                    await using (var s = File.Create(Path.Join(outPath, Path.GetFileNameWithoutExtension(p) + ".glb")))
-                        gltf.Compile(s);
+                    Directory.CreateDirectory(outPath);
                     foreach (var (name, strm) in gltf.CompileToFiles(Path.GetFileNameWithoutExtension(p))) {
                         var filePath = Path.Join(outPath, name);
                         Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);

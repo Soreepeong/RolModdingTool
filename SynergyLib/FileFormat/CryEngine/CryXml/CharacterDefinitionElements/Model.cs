@@ -2,11 +2,11 @@ using System.Xml.Serialization;
 
 namespace SynergyLib.FileFormat.CryEngine.CryXml.CharacterDefinitionElements;
 
-[XmlRoot(ElementName = "Model")]
+[XmlRoot("Model")]
 public class Model {
-    [XmlAttribute(AttributeName = "File")]
+    [XmlAttribute("File")]
     public string? File { get; set; }
 
-    [XmlAttribute(AttributeName = "Material")]
+    [XmlAttribute("Material")]
     public string? Material { get; set; }
 }

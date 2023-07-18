@@ -2,29 +2,29 @@ using System.Xml.Serialization;
 
 namespace SynergyLib.FileFormat.CryEngine.CryXml.CharacterDefinitionElements;
 
-[XmlRoot(ElementName = "ShapeDeformation")]
+[XmlRoot("ShapeDeformation")]
 public class ShapeDeformation {
-    [XmlAttribute(AttributeName = "COL0")]
+    [XmlAttribute("COL0")]
     public int Col0 { get; set; }
 
-    [XmlAttribute(AttributeName = "COL1")]
+    [XmlAttribute("COL1")]
     public int Col1 { get; set; }
 
-    [XmlAttribute(AttributeName = "COL2")]
+    [XmlAttribute("COL2")]
     public int Col2 { get; set; }
 
-    [XmlAttribute(AttributeName = "COL3")]
+    [XmlAttribute("COL3")]
     public int Col3 { get; set; }
 
-    [XmlAttribute(AttributeName = "COL4")]
+    [XmlAttribute("COL4")]
     public int Col4 { get; set; }
 
-    [XmlAttribute(AttributeName = "COL5")]
+    [XmlAttribute("COL5")]
     public int Col5 { get; set; }
 
-    [XmlAttribute(AttributeName = "COL6")]
+    [XmlAttribute("COL6")]
     public int Col6 { get; set; }
 
-    [XmlAttribute(AttributeName = "COL7")]
+    [XmlAttribute("COL7")]
     public int Col7 { get; set; }
 }

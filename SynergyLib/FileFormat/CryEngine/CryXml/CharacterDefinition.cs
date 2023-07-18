@@ -4,13 +4,13 @@ using SynergyLib.FileFormat.CryEngine.CryXml.CharacterDefinitionElements;
 
 namespace SynergyLib.FileFormat.CryEngine.CryXml;
 
-[XmlRoot(ElementName = "CharacterDefinition")]
+[XmlRoot("CharacterDefinition")]
 public class CharacterDefinition {
-    [XmlElement(ElementName = "Model")]
+    [XmlElement("Model")]
     public Model? Model { get; set; }
 
-    [XmlArray(ElementName = "AttachmentList")]
-    [XmlArrayItem(ElementName = "Attachment")]
+    [XmlArray("AttachmentList")]
+    [XmlArrayItem("Attachment")]
     public List<Attachment>? Attachments { get; set; }
 
     public ShapeDeformation? ShapeDeformation { get; set; }

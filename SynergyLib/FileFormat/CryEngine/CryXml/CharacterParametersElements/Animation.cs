@@ -2,11 +2,11 @@ using System.Xml.Serialization;
 
 namespace SynergyLib.FileFormat.CryEngine.CryXml.CharacterParametersElements;
 
-[XmlRoot(ElementName = "Animation")]
+[XmlRoot("Animation")]
 public class Animation {
-    [XmlAttribute(AttributeName = "name")]
+    [XmlAttribute("name")]
     public string? Name { get; set; }
 
-    [XmlAttribute(AttributeName = "path")]
+    [XmlAttribute("path")]
     public string? Path { get; set; }
 }

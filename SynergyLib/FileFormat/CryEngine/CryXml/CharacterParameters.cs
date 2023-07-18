@@ -6,11 +6,11 @@ using SynergyLib.FileFormat.CryEngine.CryXml.CharacterParametersElements;
 
 namespace SynergyLib.FileFormat.CryEngine.CryXml;
 
-[XmlRoot(ElementName = "Params")]
+[XmlRoot("Params")]
 public class CharacterParameters {
-    [XmlArray(ElementName = "AnimationList")]
-    [XmlArrayItem(ElementName = "Animation", Type = typeof(Animation))]
-    [XmlArrayItem(ElementName = "Comment", Type = typeof(Comment))]
+    [XmlArray("AnimationList")]
+    [XmlArrayItem("Animation", Type = typeof(Animation))]
+    [XmlArrayItem("Comment", Type = typeof(Comment))]
     public object[] Items { get; set; } = Array.Empty<object>();
 
     [XmlIgnore]

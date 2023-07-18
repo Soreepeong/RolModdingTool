@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Enums;
 using SynergyLib.Util.BinaryRW;
@@ -70,4 +71,10 @@ public class MtlNameChunk : ICryChunk {
     public int WrittenSize => Header.WrittenSize + 408;
 
     public override string ToString() => $"{nameof(MtlNameChunk)}: {Header}: {Name}";
+
+    public static MtlNameChunk FindChunkForMainMesh(CryChunks chunks) {
+        var nodeChunk = chunks.Values.OfType<NodeChunk>().Single(
+            x => x.ParentId == -1 && !((MeshChunk) chunks[x.ObjectId]).Flags.HasFlag(MeshChunkFlags.MeshIsEmpty));
+        return (MtlNameChunk) chunks[nodeChunk.MaterialId];
+    }
 }

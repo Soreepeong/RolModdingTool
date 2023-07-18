@@ -156,16 +156,20 @@ public class GltfTuple {
         GltfBufferViewTarget? target,
         ReadOnlySpan<T> data)
         where T : unmanaged {
-        if (Root.Buffers.Count != DataStreams.Count)
-            throw new InvalidOperationException("len(Buffers) != len(DataStreams)");
+        
+        int dataStreamIndex;
+        lock (DataStreams){
+            if (Root.Buffers.Count != DataStreams.Count)
+                throw new InvalidOperationException("len(Buffers) != len(DataStreams)");
 
-        var dataStreamIndex = _defaultDataStreamIndex;
-        if (dataStreamIndex == -1 && uri is null) {
-            dataStreamIndex = _defaultDataStreamIndex = DataStreams.AddAndGetIndex(new());
-            Root.Buffers.Add(new());
-        } else if (uri is not null) {
-            dataStreamIndex = DataStreams.AddAndGetIndex(new());
-            Root.Buffers.Add(new() {Uri = uri});
+            dataStreamIndex = _defaultDataStreamIndex;
+            if (dataStreamIndex == -1 && uri is null) {
+                dataStreamIndex = _defaultDataStreamIndex = DataStreams.AddAndGetIndex(new());
+                Root.Buffers.Add(new());
+            } else if (uri is not null) {
+                dataStreamIndex = DataStreams.AddAndGetIndex(new());
+                Root.Buffers.Add(new() {Uri = uri.Replace(":", "_")});
+            }
         }
 
         var targetStream = DataStreams[dataStreamIndex];
@@ -295,10 +299,10 @@ public class GltfTuple {
         }
     }
 
-    public int AddTexture<TPixel>(string name, Image<TPixel> image, PngColorType colorType, DdsFile? ddsFile = null)
+    public int AddTexture<TPixel>(string baseName, Image<TPixel> image, PngColorType colorType, DdsFile? ddsFile = null)
         where TPixel : unmanaged, IPixel<TPixel> {
         for (var i = 0; i < Root.Textures.Count; i++)
-            if (Root.Textures[i].Name == name)
+            if (Root.Textures[i].Name == baseName)
                 return i;
 
         using var pngStream = new MemoryStream();
@@ -307,11 +311,11 @@ public class GltfTuple {
         if (ddsFile is not null)
             Root.ExtensionsUsed.Add("MSFT_texture_dds");
 
-        var pngName = Path.GetFileNameWithoutExtension(name) + ".png";
-        var ddsName = "dds/" + Path.GetFileNameWithoutExtension(name) + ".dds";
+        var pngName = $"{baseName}.png";
+        var ddsName = $"dds/{Path.GetFileName(baseName)}.dds";
         return Root.Textures.AddAndGetIndex(
             new() {
-                Name = name,
+                Name = baseName,
                 Source = Root.Images.AddAndGetIndex(
                     new() {
                         Name = pngName,

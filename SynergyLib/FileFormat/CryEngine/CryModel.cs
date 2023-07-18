@@ -6,6 +6,8 @@ using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Enums;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
@@ -17,8 +19,8 @@ using SynergyLib.Util.MathExtras;
 namespace SynergyLib.FileFormat.CryEngine;
 
 public class CryModel {
-    public string Name;
-    public Material Material;
+    public readonly string Name;
+    public readonly Material Material;
     public readonly List<Controller> Controllers = new();
     public readonly List<Mesh> Meshes = new();
     public readonly Dictionary<string, MemoryStream> ExtraTextures = new();
@@ -418,11 +420,42 @@ public class CryModel {
     public static CryModel FromCryEngineFiles(Stream geom, Stream mtrl) {
         var material = PbxmlFile.FromStream(mtrl).DeserializeAs<Material>();
         var chunks = CryChunks.FromStream(geom);
+        return FromCryEngineFiles(chunks, material);
+    }
 
+    public static async Task<CryModel> FromCryEngineFiles(
+        Func<string, CancellationToken, Task<Stream>> streamOpener,
+        string geometryPath,
+        string? materialPath,
+        CancellationToken cancellationToken) {
+        
+        var geometryChunks = CryChunks.FromStream(await streamOpener(geometryPath, cancellationToken));
+        
+        materialPath = materialPath?.Replace("\\", "/");
+        if (materialPath?.EndsWith(".mtl", StringComparison.OrdinalIgnoreCase) is false)
+            materialPath += ".mtl";
+        var embeddedMaterialPath = Path.Join(
+            Path.GetDirectoryName(geometryPath),
+            MtlNameChunk.FindChunkForMainMesh(geometryChunks).Name + ".mtl")
+            .Replace("\\", "/");
+        
+        if (materialPath is not null && string.Compare(
+                materialPath,
+                embeddedMaterialPath,
+                StringComparison.OrdinalIgnoreCase) != 0)
+            throw new InvalidDataException();
+
+        var material = PbxmlFile.FromStream(await streamOpener(embeddedMaterialPath, cancellationToken))
+            .DeserializeAs<Material>();
+        return FromCryEngineFiles(geometryChunks, material);
+    }
+
+    public static CryModel FromCryEngineFiles(CryChunks chunks, Material material) {
         // Test: Ensure exportFlagsChunk is what we know
         NotSupportedIfFalse(chunks.Values.OfType<ExportFlagsChunk>().Single().Flags == ExportFlags.UseCustomNormals);
 
-        var nodeChunk = chunks.Values.OfType<NodeChunk>().Single(x => x.ParentId == -1);
+        var nodeChunk = chunks.Values.OfType<NodeChunk>().Single(
+            x => x.ParentId == -1 && !((MeshChunk) chunks[x.ObjectId]).Flags.HasFlag(MeshChunkFlags.MeshIsEmpty));
         NotSupportedIfFalse(!nodeChunk.IsGroupHead);
         NotSupportedIfFalse(!nodeChunk.IsGroupMember);
         NotSupportedIfFalse(nodeChunk.Properties.Length == 0);
@@ -439,7 +472,7 @@ public class CryModel {
         var mtlNameChunks = chunks.Values.OfType<MtlNameChunk>().ToArray();
         foreach (var chunk in mtlNameChunks) {
             NotSupportedIfFalse(chunk.AdvancedDataChunkId == 0); // not implemented by us
-            NotSupportedIfFalse(chunk.PhysicsType == MtlNamePhysicsType.None); // not implemented by us
+            // NotSupportedIfFalse(chunk.PhysicsType == MtlNamePhysicsType.None); // not implemented by us
             NotSupportedIfFalse(chunk.Flags2 == 0); // not implemented by CryEngine
             if (chunk.Header.Id == nodeChunk.MaterialId) {
                 NotSupportedIfFalse(chunk.Flags == MtlNameFlags.MultiMaterial);
@@ -500,7 +533,7 @@ public class CryModel {
 
         // Test: ShapeDeformation.Index are all set to 0xFF
         foreach (var sd in shapeDeformations)
-            NotSupportedIfFalse(sd.Index.All(x => x is 0xFF or 1));
+            NotSupportedIfFalse(sd.Index.All(x => x is 0xFF or 1 or 0));
 
         // Test: Ensure subset counts match
         NotSupportedIfFalse(subsetsChunk.Subsets.Count == meshChunk.SubsetsCount);
@@ -644,9 +677,8 @@ public class CryModel {
                 checked((ushort) Enumerable.Range(i, to - i).Min(x => subsetsChunk.Subsets[x].FirstVertId));
             var vertexIdTo = checked((ushort) Enumerable.Range(i, to - i)
                 .Max(x => subsetsChunk.Subsets[x].FirstVertId + subsetsChunk.Subsets[x].NumVerts));
-            var indexIdFrom = checked((ushort) subsetsChunk.Subsets[i].FirstIndexId);
-            var indexIdTo = checked((ushort) subsetsChunk.Subsets[to - 1].FirstIndexId +
-                subsetsChunk.Subsets[to - 1].NumIndices);
+            var indexIdFrom = subsetsChunk.Subsets[i].FirstIndexId;
+            var indexIdTo = subsetsChunk.Subsets[to - 1].FirstIndexId + subsetsChunk.Subsets[to - 1].NumIndices;
 
             // Test: Ensure corresponding material is defined in the mtl file
             var matName = material.SubMaterials![subsetsChunk.Subsets[i].MatId].Name!;

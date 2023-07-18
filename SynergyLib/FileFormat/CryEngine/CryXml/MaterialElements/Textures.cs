@@ -3,8 +3,8 @@ using System.Xml.Serialization;
 
 namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
-[XmlRoot(ElementName = "Textures")]
+[XmlRoot("Textures")]
 public record Textures {
-    [XmlElement(ElementName = "Texture")]
+    [XmlElement("Texture")]
     public readonly List<Texture> Texture = new();
 }

@@ -2,8 +2,8 @@
 
 namespace SynergyLib.FileFormat.CryEngine.CryXml.CharacterParametersElements;
 
-[XmlRoot(ElementName = "Comment")]
+[XmlRoot("Comment")]
 public class Comment {
-    [XmlAttribute(AttributeName = "value")]
+    [XmlAttribute("value")]
     public string? Value { get; set; }
 }

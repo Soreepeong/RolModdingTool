@@ -82,11 +82,13 @@ public sealed class GameFileSystemReader : IAsyncDisposable, IDisposable {
         string path,
         SkinFlag lookupSkinFlag,
         CancellationToken cancellationToken) {
+        
+        var originalPath = path;
         path = path.Replace('\\', '/').Trim('/');
         while (path.StartsWith("../"))
             path = path[3..];
         if (path == "..")
-            throw new FileNotFoundException();
+            throw new FileNotFoundException($"File not found: {originalPath}");
 
         if (lookupSkinFlag.IsAltSkin()) {
             var basePath = Path.Join(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path));
@@ -107,7 +109,7 @@ public sealed class GameFileSystemReader : IAsyncDisposable, IDisposable {
                 return new MemoryStream(entry.Source.ReadRaw(cancellationToken));
         }
 
-        throw new FileNotFoundException();
+        throw new FileNotFoundException($"File not found: {originalPath}");
     }
 
     public async Task<byte[]> GetBytesAsync(

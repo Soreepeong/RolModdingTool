@@ -3,7 +3,7 @@ using System.Xml.Serialization;
 
 namespace SynergyLib.FileFormat.CryEngine.CryXml.CharacterDefinitionElements;
 
-[XmlRoot(ElementName = "Attachment")]
+[XmlRoot("Attachment")]
 public class Attachment {
     [XmlIgnore]
     public Quaternion Rotation = Quaternion.Identity;
@@ -11,33 +11,33 @@ public class Attachment {
     [XmlIgnore]
     public Vector3 Position = Vector3.Zero;
 
-    [XmlAttribute(AttributeName = "AName")]
+    [XmlAttribute("AName")]
     public string? AName { get; set; }
 
-    [XmlAttribute(AttributeName = "Type")]
+    [XmlAttribute("Type")]
     public string? Type { get; set; }
 
-    [XmlAttribute(AttributeName = "Rotation")]
+    [XmlAttribute("Rotation")]
     public string? RotationString {
         get => Rotation.ToXmlValue();
         set => Rotation = value.XmlToQuaternion() ?? Quaternion.Identity;
     }
 
-    [XmlAttribute(AttributeName = "Position")]
+    [XmlAttribute("Position")]
     public string? PositionString {
         get => Position.ToXmlValue();
         set => Position = value.XmlToVector3() ?? Vector3.Zero;
     }
 
-    [XmlAttribute(AttributeName = "BoneName")]
+    [XmlAttribute("BoneName")]
     public string? BoneName { get; set; }
 
-    [XmlAttribute(AttributeName = "Binding")]
+    [XmlAttribute("Binding")]
     public string? Binding { get; set; }
 
-    [XmlAttribute(AttributeName = "Flags")]
+    [XmlAttribute("Flags")]
     public int Flags { get; set; }
 
-    [XmlAttribute(AttributeName = "Material")]
+    [XmlAttribute("Material")]
     public string? Material { get; set; }
 }
