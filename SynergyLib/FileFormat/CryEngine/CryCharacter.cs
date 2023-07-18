@@ -170,7 +170,9 @@ public partial class CryCharacter {
                         MaterialFlags.ShaderGenMask64Bit,
                     DiffuseColor = material?.PbrMetallicRoughness?.BaseColorFactor?.ToVector3(),
                     SpecularColor = material?.Extensions?.KhrMaterialsSpecular?.SpecularColorFactor?.ToVector3(),
-                    Shininess = material?.Extensions?.KhrMaterialsPbrSpecularGlossiness?.GlossinessFactor ?? 200,
+                    EmissiveColor = Vector3.Zero,
+                    Shininess = MathF.Round(
+                        material?.Extensions?.KhrMaterialsPbrSpecularGlossiness?.GlossinessFactor * 255 ?? 200),
                     Opacity = material?.PbrMetallicRoughness?.BaseColorFactor?[3] ?? 1f,
                     GlowAmount = material?.Extensions?.KhrMaterialsEmissiveStrength?.EmissiveStrength ?? 0f,
                     Shader = "Brb_Illum",
@@ -217,7 +219,25 @@ public partial class CryCharacter {
                         });
                 }
 
-                if (material?.Extensions?.KhrMaterialsSpecular?.SpecularTexture?.Index is
+                if (material?.Extensions?.KhrMaterialsPbrSpecularGlossiness?.SpecularGlossinessTexture?.Index is
+                    { } specularGlossinessTextureIndex) {
+                    cryMaterial.StringGenMask += "%GLOSS_MAP%SPECULARPOW_GLOSSALPHA";
+                    var image = Image.Load<Rgba32>(
+                            gltf.ReadBufferView(
+                                root.Images[root.Textures[specularGlossinessTextureIndex].Source ??
+                                        throw new InvalidDataException()]
+                                    .BufferView ?? throw new InvalidDataException())) ??
+                        throw new InvalidDataException();
+
+                    var ms = new MemoryStream();
+                    ddsEncoder.EncodeToStream(image, ms);
+                    model.ExtraTextures[$"mod/{rootNode.Name}/{materialName}_specular.dds"] = ms;
+                    cryMaterial.Textures.Add(
+                        new() {
+                            File = $"mod/{rootNode.Name}/{materialName}_specular.tif",
+                            Map = Texture.MapTypeEnum.Specular,
+                        });
+                } else if (material?.Extensions?.KhrMaterialsSpecular?.SpecularTexture?.Index is
                     { } specularTextureIndex) {
                     cryMaterial.StringGenMask += "%GLOSS_MAP";
                     var image = Image.Load<Rgba32>(
