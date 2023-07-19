@@ -198,6 +198,6 @@ public class Controller {
     }
 
     public override string ToString() => Children.Any()
-        ? $"{nameof(CryModel)}: {Name} #{Id:X08}"
-        : $"{nameof(CryModel)}: {Name} #{Id:X08} (Leaf)";
+        ? $"{nameof(Controller)}: {Name} #{Id:X08}"
+        : $"{nameof(Controller)}: {Name} #{Id:X08} (Leaf)";
 }

@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 using BCnEncoder.Decoder;
@@ -14,6 +15,7 @@ using BCnEncoder.ImageSharp;
 using BCnEncoder.Shared;
 using SynergyLib.FileFormat;
 using SynergyLib.FileFormat.CryEngine;
+using SynergyLib.Util;
 using SynergyTools.Misc;
 
 namespace SynergyTools.ProgramCommands;
@@ -28,14 +30,14 @@ public class QuickModProgramCommand : RootProgramCommand {
         Arity = ArgumentArity.OneOrMore,
     };
 
-    public static readonly Option<SonicClones> ModeOption = new(
+    public static readonly Option<Characters> ModeOption = new(
         "--mode",
-        () => SonicClones.Default,
+        () => Characters.Default,
         "Specify which character to replace Sonic.");
 
-    public static readonly Option<SonicCloneVoices> VoiceOption = new(
+    public static readonly Option<CharacterVoices> VoiceOption = new(
         "--voice",
-        () => SonicCloneVoices.Auto,
+        () => CharacterVoices.Auto,
         "Specify which voice to replace Sonic's voice.");
 
     private const string SonicBaseName = "objects/characters/1_heroes/sonic/sonic";
@@ -143,9 +145,13 @@ public class QuickModProgramCommand : RootProgramCommand {
             "animations/characters/5_minibosses/metal_sonic/test/run.caf",
     };
 
+    public static readonly Dictionary<string, string> SonicToSticksAnimationMap = new() {
+        ["animations/characters/1_heroes/sonic/final/idle.caf"] =
+            "animations/characters/9_majornpc/sticks/final/idle.caf",
+    };
+
     static QuickModProgramCommand() {
         Command.AddAlias("qm");
-        Command.AddAlias("metadow");
         Command.AddArgument(PathArgument);
         ModeOption.AddAlias("-m");
         Command.AddOption(ModeOption);
@@ -155,8 +161,8 @@ public class QuickModProgramCommand : RootProgramCommand {
     }
 
     public readonly string[] PathArray;
-    public readonly SonicClones Mode;
-    public readonly SonicCloneVoices Voice;
+    public readonly Characters Mode;
+    public readonly CharacterVoices Voice;
 
     public string? SoundsPath;
     public string? HeroesPath;
@@ -170,29 +176,37 @@ public class QuickModProgramCommand : RootProgramCommand {
     }
 
     private WiiuStreamFile ReferenceLevel => Levels[Mode switch {
-        SonicClones.Shadow => "level02_ancientfactorypresent_a",
-        SonicClones.MetalSonic => "level05_sunkenruins",
-        SonicClones.Sonic => throw new InvalidOperationException(),
+        Characters.Shadow => "level02_ancientfactorypresent_a",
+        Characters.MetalSonic => "level05_sunkenruins",
+        Characters.Sticks => "hub02_seasidevillage",
+        Characters.Sonic => throw new InvalidOperationException(),
         _ => throw new InvalidOperationException(),
     }];
 
     private string ReferenceObjectBaseName => Mode switch {
-        SonicClones.Shadow => "objects/characters/5_minibosses/shadow/shadow",
-        SonicClones.MetalSonic => "objects/characters/5_minibosses/metal_sonic/metal_sonic",
-        SonicClones.Sonic => throw new InvalidOperationException(),
+        Characters.Shadow => "objects/characters/5_minibosses/shadow/shadow",
+        Characters.MetalSonic => "objects/characters/5_minibosses/metal_sonic/metal_sonic",
+        Characters.Sticks => "objects/characters/9_majornpc/sticks/sticks",
+        Characters.Sonic => throw new InvalidOperationException(),
         _ => throw new InvalidOperationException(),
     };
 
     private string ReferenceTexturePathPrefix => Mode switch {
-        SonicClones.Shadow => "art/characters/5_minibosses/shadow/texture/",
-        SonicClones.MetalSonic => "art/characters/5_minibosses/metal_sonic/textures/",
-        SonicClones.Sonic => throw new InvalidOperationException(),
+        Characters.Shadow => "art/characters/5_minibosses/shadow/texture/",
+        Characters.MetalSonic => "art/characters/5_minibosses/metal_sonic/textures/",
+        Characters.Sticks => "art/characters/9_majornpc/sticks/textures/",
+        Characters.Sonic => throw new InvalidOperationException(),
         _ => throw new InvalidOperationException(),
     };
 
     public async Task<int> Handle(CancellationToken cancellationToken) {
         Heroes = null;
         Levels.Clear();
+        
+        if (Mode == Characters.Sticks)
+            using (ScopedConsoleColor.Foreground(ConsoleColor.Yellow))
+                Console.WriteLine("Sticks does not have perfectly compatible bone structures with Sonic, and will " +
+                    "not look right.");
 
         var levelPaths = new Dictionary<string, string>();
 
@@ -208,7 +222,7 @@ public class QuickModProgramCommand : RootProgramCommand {
             if (HeroesPath is null) {
                 HeroesPath = Path.Join(inPath, "Sonic_Crytek", "heroes.wiiu.stream");
                 var bakFile = HeroesPath + ".bak";
-                if (Mode == SonicClones.Sonic) {
+                if (Mode == Characters.Sonic) {
                     if (File.Exists(bakFile)) {
                         File.Delete(HeroesPath);
                         File.Move(bakFile, HeroesPath);
@@ -235,7 +249,7 @@ public class QuickModProgramCommand : RootProgramCommand {
                     continue;
 
                 var bakFile = levelPath + ".bak";
-                if (Mode == SonicClones.Sonic) {
+                if (Mode == Characters.Sonic) {
                     if (File.Exists(bakFile)) {
                         File.Delete(levelPath);
                         File.Move(bakFile, levelPath);
@@ -268,8 +282,8 @@ public class QuickModProgramCommand : RootProgramCommand {
         if (SoundsPath is null)
             throw new DirectoryNotFoundException("Sounds folder could not be found.");
 
-        if ((Voice == SonicCloneVoices.Auto && Mode == SonicClones.Sonic)
-            || Voice == SonicCloneVoices.Sonic) {
+        if ((Voice == CharacterVoices.Auto && Mode == Characters.Sonic)
+            || Voice == CharacterVoices.Sonic) {
             Console.WriteLine("Reverting voices...");
 
             foreach (var f in Directory.GetFiles(SoundsPath)) {
@@ -291,13 +305,13 @@ public class QuickModProgramCommand : RootProgramCommand {
             await PatchSonicExertions(cancellationToken);
         }
 
-        if (Mode != SonicClones.Sonic) {
+        if (Mode != Characters.Sonic) {
             if (Heroes is null || HeroesPath is null)
                 throw new FileNotFoundException("heroes.wiiu.stream could not be found.");
 
             Console.WriteLine("Patching graphics...");
 
-            if (Mode == SonicClones.Shadow)
+            if (Mode == Characters.Shadow)
                 await PatchSpinDashBallColor(cancellationToken);
 
             await Task.WhenAll(
@@ -411,6 +425,48 @@ public class QuickModProgramCommand : RootProgramCommand {
         },
         cancellationToken);
 
+    private void PatchSonicExertionsWith(
+        AcbFile targetAcb,
+        string sourceAcbFileName,
+        string cuePrefix,
+        IReadOnlyDictionary<string, string>? extraExertionMap) {
+        var sourceAcb = new AcbFile(Path.Join(SoundsPath, "exertions", sourceAcbFileName), null);
+        var trackIndicesOfSourceWaveformsInSonic = new List<ushort>(sourceAcb.InternalWaveforms.Count);
+        trackIndicesOfSourceWaveformsInSonic.AddRange(
+            sourceAcb.InternalWaveformRows.Select(
+                row => targetAcb.AddTrack(
+                    row,
+                    sourceAcb.InternalWaveforms[row.GetValue<ushort>("Id")])));
+
+        // 1. copy all new voices to sonic voices file
+        var translatedTrackIndices = new Dictionary<string, List<ushort>>();
+        foreach (var (key, indices) in sourceAcb.RelevantWaveformIds) {
+            var translated = translatedTrackIndices[key] = new();
+            translated.AddRange(indices.Select(index => trackIndicesOfSourceWaveformsInSonic[index]));
+        }
+
+        // 2. silence all sonic voices
+        for (var i = 0; i < targetAcb.SequenceTable.Rows.Count; i++)
+            targetAcb.SetTrackIndices(i, Array.Empty<ushort>());
+
+        // 3. for the voice lines with matching names, put new lines
+        foreach (var (cueName, sequenceIndex) in targetAcb.CueNameToSequenceIndex) {
+            var newCueName = cuePrefix + "_" + cueName.Split("_", 2)[1];
+            if (!translatedTrackIndices.TryGetValue(newCueName, out var indices))
+                continue;
+            targetAcb.SetTrackIndices(sequenceIndex, indices.ToArray());
+        }
+
+        // 4. apply extra mappings
+        if (extraExertionMap is not null)
+            foreach (var (from, to) in extraExertionMap) {
+                var sequenceIndex = targetAcb.CueNameToSequenceIndex[from];
+                targetAcb.SetTrackIndices(
+                    sequenceIndex,
+                    to == "" ? Array.Empty<ushort>() : translatedTrackIndices[to].ToArray());
+            }
+    }
+
     private Task PatchSonicExertions(CancellationToken cancellationToken) => Task.Run(
         () => {
             Debug.Assert(SoundsPath is not null);
@@ -424,53 +480,23 @@ public class QuickModProgramCommand : RootProgramCommand {
             var targetAcb = new AcbFile(acbFile + ".bak", awbFile + ".bak");
 
             switch (Voice) {
-                case SonicCloneVoices.Auto when Mode == SonicClones.Shadow:
-                case SonicCloneVoices.Shadow: {
-                    var shadowAcb = new AcbFile(Path.Join(SoundsPath, "exertions", "shadow.acb"), null);
-                    var trackIndicesOfShadowWaveformsInSonic = new List<ushort>(shadowAcb.InternalWaveforms.Count);
-                    trackIndicesOfShadowWaveformsInSonic.AddRange(
-                        shadowAcb.InternalWaveformRows.Select(
-                            row => targetAcb.AddTrack(
-                                row,
-                                shadowAcb.InternalWaveforms[row.GetValue<ushort>("Id")])));
-
-                    // 1. copy all shadow voices to sonic voices file
-                    var translatedTrackIndices = new Dictionary<string, List<ushort>>();
-                    foreach (var (key, indices) in shadowAcb.RelevantWaveformIds) {
-                        var translated = translatedTrackIndices[key] = new();
-                        translated.AddRange(indices.Select(index => trackIndicesOfShadowWaveformsInSonic[index]));
-                    }
-
-                    // 2. silence all sonic voices
-                    for (var i = 0; i < targetAcb.SequenceTable.Rows.Count; i++)
-                        targetAcb.SetTrackIndices(i, Array.Empty<ushort>());
-
-                    // 3. for the voice lines with matching names, put shadow lines
-                    foreach (var (cueName, sequenceIndex) in targetAcb.CueNameToSequenceIndex) {
-                        var shadowCueName = "Shadow_" + cueName.Split("_", 2)[1];
-                        if (!translatedTrackIndices.TryGetValue(shadowCueName, out var indices))
-                            continue;
-                        targetAcb.SetTrackIndices(sequenceIndex, indices.ToArray());
-                    }
-
-                    // 4. apply extra mappings
-                    foreach (var (from, to) in SonicToShadowExertionMap) {
-                        var sequenceIndex = targetAcb.CueNameToSequenceIndex[from];
-                        targetAcb.SetTrackIndices(
-                            sequenceIndex,
-                            to == "" ? Array.Empty<ushort>() : translatedTrackIndices[to].ToArray());
-                    }
-
+                case CharacterVoices.Auto when Mode == Characters.Shadow:
+                case CharacterVoices.Shadow:
+                    PatchSonicExertionsWith(targetAcb, "shadow.acb", "Shadow", SonicToShadowExertionMap);
+                    break;
+                case CharacterVoices.Auto when Mode == Characters.Sticks:
+                case CharacterVoices.Sticks: {
+                    PatchSonicExertionsWith(targetAcb, "sticks.acb", "Sticks", null);
                     break;
                 }
-                case SonicCloneVoices.Auto when Mode == SonicClones.MetalSonic:
-                case SonicCloneVoices.Silence: {
+                case CharacterVoices.Auto when Mode == Characters.MetalSonic:
+                case CharacterVoices.Silence: {
                     // he's a silent type
                     for (var i = 0; i < targetAcb.SequenceTable.Rows.Count; i++)
                         targetAcb.SetTrackIndices(i, Array.Empty<ushort>());
                     break;
                 }
-                case SonicCloneVoices.Sonic:
+                case CharacterVoices.Sonic:
                 default:
                     throw new InvalidOperationException();
             }
@@ -506,45 +532,75 @@ public class QuickModProgramCommand : RootProgramCommand {
 
         sonic.Model.Meshes.Clear();
         sonic.Model.Meshes.AddRange(reference.Model.Meshes.Select(x => x.Clone()));
+
+        foreach (var c in sonic.Model.Controllers)
+            c.RelativeBindPoseMatrix = Matrix4x4.Identity;
+
+        foreach (var controller in reference.Model.Controllers) {
+            var target = sonic.Model.Controllers.SingleOrDefault(x => x.Id == controller.Id);
+            if (target is null) {
+                target = sonic.Model.Controllers.SingleOrDefault(
+                    x => x.Name + "_joint" == controller.Name
+                        || x.Name == controller.Name + "_joint"
+                        || x.Name == controller.Name[..2] + "mouth_" + controller.Name[2..]
+                        || x.Name + "_joint" == controller.Name[..2] + "mouth_" + controller.Name[2..]
+                        || x.Name == controller.Name[..2] + "mouth_" + controller.Name[2..] + "_joint"
+                );
+
+                if (target is null) {
+                    var parent = controller.Parent is null
+                        ? null
+                        : sonic.Model.Controllers.Single(x => x.Name == controller.Parent.Name);
+
+                    target = new(controller.Id, controller.Name, controller.AbsoluteBindPoseMatrix, parent);
+                    sonic.Model.Controllers.Add(target);
+                } else {
+                    foreach (var mesh in sonic.Model.Meshes) {
+                        for (var i = 0; i < mesh.Vertices.Length; i++) {
+                            for (var j = 0; j < 4; j++)
+                                if (mesh.Vertices[i].ControllerIds[j] == controller.Id)
+                                    mesh.Vertices[i].ControllerIds[j] = target.Id;
+                        }
+                    }
+                }
+            }
+
+            if (Mode == Characters.Metal && target.Name
+                    is not "L_ball_joint"
+                    and not "R_ball_joint"
+                    and not "L_ankle_joint"
+                    and not "R_ankle_joint"
+                    and not "_L_toe_joint"
+                    and not "_R_toe_joint"
+                    and not "C_pelvis_joint"
+                    and not "C_spine_1_joint"
+                    and not "C_torso_joint") {
+                target.AbsoluteBindPoseMatrix = controller.AbsoluteBindPoseMatrix;
+            } else if (Mode == Characters.Sticks)
+                target.RelativeBindPoseMatrix = controller.RelativeBindPoseMatrix;
+        }
+
         sonic.Attachments.AddRange(reference.Attachments);
         sonic.Definition ??= new();
         sonic.Definition.Attachments ??= new();
         if (reference.Definition?.Attachments is not null)
             sonic.Definition.Attachments.AddRange(reference.Definition.Attachments);
         switch (Mode) {
-            case SonicClones.Shadow:
+            case Characters.Shadow:
                 foreach (var (a, b) in SonicToShadowAnimationMap)
                     sonic.CryAnimationDatabase!.Animations[a] = reference.CryAnimationDatabase!.Animations[b];
                 break;
-            case SonicClones.MetalSonic:
+            case Characters.MetalSonic:
                 foreach (var (a, b) in SonicToMetalAnimationMap)
                     sonic.CryAnimationDatabase!.Animations[a] = reference.CryAnimationDatabase!.Animations[b];
                 break;
-            case SonicClones.Sonic:
+            case Characters.Sticks:
+                foreach (var (a, b) in SonicToSticksAnimationMap)
+                    sonic.CryAnimationDatabase!.Animations[a] = reference.CryAnimationDatabase!.Animations[b];
+                break;
+            case Characters.Sonic:
             default:
                 throw new InvalidOperationException();
-        }
-
-        foreach (var refController in reference.Model.Controllers) {
-            if (sonic.Model.Controllers.SingleOrDefault(x => x.Id == refController.Id) is { } existingController) {
-                if (Mode == SonicClones.Metal && existingController.Name
-                        is not "L_ball_joint"
-                        and not "R_ball_joint"
-                        and not "L_ankle_joint"
-                        and not "R_ankle_joint"
-                        and not "_L_toe_joint"
-                        and not "_R_toe_joint"
-                        and not "C_pelvis_joint"
-                        and not "C_spine_1_joint"
-                        and not "C_torso_joint") {
-                    existingController.AbsoluteBindPoseMatrix = refController.AbsoluteBindPoseMatrix;
-                }
-
-                continue;
-            }
-
-            var parent = sonic.Model.Controllers.Single(x => x.Id == refController.Parent!.Id);
-            refController.CloneInto(parent, sonic.Model.Controllers);
         }
 
         var geoBytes = sonic.Model.GetGeometryBytes();
@@ -563,10 +619,11 @@ public class QuickModProgramCommand : RootProgramCommand {
     }
 
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
-    public enum SonicClones {
+    public enum Characters {
         Sonic = 0,
         Shadow = 1,
         MetalSonic = 2,
+        Sticks = 3,
 
         // Aliases for command line invocation
         Default = Sonic,
@@ -576,11 +633,12 @@ public class QuickModProgramCommand : RootProgramCommand {
     }
 
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
-    public enum SonicCloneVoices {
+    public enum CharacterVoices {
         Auto = 0,
         Sonic = 1,
         Shadow = 2,
-        Silence = 3,
+        Sticks = 3,
+        Silence = 4,
 
         // Aliases for command line invocation
         Default = Auto,

@@ -56,7 +56,7 @@ public struct Vector4<T> : IList<T>, IEquatable<Vector4<T>> where T : unmanaged 
     public bool Contains(T item) => Equals(item, X) || Equals(item, Y) || Equals(item, Z) || Equals(item, W);
 
     public void CopyTo(T[] array, int arrayIndex) {
-        if (arrayIndex + 4 < array.Length)
+        if (arrayIndex + 4 > array.Length)
             throw new ArgumentException(null, nameof(array));
         array[arrayIndex + 0] = X;
         array[arrayIndex + 1] = Y;
