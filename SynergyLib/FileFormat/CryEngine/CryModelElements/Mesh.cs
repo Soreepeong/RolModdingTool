@@ -6,17 +6,19 @@ using SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
 namespace SynergyLib.FileFormat.CryEngine.CryModelElements;
 
 public class Mesh {
-    public string MaterialName;
+    public string? MaterialName;
+    public bool IsProxy;
     public Vertex[] Vertices;
     public ushort[] Indices;
 
-    public Mesh(string materialName, Vertex[] vertices, ushort[] indices) {
+    public Mesh(string? materialName, bool isProxy, Vertex[] vertices, ushort[] indices) {
         MaterialName = materialName;
+        IsProxy = isProxy;
         Vertices = vertices;
         Indices = indices;
     }
 
-    public Mesh Clone() => new(MaterialName, (Vertex[]) Vertices.Clone(), (ushort[]) Indices.Clone());
+    public Mesh Clone() => new(MaterialName, IsProxy, (Vertex[]) Vertices.Clone(), (ushort[]) Indices.Clone());
 
     public override string ToString() =>
         $"{nameof(Mesh)}: {MaterialName} (vert={Vertices.Length} ind={Indices.Length})";

@@ -57,19 +57,19 @@ public class Material {
     [XmlAttribute("Diffuse")]
     public string? Diffuse {
         get => DiffuseColor.ToXmlValue();
-        set => DiffuseColor = value.XmlToVector3();
+        set => DiffuseColor = value?.XmlToVector3();
     }
 
     [XmlAttribute("Specular")]
     public string? Specular {
         get => SpecularColor.ToXmlValue();
-        set => SpecularColor = value.XmlToVector3();
+        set => SpecularColor = value?.XmlToVector3();
     }
 
     [XmlAttribute("Emissive")]
     public string? Emissive {
         get => EmissiveColor.ToXmlValue();
-        set => EmissiveColor = value.XmlToVector3();
+        set => EmissiveColor = value?.XmlToVector3();
     }
 
     [XmlAttribute("Shininess")]
@@ -86,17 +86,30 @@ public class Material {
 
     [XmlAttribute("AlphaTest")]
     public float AlphaTest { get; set; }
-    
+
     [XmlAttribute("vertModifType")]
     public int VertModifType { get; set; }
 
+    [XmlAttribute("HeatAmountScaled")]
+    public float HeatAmountScaled { get; set; }
+
+    [XmlAttribute("SpecularLevel")]
+    public float SpecularLevel { get; set; }
+
     [XmlArray("SubMaterials")]
-    [XmlArrayItem("Material")]
-    public List<Material>? SubMaterials { get; set; }
+    [XmlArrayItem("Material", Type = typeof(Material))]
+    [XmlArrayItem("MaterialRef", Type = typeof(MaterialRef))]
+    public List<object>? SubMaterialsAndRefs { get; set; }
+
+    [XmlIgnore]
+    public IEnumerable<Material?>? SubMaterials => SubMaterialsAndRefs?.Select(x => x as Material);
+
+    [XmlIgnore]
+    public IEnumerable<MaterialRef?>? SubMaterialRefs => SubMaterialsAndRefs?.Select(x => x as MaterialRef);
 
     [XmlElement("PublicParams")]
     public PublicParams? PublicParams { get; set; }
-    
+
     [XmlElement("VertexDeform")]
     public VertexDeform? VertexDeform { get; set; }
 
@@ -104,5 +117,9 @@ public class Material {
     [XmlArrayItem("Texture")]
     public List<Texture>? Textures { get; set; }
 
-    public override string ToString() => $"Name: {Name}, Shader: {Shader}, Submaterials: {SubMaterials?.Count ?? 0}";
+    public override string ToString() =>
+        $"Name: {Name}, Shader: {Shader}, Submaterials: {SubMaterialsAndRefs?.Count ?? 0}";
 }
+
+[XmlRoot("MaterialRef")]
+public class MaterialRef { }

@@ -421,6 +421,11 @@ public class WiiuStreamFile {
             Hash = Crc32.Brb.Get(data);
         }
 
+        public readonly Stream GetRawStream(CancellationToken cancellationToken) =>
+            SourceType == FileEntrySourceType.RawFile
+                ? File.OpenRead(Path!)
+                : new MemoryStream(ReadRaw(cancellationToken));
+
         public readonly byte[] ReadRaw(CancellationToken cancellationToken) {
             var buf = new byte[RawLength];
             using var ms = new MemoryStream(buf);

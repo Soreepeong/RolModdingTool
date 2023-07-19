@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Serialization;
+using SynergyLib.FileFormat.CryEngine.CryXml.CharacterDefinitionElements;
 using SynergyLib.FileFormat.CryEngine.CryXml.CharacterParametersElements;
 
 namespace SynergyLib.FileFormat.CryEngine.CryXml;
@@ -11,6 +12,7 @@ public class CharacterParameters {
     [XmlArray("AnimationList")]
     [XmlArrayItem("Animation", Type = typeof(Animation))]
     [XmlArrayItem("Comment", Type = typeof(Comment))]
+    [XmlArrayItem("Parts", Type = typeof(Parts))]
     public object[] Items { get; set; } = Array.Empty<object>();
 
     [XmlIgnore]
@@ -27,4 +29,7 @@ public class CharacterParameters {
 
     [XmlIgnore]
     public string? FaceLibPath => Animations.SingleOrDefault(x => x.Name == "$facelib")?.Path;
+    
+    [XmlElement("Parts")]
+    public Parts? Parts { get; set; }
 }

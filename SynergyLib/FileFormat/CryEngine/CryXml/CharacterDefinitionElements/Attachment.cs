@@ -26,7 +26,7 @@ public class Attachment {
     [XmlAttribute("Position")]
     public string? PositionString {
         get => Position.ToXmlValue();
-        set => Position = value.XmlToVector3() ?? Vector3.Zero;
+        set => Position = value?.XmlToVector3() ?? Vector3.Zero;
     }
 
     [XmlAttribute("BoneName")]

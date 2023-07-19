@@ -15,6 +15,7 @@ using BCnEncoder.ImageSharp;
 using BCnEncoder.Shared;
 using SynergyLib.FileFormat;
 using SynergyLib.FileFormat.CryEngine;
+using SynergyLib.FileFormat.CryEngine.CryXml;
 using SynergyLib.Util;
 using SynergyTools.Misc;
 
@@ -202,10 +203,11 @@ public class QuickModProgramCommand : RootProgramCommand {
     public async Task<int> Handle(CancellationToken cancellationToken) {
         Heroes = null;
         Levels.Clear();
-        
+
         if (Mode == Characters.Sticks)
             using (ScopedConsoleColor.Foreground(ConsoleColor.Yellow))
-                Console.WriteLine("Sticks does not have perfectly compatible bone structures with Sonic, and will " +
+                Console.WriteLine(
+                    "Sticks does not have perfectly compatible bone structures with Sonic, and will " +
                     "not look right.");
 
         var levelPaths = new Dictionary<string, string>();
@@ -386,22 +388,46 @@ public class QuickModProgramCommand : RootProgramCommand {
                 return PatchSonicFxColor(
                     cancellationToken,
                     new(
-                        0, 1, 0, 0,
-                        0, 1, 0, 0,
-                        1, 0, 0, 0,
-                        0, 0, 0, 1),
+                        0,
+                        1,
+                        0,
+                        0,
+                        0,
+                        1,
+                        0,
+                        0,
+                        1,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        1),
                     new(
-                        0, 1, 0, 0,
-                        0, 1, 0, 0,
-                        1, 0, 0, 0,
-                        0, 0, 0, 1));
+                        0,
+                        1,
+                        0,
+                        0,
+                        0,
+                        1,
+                        0,
+                        0,
+                        1,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        1));
             case Characters.Sonic:
             case Characters.MetalSonic:
             default:
                 return Task.CompletedTask;
         }
     }
-    
+
     private async Task PatchSonicFxColor(CancellationToken cancellationToken, params Matrix4x4[] patchMatrices) {
         // Turn Sonic's blue spindash ball grey
         var decoder = new BcDecoder();
@@ -428,10 +454,10 @@ public class QuickModProgramCommand : RootProgramCommand {
                         for (var i = 0; i < span.Length; i++) {
                             var item = new Vector4(span[i].R, span[i].G, span[i].B, span[i].A) / 255;
                             item = Vector4.Transform(item, patchMatrices[patchMatrixIndex]);
-                            span[i].R = (byte)float.Clamp(item.X * 255, 0, 255);
-                            span[i].G = (byte)float.Clamp(item.Y * 255, 0, 255);
-                            span[i].B = (byte)float.Clamp(item.Z * 255, 0, 255);
-                            span[i].A = (byte)float.Clamp(item.W * 255, 0, 255);
+                            span[i].R = (byte) float.Clamp(item.X * 255, 0, 255);
+                            span[i].G = (byte) float.Clamp(item.Y * 255, 0, 255);
+                            span[i].B = (byte) float.Clamp(item.Z * 255, 0, 255);
+                            span[i].A = (byte) float.Clamp(item.W * 255, 0, 255);
                             hasAlpha |= span[i].A != 255;
                         }
                     }
@@ -585,9 +611,10 @@ public class QuickModProgramCommand : RootProgramCommand {
             ReferenceLevel.AsFunc(SkinFlag.LookupDefault),
             ReferenceObjectBaseName,
             cancellationToken);
-        var sonicMaterials = sonic.Model.Material.SubMaterials ?? throw new InvalidDataException();
-        var referenceMaterials = reference.Model.Material.SubMaterials ?? throw new InvalidDataException();
-        sonicMaterials.RemoveAll(x => referenceMaterials.Any(y => y.Name == x.Name));
+        var sonicMaterials = sonic.Model.Material.SubMaterialsAndRefs ?? throw new InvalidDataException();
+        var referenceMaterials = reference.Model.Material.SubMaterialsAndRefs ?? throw new InvalidDataException();
+        sonicMaterials.RemoveAll(
+            x => x is Material xm && referenceMaterials.Any(y => y is Material ym && ym.Name == xm.Name));
         sonicMaterials.AddRange(referenceMaterials);
 
         sonic.Model.Meshes.Clear();

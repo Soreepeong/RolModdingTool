@@ -96,14 +96,14 @@ public class Controller {
     }
 
     public Tuple<Vector3, Quaternion> Decomposed {
-        get =>
+        get {
             Matrix4x4.Decompose(
                 _inverseRelativeBindPoseMatrix,
                 out _,
                 out var r,
-                out var t)
-                ? Tuple.Create(t, r)
-                : throw new InvalidOperationException();
+                out var t);
+            return Tuple.Create(t, r);
+        }
         set => InverseRelativeBindPoseMatrix = Matrix4x4.Multiply(
             Matrix4x4.CreateFromQuaternion(value.Item2),
             Matrix4x4.CreateTranslation(value.Item1));

@@ -33,6 +33,7 @@ public partial class CryCharacter {
         private readonly Dictionary<uint, int> _controllerIdToNodeIndex = new();
         private readonly Dictionary<uint, int> _controllerIdToBoneIndex = new();
         private readonly Dictionary<string, int> _materialNameToIndex = new();
+        private readonly List<Material> _flatMaterials = new();
 
         public GltfExporter(
             CryCharacter character,
@@ -320,10 +321,16 @@ public partial class CryCharacter {
         }
 
         private async Task Step02WriteMaterials() {
+            _flatMaterials.Add(_character.Model.Material);
+            for (var i = 0; i < _flatMaterials.Count; i++) {
+                if (_flatMaterials[i].MaterialFlags.HasFlag(MaterialFlags.MultiSubmtl))
+                    _flatMaterials.AddRange(_flatMaterials[i].SubMaterials!);
+            }
+
             var cryMaterials = _character.Model.Meshes
                 .Select(x => x.MaterialName)
                 .Distinct()
-                .Select(x => _character.Model.Material.SubMaterials?.SingleOrDefault(y => y.Name == x))
+                .Select(x => _flatMaterials.SingleOrDefault(y => y.Name == x))
                 .Where(x => x is not null)
                 .Cast<Material>()
                 .ToArray();
@@ -338,28 +345,37 @@ public partial class CryCharacter {
                 .Select(x => x.File!)
                 .DistinctBy(x => x.ToLowerInvariant())
                 .ToArray();
-            var textureNames = StripCommonParentPaths(texturePaths)
+            var textureNames = texturePaths.StripCommonParentPaths()
                 .Select(x => Path.GetFileNameWithoutExtension(x.Replace("/", "_")))
                 .ToArray();
 
-            foreach (var (texture, name) in texturePaths.Zip(textureNames)
+            foreach (var (textureTask, name) in texturePaths.Zip(textureNames)
                          .Select(
                              pathAndName => Task.Run(
                                  async () => {
-                                     var (path, name) = pathAndName;
-                                     var ddsFile = new DdsFile(
-                                         name + ".dds",
-                                         await _getStreamAsync(Path.ChangeExtension(path, ".dds"), _cancellationToken));
-                                     return new AddedTexture<Bgra32>(
-                                         name,
-                                         -1,
-                                         ddsFile.PixelFormat.Alpha != AlphaType.None,
-                                         ddsFile.ToImageBgra32(0, 0, 0),
-                                         _exportOnlyRequiredTextures ? null : ddsFile);
+                                     try {
+                                         var (path, name) = pathAndName;
+                                         if (path.StartsWith("engine/", StringComparison.OrdinalIgnoreCase))
+                                             path = path[7..];
+                                         var ddsFile = new DdsFile(
+                                             name + ".dds",
+                                             await _getStreamAsync(
+                                                 Path.ChangeExtension(path, ".dds"),
+                                                 _cancellationToken));
+                                         return new AddedTexture<Bgra32>(
+                                             name,
+                                             -1,
+                                             ddsFile.PixelFormat.Alpha != AlphaType.None,
+                                             ddsFile.ToImageBgra32(0, 0, 0),
+                                             _exportOnlyRequiredTextures ? null : ddsFile);
+                                     } catch (FileNotFoundException) {
+                                         return null;
+                                     }
                                  },
                                  _cancellationToken))
                          .Zip(textureNames)) {
-                src32.Add(DerivativeTextureKey.Raw(name), await texture);
+                if (await textureTask is { } texture)
+                    src32.Add(DerivativeTextureKey.Raw(name), texture);
             }
 
             foreach (var cryMaterial in cryMaterials) {
@@ -367,10 +383,18 @@ public partial class CryCharacter {
                 var materialTextures =
                     ((IEnumerable<Texture>?) cryMaterial.Textures ?? Array.Empty<Texture>())
                     .Where(x => x.File != "nearest_cubemap" && x.File is not null)
-                    .ToDictionary(
-                        x => x.Map,
-                        x => src32[DerivativeTextureKey.Raw(
-                            textureNames.Zip(texturePaths).Single(y => y.Second == x.File).First)]);
+                    .Select(
+                        x => Tuple.Create(
+                            x.Map,
+                            src32.GetValueOrDefault(
+                                DerivativeTextureKey.Raw(
+                                    textureNames.Zip(texturePaths).Single(
+                                        y => string.Equals(
+                                            y.Second,
+                                            x.File,
+                                            StringComparison.OrdinalIgnoreCase)).First))))
+                    .Where(x => x.Item2 is not null)
+                    .ToDictionary(x => x.Item1, x => x.Item2!);
 
                 var genMask = new ParsedGenMask(cryMaterial.GenMaskSet);
 
@@ -623,7 +647,7 @@ public partial class CryCharacter {
         private void Step03WriteMeshes() {
             var mesh = new GltfMesh();
             foreach (var cryMesh in _character.Model.Meshes) {
-                var cryMaterial = _character.Model.Material.SubMaterials!.Single(x => x.Name == cryMesh.MaterialName);
+                var cryMaterial = _flatMaterials.SingleOrDefault(x => x.Name == cryMesh.MaterialName);
                 mesh.Primitives.Add(
                     new() {
                         Attributes = new() {
@@ -639,7 +663,7 @@ public partial class CryCharacter {
                                 null,
                                 cryMesh.Vertices.Select(x => SwapAxesTangent(x.Tangent.Tangent)).ToArray().AsSpan(),
                                 target: GltfBufferViewTarget.ArrayBuffer),
-                            Color0 = !cryMaterial.ContainsGenMask("VERTCOLORS")
+                            Color0 = cryMaterial?.ContainsGenMask("VERTCOLORS") is true
                                 ? null
                                 : _gltf.AddAccessor(
                                     null,
@@ -673,7 +697,7 @@ public partial class CryCharacter {
                             null,
                             cryMesh.Indices.AsSpan(),
                             target: GltfBufferViewTarget.ElementArrayBuffer),
-                        Material = _materialNameToIndex[cryMesh.MaterialName],
+                        Material = cryMesh.MaterialName is null ? null : _materialNameToIndex[cryMesh.MaterialName],
                     });
             }
 
@@ -696,7 +720,7 @@ public partial class CryCharacter {
 
             var timeAccessors = new Dictionary<Tuple<ControllerKeyTime, int>, int>();
 
-            var names = StripCommonParentPaths(animations.Keys.Select(x => Path.ChangeExtension(x, null)).ToList());
+            var names = animations.Keys.Select(x => Path.ChangeExtension(x, null)).StripCommonParentPaths();
             foreach (var (animationName, animation) in animations.Values.Zip(names)
                          .OrderBy(x => x.Second.ToLowerInvariant())
                          .Select(x => (x.Second, x.First))) {

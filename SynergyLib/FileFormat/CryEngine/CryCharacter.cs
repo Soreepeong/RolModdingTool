@@ -161,7 +161,7 @@ public partial class CryCharacter {
                 var materialName = materialIndex == -1
                     ? "_Empty"
                     : string.IsNullOrWhiteSpace(material?.Name)
-                        ? $"_Unnamed_{model.Material.SubMaterials!.Count}"
+                        ? $"_Unnamed_{model.Material.SubMaterialsAndRefs?.Count ?? 0}"
                         : material.Name;
                 var cryMaterial = new Material {
                     Name = materialName,
@@ -179,7 +179,7 @@ public partial class CryCharacter {
                     StringGenMask = string.Empty,
                     Textures = new(),
                 };
-                model.Material.SubMaterials!.Add(cryMaterial);
+                model.Material.SubMaterialsAndRefs!.Add(cryMaterial);
 
                 if (material?.NormalTexture?.Index is { } normalTextureIndex) {
                     cryMaterial.StringGenMask += "%BUMP_MAP";
@@ -330,7 +330,7 @@ public partial class CryCharacter {
                     }
                 }
 
-                model.Meshes.Add(new(materialName, vertices.ToArray(), indices.ToArray()));
+                model.Meshes.Add(new(materialName, false, vertices.ToArray(), indices.ToArray()));
             }
         }
 
@@ -382,34 +382,6 @@ public partial class CryCharacter {
         }
 
         return new(model) {CryAnimationDatabase = animdb};
-    }
-
-    private static List<string> StripCommonParentPaths(ICollection<string> fullNames) {
-        var namesDepths = new List<List<string>>();
-        fullNames = fullNames.Select(x => x.Replace("\\", "/")).ToList();
-        var maxDepth = fullNames.Max(x => x.Count(y => y == '/'));
-
-        var names = new List<string>();
-        for (var i = 0; i < fullNames.Count; i++) {
-            var nameDepth = 0;
-            for (; nameDepth < namesDepths.Count; nameDepth++) {
-                if (namesDepths[nameDepth].Count(x => x == namesDepths[nameDepth][i]) < 2)
-                    break;
-            }
-
-            if (nameDepth == namesDepths.Count) {
-                namesDepths.Add(
-                    fullNames.Select(x => string.Join('/', x.Split('/').TakeLast(nameDepth + 1))).ToList());
-                if (nameDepth < maxDepth) {
-                    i--;
-                    continue;
-                }
-            }
-
-            names.Add(namesDepths[nameDepth][i]);
-        }
-
-        return names;
     }
 
     protected static Vector3 SwapAxes(Vector3 val) => new(-val.X, val.Z, val.Y);

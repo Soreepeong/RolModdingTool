@@ -57,15 +57,15 @@ public class Texture {
             _ => 0,
         };
         set => MapString = value switch {
-            MapTypeEnum.Diffuse => "Diffuse", 
-            MapTypeEnum.Specular => "Specular", 
-            MapTypeEnum.Normals => "Bumpmap", 
-            MapTypeEnum.Env => "Environment", 
-            MapTypeEnum.Detail => "Detail", 
-            MapTypeEnum.Opacity => "Opacity", 
-            MapTypeEnum.Decal => "Decal", 
-            MapTypeEnum.SubSurface => "SubSurface", 
-            MapTypeEnum.Custom => "Custom", 
+            MapTypeEnum.Diffuse => "Diffuse",
+            MapTypeEnum.Specular => "Specular",
+            MapTypeEnum.Normals => "Bumpmap",
+            MapTypeEnum.Env => "Environment",
+            MapTypeEnum.Detail => "Detail",
+            MapTypeEnum.Opacity => "Opacity",
+            MapTypeEnum.Decal => "Decal",
+            MapTypeEnum.SubSurface => "SubSurface",
+            MapTypeEnum.Custom => "Custom",
             MapTypeEnum.Custom2 => "[1] Custom",
             _ => $"({value})",
         };
@@ -100,7 +100,29 @@ public class Texture {
         set => IsTileVInt = value ? 1 : 0;
     }
 
+    [XmlAttribute("Filter")]
+    [DefaultValue(-1)]
+    public int FilterInt { get; set; } = -1;
+
+    [XmlIgnore]
+    public TextureFilter Filter {
+        get => (TextureFilter) FilterInt;
+        set => FilterInt = (int) value;
+    }
+
     /// <summary>The modifier to apply to the texture</summary>
     [XmlElement("TexMod")]
     public TextureModifier? Modifier;
+}
+
+public enum TextureFilter {
+    None = -1,
+    Point,
+    Linear,
+    Bilinear,
+    Trilinear,
+    Aniso2X,
+    Aniso4X,
+    Aniso8X,
+    Anosi16X,
 }

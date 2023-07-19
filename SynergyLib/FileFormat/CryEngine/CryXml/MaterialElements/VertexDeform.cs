@@ -26,7 +26,7 @@ public class VertexDeform {
     [XmlAttribute("NoiseScale")]
     public string? NoiseScaleString {
         get => NoiseScale.ToXmlValue();
-        set => NoiseScale = value.XmlToVector3();
+        set => NoiseScale = value?.XmlToVector3();
     }
 
     [XmlElement("WaveX")]

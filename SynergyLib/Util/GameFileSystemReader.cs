@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using SynergyLib.FileFormat;
@@ -12,7 +15,7 @@ public sealed class GameFileSystemReader : IAsyncDisposable, IDisposable {
     private readonly List<string> _rootPaths = new();
     private readonly Dictionary<string, Tuple<string, Task<WiiuStreamFile>>> _packfiles = new();
     private readonly List<Task<WiiuStreamFile>> _packfileLoaders = new();
-
+    private readonly Dictionary<string, Tuple<string?, WiiuStreamFile?>> _entries = new();
     private readonly CancellationTokenSource _cancellationTokenSource = new();
 
     public void Dispose() {
@@ -34,7 +37,7 @@ public sealed class GameFileSystemReader : IAsyncDisposable, IDisposable {
     public bool AddRootDirectory(string rootDirectory) {
         _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-        rootDirectory = rootDirectory.TrimEnd('\\', '/');
+        rootDirectory = Path.GetFullPath(rootDirectory.TrimEnd('\\', '/'));
 
         var basePath = Path.Join(rootDirectory, "Sonic_Crytek");
         if (!Directory.Exists(basePath))
@@ -47,28 +50,25 @@ public sealed class GameFileSystemReader : IAsyncDisposable, IDisposable {
 
         _rootPaths.Add(basePath);
 
-        var levelsPath = Path.Join(basePath, "levels");
-        var packfilePathList = new List<string>();
-        if (Directory.Exists(levelsPath))
-            packfilePathList.AddRange(
-                Directory.GetFiles(levelsPath)
-                    .Where(x => x.EndsWith(".wiiu.stream", StringComparison.OrdinalIgnoreCase))
-                    .Select(x => File.Exists($"{x}.bak") ? $"{x}.bak" : x));
+        lock (_entries) {
+            foreach (var f in new DirectoryInfo(rootDirectory).EnumerateFiles("", SearchOption.AllDirectories)) {
+                Debug.Assert(f.FullName.StartsWith(rootDirectory));
+                if (f.Name.EndsWith(".bak", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (f.Name.EndsWith(".wiiu.stream", StringComparison.OrdinalIgnoreCase)) {
+                    var key = f.Name[..^12];
+                    if (_packfiles.ContainsKey(key))
+                        continue;
 
-        packfilePathList.AddRange(
-            Directory.GetFiles(basePath)
-                .Where(x => x.EndsWith(".wiiu.stream", StringComparison.OrdinalIgnoreCase))
-                .Select(x => File.Exists($"{x}.bak") ? $"{x}.bak" : x));
-
-        foreach (var path in packfilePathList) {
-            var key = Path.GetFileName(path).Split('.', 2)[0].ToLowerInvariant();
-            if (_packfiles.ContainsKey(key))
-                continue;
-
-            var entry = _packfiles[key] = Tuple.Create(
-                path,
-                new Task<WiiuStreamFile>(() => WiiuStreamFile.FromFile(path)));
-            TryLoad(entry.Item2);
+                    var path = File.Exists(f.FullName + ".bak") ? f.FullName + ".bak" : f.FullName;
+                    var entry = _packfiles[key] = Tuple.Create(
+                        path,
+                        new Task<WiiuStreamFile>(() => WiiuStreamFile.FromFile(path)));
+                    TryLoad(entry.Item2);
+                } else {
+                    _entries.TryAdd(f.FullName[rootDirectory.Length..], new(rootDirectory, null));
+                }
+            }
         }
 
         return true;
@@ -78,11 +78,34 @@ public sealed class GameFileSystemReader : IAsyncDisposable, IDisposable {
         ? this
         : throw new DirectoryNotFoundException(rootDirectory);
 
+    public async IAsyncEnumerable<Tuple<string, Func<Stream>>> FindFiles(
+        Regex pattern,
+        SkinFlag lookupSkinFlag,
+        [EnumeratorCancellation] CancellationToken cancellationToken) {
+        await Task.WhenAny(Task.WhenAll(_packfileLoaders), Task.Delay(Timeout.Infinite, cancellationToken));
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_entries) {
+            foreach (var (path, (rootPath, packfile)) in _entries) {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!pattern.IsMatch("/" + path))
+                    continue;
+                
+                if (rootPath is not null)
+                    yield return new(path, () => File.OpenRead(Path.Join(rootPath, path)));
+                else if (packfile is not null)
+                    yield return new(
+                        path,
+                        () => packfile.GetEntry(path, lookupSkinFlag).Source.GetRawStream(cancellationToken));
+                else
+                    Debug.Assert(false);
+            }
+        }
+    }
+
     public async Task<Stream> GetStreamAsync(
         string path,
         SkinFlag lookupSkinFlag,
         CancellationToken cancellationToken) {
-        
         var originalPath = path;
         path = path.Replace('\\', '/').Trim('/');
         while (path.StartsWith("../"))
@@ -142,7 +165,15 @@ public sealed class GameFileSystemReader : IAsyncDisposable, IDisposable {
                 _packfileLoaders.Add(packfile);
                 packfile.Start();
                 packfile.ContinueWith(
-                    _ => {
+                    result => {
+                        lock (_entries) {
+                            foreach (var f in result.Result.Entries) {
+                                var key = f.Header.InnerPath.ToLowerInvariant();
+                                if (!_entries.TryGetValue(key, out var v) || v.Item2 == null)
+                                    _entries[key] = new(null, result.Result);
+                            }
+                        }
+
                         lock (_packfileLoaders)
                             _packfileLoaders.Remove(packfile);
                     },

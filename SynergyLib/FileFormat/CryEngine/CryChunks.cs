@@ -59,6 +59,8 @@ public class CryChunks : Dictionary<int, ICryChunk> {
             for (var i = 0; i < chunkCount; i++) {
                 ICryChunk chunk = (headers[i].Header.Type, headers[i].Header.Version) switch {
                     // chr, in order
+                    (ChunkType.SourceInfo, 0) => new SourceInfoChunk(),
+                    (ChunkType.Timing, 0x918) => new TimingChunk(),
                     (ChunkType.MtlName, 0x800) => new MtlNameChunk(),
                     (ChunkType.CompiledBones, 0x800) => new CompiledBonesChunk(),
                     (ChunkType.CompiledPhysicalBones, 0x800) => new CompiledPhysicalBonesChunk(),
@@ -147,8 +149,11 @@ public class CryChunks : Dictionary<int, ICryChunk> {
             // seems that if boneId array is not full, garbage values remain in place of unused memory.
             // ignore that from comparison.
             foreach (var ignoreItem in testfile.Values.OfType<MeshSubsetsChunk>())
-                ignoreZones.Add(
-                    Tuple.Create(ignoreItem.Header.Offset, ignoreItem.Header.Offset + ignoreItem.WrittenSize));
+                ignoreZones.Add(new(ignoreItem.Header.Offset, ignoreItem.Header.Offset + ignoreItem.WrittenSize));
+            
+            // size is set wrong for this chunk?
+            foreach (var ignoreItem in testfile.Values.OfType<SourceInfoChunk>())
+                ignoreZones.Add(new(ignoreItem.Header.Offset + 8, ignoreItem.Header.Offset + 12));
 
             ignoreZones.Add(Tuple.Create(31, 32));
             ignoreZones.Add(Tuple.Create(51, 52));
