@@ -162,6 +162,12 @@ public partial class CryCharacter {
             public static DerivativeTextureKey Gloss(object source) =>
                 new($"Gloss[{source}]", source, null, null, null);
 
+            public static DerivativeTextureKey Scatter(object source) =>
+                new($"Scatter[{source}]", source, null, null, null);
+
+            public static DerivativeTextureKey Height(object source) =>
+                new($"Height[{source}]", source, null, null, null);
+
             public static DerivativeTextureKey SpecularOpaque(object source) =>
                 new($"SpecularOpaque[{source}]", source, source, source, null);
 
@@ -362,10 +368,7 @@ public partial class CryCharacter {
                         x => src32[DerivativeTextureKey.Raw(
                             Path.GetFileNameWithoutExtension(x.File!).ToLowerInvariant())]);
 
-                var useScatterInNormalMap = cryMaterial.ContainsGenMask("TEMP_SKIN");
-                var useHeightInNormalMap = cryMaterial.ContainsGenMask("BLENDHEIGHT_DISPL");
-                var useSpecAlphaInDiffuseMap = cryMaterial.ContainsGenMask("GLOSS_DIFFUSEALPHA");
-                var useGlossInSpecularMap = cryMaterial.ContainsGenMask("SPECULARPOW_GLOSSALPHA");
+                var genMask = new ParsedGenMask(cryMaterial.GenMaskSet);
 
                 var diffuseRaw = materialTextures.GetValueOrDefault(Texture.MapTypeEnum.Diffuse);
                 var normalRaw = materialTextures.GetValueOrDefault(Texture.MapTypeEnum.Normals);
@@ -380,10 +383,10 @@ public partial class CryCharacter {
                 AddedTexture<L8>? glossFromNormalTexture = null;
 
                 if (specularRaw is not null) {
-                    if (useGlossInSpecularMap)
+                    if (genMask.UseGlossInSpecularMap)
                         specularGlossinessTexture = specularRaw;
 
-                    if (useGlossInSpecularMap && deriv8.GetOrAdd(
+                    if (genMask.UseGlossInSpecularMap && deriv8.GetOrAdd(
                             DerivativeTextureKey.Gloss(specularRaw),
                             specularRaw,
                             out glossFromSpecularTexture))
@@ -410,7 +413,7 @@ public partial class CryCharacter {
 
                 if (diffuseRaw is not null) {
                     if (diffuseRaw.HasAlphaValues) {
-                        if (useSpecAlphaInDiffuseMap) {
+                        if (genMask.UseSpecAlphaInDiffuseMap) {
                             if (specularTexture is null) {
                                 deriv32.GetOrAdd(
                                     DerivativeTextureKey.SpecularOpaque(
@@ -451,18 +454,20 @@ public partial class CryCharacter {
                 }
 
                 if (normalRaw is not null) {
-                    if (useScatterInNormalMap || useHeightInNormalMap) {
+                    if (genMask.UseScatterInNormalMap || genMask.UseHeightInNormalMap) {
                         var added = false;
                         added |= deriv32.GetOrAdd(
                             DerivativeTextureKey.Normal(normalRaw),
                             normalRaw,
                             out normalTexture);
-                        added |= deriv32.GetOrAdd(
-                            DerivativeTextureKey.Normal(normalRaw),
+                        added |= deriv8.GetOrAdd(
+                            genMask.UseScatterInNormalMap
+                                ? DerivativeTextureKey.Scatter(normalRaw)
+                                : DerivativeTextureKey.Height(normalRaw),
                             normalRaw,
                             out var redTexture);
                         added |= deriv8.GetOrAdd(
-                            DerivativeTextureKey.Normal(normalRaw),
+                            DerivativeTextureKey.Gloss(normalRaw),
                             normalRaw,
                             out glossFromNormalTexture);
                         if (added) {
