@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Enums;
@@ -12,7 +11,7 @@ using SynergyLib.Util.BinaryRW;
 namespace SynergyLib.FileFormat.CryEngine;
 
 public class CryChunks : Dictionary<int, ICryChunk> {
-    public static readonly ImmutableArray<byte> Magic = "CryTek\0\0"u8.ToArray().ToImmutableArray();
+    public static readonly ImmutableArray<byte> Magic = "CryTek\0"u8.ToArray().ToImmutableArray();
 
     public CryFileType Type;
     public CryFileVersion Version;
@@ -40,6 +39,7 @@ public class CryChunks : Dictionary<int, ICryChunk> {
     public void ReadFrom(NativeReader reader) {
         using (reader.ScopedLittleEndian()) {
             reader.EnsureMagicOrThrow(Magic.AsSpan());
+            reader.ReadByte();
             reader.ReadInto(out Type);
             if (!Enum.IsDefined(Type))
                 throw new IOException("Bad FileType");
@@ -59,7 +59,7 @@ public class CryChunks : Dictionary<int, ICryChunk> {
             for (var i = 0; i < chunkCount; i++) {
                 ICryChunk chunk = (headers[i].Header.Type, headers[i].Header.Version) switch {
                     // chr, in order
-                    (ChunkType.SourceInfo, 0) => new SourceInfoChunk(),
+                    (ChunkType.SourceInfo, 0) => new SourceInfoChunk {Header = headers[i].Header},
                     (ChunkType.Timing, 0x918) => new TimingChunk(),
                     (ChunkType.MtlName, 0x800) => new MtlNameChunk(),
                     (ChunkType.CompiledBones, 0x800) => new CompiledBonesChunk(),
@@ -75,6 +75,7 @@ public class CryChunks : Dictionary<int, ICryChunk> {
                     (ChunkType.MeshSubsets, 0x800) => new MeshSubsetsChunk(),
                     (ChunkType.DataStream, 0x800) => new DataChunk(),
                     (ChunkType.Mesh, 0x800) => new MeshChunk(),
+                    (ChunkType.Helper, 0x744) => new HelperChunk(),
                     (ChunkType.Node, 0x823) => new NodeChunk(),
                     (ChunkType.FoliageInfo, 1) => new FoliageInfoChunk(),
 
@@ -99,6 +100,7 @@ public class CryChunks : Dictionary<int, ICryChunk> {
 
     public void WriteTo(NativeWriter writer) {
         writer.Write(Magic.AsSpan());
+        writer.Write((byte) 0);
         writer.WriteEnum(Type);
         writer.WriteEnum(Version);
         writer.Write(20);
@@ -145,7 +147,10 @@ public class CryChunks : Dictionary<int, ICryChunk> {
                 outBytes = ms.ToArray();
             }
 
-            var ignoreZones = new List<Tuple<int, int>>();
+            var ignoreZones = new List<Tuple<int, int>> {
+                // random pad byte after CryTek\0
+                new(7, 8),
+            };
             // seems that if boneId array is not full, garbage values remain in place of unused memory.
             // ignore that from comparison.
             foreach (var ignoreItem in testfile.Values.OfType<MeshSubsetsChunk>())

@@ -100,7 +100,7 @@ public partial class CryCharacter {
         var root = gltf.Root;
         var rootNode = root.Nodes[root.Scenes[root.Scene].Nodes.Single()];
 
-        var model = new CryModel(rootNode.Name ?? "Untitled");
+        var model = new CryModel(new(){SubMaterialsAndRefs = new()});
 
         var boneIdToControllerId = new Dictionary<int, uint>();
         var nodeIdToControllerId = new Dictionary<int, uint>();
@@ -150,6 +150,8 @@ public partial class CryCharacter {
 
         if (rootNode.Mesh is not null) {
             var mesh = root.Meshes[rootNode.Mesh.Value];
+            var cmn = new Node(mesh.Name!, new(mesh.Name!));
+            model.Nodes.Add(cmn);
             foreach (var materialIndex in Enumerable.Range(-1, 1 + root.Materials.Count)) {
                 var primitives = mesh.Primitives
                     .Where(x => (x.Material is null && materialIndex == -1) || x.Material == materialIndex)
@@ -161,7 +163,7 @@ public partial class CryCharacter {
                 var materialName = materialIndex == -1
                     ? "_Empty"
                     : string.IsNullOrWhiteSpace(material?.Name)
-                        ? $"_Unnamed_{model.Material.SubMaterialsAndRefs?.Count ?? 0}"
+                        ? $"_Unnamed_{model.Material!.SubMaterialsAndRefs?.Count ?? 0}"
                         : material.Name;
                 var cryMaterial = new Material {
                     Name = materialName,
@@ -179,7 +181,7 @@ public partial class CryCharacter {
                     StringGenMask = string.Empty,
                     Textures = new(),
                 };
-                model.Material.SubMaterialsAndRefs!.Add(cryMaterial);
+                model.Material!.SubMaterialsAndRefs!.Add(cryMaterial);
 
                 if (material?.NormalTexture?.Index is { } normalTextureIndex) {
                     cryMaterial.StringGenMask += "%BUMP_MAP";
@@ -330,7 +332,7 @@ public partial class CryCharacter {
                     }
                 }
 
-                model.Meshes.Add(new(materialName, false, vertices.ToArray(), indices.ToArray()));
+                cmn.Meshes.Add(new(materialName, false, vertices.ToArray(), indices.ToArray()));
             }
         }
 
@@ -407,7 +409,7 @@ public partial class CryCharacter {
         val.M44);
 
     public void Scale(float scale) {
-        Model.Scale(scale);
+        Model.ChangeScale(scale);
         CryAnimationDatabase?.Scale(scale);
         // todo: scale attachments
     }

@@ -11,7 +11,10 @@ public static class DdsFileExtensions {
         int sliceIndex) {
         dds.SliceOrFaceData(imageIndex, mipmapIndex, sliceIndex);
 
-        var output = new Image<Bgra32>(dds.Width(mipmapIndex), dds.Height(mipmapIndex));
+        var output = new Image<Bgra32>(
+            new() {PreferContiguousImageBuffers = true},
+            dds.Width(mipmapIndex),
+            dds.Height(mipmapIndex));
         if (!output.DangerousTryGetSinglePixelMemory(out var memory))
             throw new();
         fixed (void* p = memory.Span)

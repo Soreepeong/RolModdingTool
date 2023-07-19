@@ -611,14 +611,14 @@ public class QuickModProgramCommand : RootProgramCommand {
             ReferenceLevel.AsFunc(SkinFlag.LookupDefault),
             ReferenceObjectBaseName,
             cancellationToken);
-        var sonicMaterials = sonic.Model.Material.SubMaterialsAndRefs ?? throw new InvalidDataException();
-        var referenceMaterials = reference.Model.Material.SubMaterialsAndRefs ?? throw new InvalidDataException();
+        var sonicMaterials = sonic.Model.Material?.SubMaterialsAndRefs ?? throw new InvalidDataException();
+        var referenceMaterials = reference.Model.Material?.SubMaterialsAndRefs ?? throw new InvalidDataException();
         sonicMaterials.RemoveAll(
             x => x is Material xm && referenceMaterials.Any(y => y is Material ym && ym.Name == xm.Name));
         sonicMaterials.AddRange(referenceMaterials);
 
-        sonic.Model.Meshes.Clear();
-        sonic.Model.Meshes.AddRange(reference.Model.Meshes.Select(x => x.Clone()));
+        sonic.Model.Nodes.Clear();
+        sonic.Model.Nodes.AddRange(reference.Model.Nodes.Select(x => x.Clone()));
 
         foreach (var controller in reference.Model.Controllers) {
             var target = sonic.Model.Controllers.SingleOrDefault(x => x.Id == controller.Id);
@@ -639,13 +639,12 @@ public class QuickModProgramCommand : RootProgramCommand {
                     target = new(controller.Id, controller.Name, controller.AbsoluteBindPoseMatrix, parent);
                     sonic.Model.Controllers.Add(target);
                 } else {
-                    foreach (var mesh in sonic.Model.Meshes) {
+                    foreach (var mesh in sonic.Model.Nodes.SelectMany(node => node.Meshes))
                         for (var i = 0; i < mesh.Vertices.Length; i++) {
                             for (var j = 0; j < 4; j++)
                                 if (mesh.Vertices[i].ControllerIds[j] == controller.Id)
                                     mesh.Vertices[i].ControllerIds[j] = target.Id;
                         }
-                    }
                 }
             }
 

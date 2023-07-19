@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
 using SynergyLib.FileFormat;
 using SynergyLib.Util;
 using SynergyLib.Util.BinaryRW;
@@ -95,10 +96,21 @@ public class ExtractProgramCommand : RootProgramCommand {
                     try {
                         await using (var target = new FileStream(tempPath, FileMode.Create)) {
                             msr.BaseStream.Position = 0;
-                            if (!PreservePbxml)
-                                PbxmlFile.FromReader(msr).WriteText(target);
-                            else
+                            var writeRawFile = true;
+                            if (!PreservePbxml) {
+                                try {
+                                    PbxmlFile.FromReader(msr, true).WriteText(target);
+                                    writeRawFile = false;
+                                } catch (XmlException) {
+                                    // pass
+                                }
+                            }
+
+                            if (writeRawFile) {
+                                msr.BaseStream.Position = 0;
+                                target.SetLength(target.Position = 0);
                                 await target.WriteAsync(ms.GetBuffer().AsMemory(0, (int) ms.Length), cancellationToken);
+                            }
                         }
 
                         File.Move(tempPath, localPath, true);

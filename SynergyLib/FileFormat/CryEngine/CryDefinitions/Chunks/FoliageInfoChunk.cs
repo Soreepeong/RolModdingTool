@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Numerics;
 using System.Text;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Enums;
@@ -31,16 +32,16 @@ public class FoliageInfoChunk : ICryChunk {
             for (var i = 0; i < spineCount; i++)
                 Spines[i].ReadFrom(reader, 24);
 
-            SpineVertices = new Vector3[skinnedVertexCount];
+            SpineVertices = new Vector3[spineVertexCount];
             for (var i = 0; i < spineVertexCount; i++)
                 SpineVertices[i] = reader.ReadVector3();
 
-            SpineVertexSegDim = new Vector4[skinnedVertexCount];
+            SpineVertexSegDim = new Vector4[spineVertexCount];
             for (var i = 0; i < spineVertexCount; i++)
                 SpineVertexSegDim[i] = reader.ReadVector4();
 
-            BoneMappings = new MeshBoneMapping[boneIdCount];
-            for (var i = 0; i < boneIdCount; i++)
+            BoneMappings = new MeshBoneMapping[skinnedVertexCount];
+            for (var i = 0; i < skinnedVertexCount; i++)
                 BoneMappings[i].ReadFrom(reader, 8);
 
             BoneIds = new ushort[boneIdCount];
@@ -56,8 +57,8 @@ public class FoliageInfoChunk : ICryChunk {
         using (writer.ScopedBigEndian(useBigEndian)) {
             writer.Write(Spines.Length);
             writer.Write(SpineVertices.Length);
-            writer.Write(SpineVertexSegDim.Length);
             writer.Write(BoneMappings.Length);
+            writer.Write(BoneIds.Length);
 
             foreach (var s in Spines)
                 s.WriteTo(writer, useBigEndian);
@@ -76,7 +77,8 @@ public class FoliageInfoChunk : ICryChunk {
         }
     }
 
-    public int WrittenSize => Header.WrittenSize + 16;
+    public int WrittenSize => Header.WrittenSize + 16 + 24 * Spines.Length + 12 * SpineVertices.Length +
+        16 * SpineVertexSegDim.Length + 8 * BoneMappings.Length + 2 * BoneIds.Length;
 
     public override string ToString() => $"{nameof(FoliageInfoChunk)}: {Header}";
 }

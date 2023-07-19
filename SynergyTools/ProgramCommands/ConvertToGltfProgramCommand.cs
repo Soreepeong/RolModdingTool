@@ -155,8 +155,6 @@ public class ConvertToGltfProgramCommand : RootProgramCommand {
 
         for (var i = 0; i < pathList.Count; i++) {
             cancellationToken.ThrowIfCancellationRequested();
-            if (i < 1024)
-                continue;
             var path = pathList[i];
             var outputName = Path.ChangeExtension(
                 PreserveDirectoryStructure
@@ -207,8 +205,8 @@ public class ConvertToGltfProgramCommand : RootProgramCommand {
                 }
             } catch (Exception e) {
                 using (ScopedConsoleColor.Foreground(ConsoleColor.Red)) {
-                    Console.WriteLine("=> {0}: {1}", e.GetType().FullName, e.Message);
-                    if (e is not NotSupportedException)
+                    Console.WriteLine("=> {0}: {1}", e.GetType().FullName, e.Message.Trim());
+                    if (e is not NotSupportedException ex || ex.Message == "Specified method is not supported.")
                         Console.WriteLine(e.StackTrace);
                 }
             }

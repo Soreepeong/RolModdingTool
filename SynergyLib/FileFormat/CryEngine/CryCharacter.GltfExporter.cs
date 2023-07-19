@@ -321,14 +321,19 @@ public partial class CryCharacter {
         }
 
         private async Task Step02WriteMaterials() {
-            _flatMaterials.Add(_character.Model.Material);
-            for (var i = 0; i < _flatMaterials.Count; i++) {
-                if (_flatMaterials[i].MaterialFlags.HasFlag(MaterialFlags.MultiSubmtl))
-                    _flatMaterials.AddRange(_flatMaterials[i].SubMaterials!);
+            if (_character.Model.Material is not null) {
+                _flatMaterials.Add(_character.Model.Material);
+                for (var i = 0; i < _flatMaterials.Count; i++) {
+                    if (!_flatMaterials[i].MaterialFlags.HasFlag(MaterialFlags.MultiSubmtl))
+                        continue;
+                    if (_flatMaterials[i].SubMaterials is not { } subMaterials)
+                        continue;
+                    _flatMaterials.AddRange(subMaterials.Where(x => x is not null)!);
+                }
             }
 
-            var cryMaterials = _character.Model.Meshes
-                .Select(x => x.MaterialName)
+            var cryMaterials = _character.Model.Nodes
+                .SelectMany(x => x.Meshes.Select(y => y.MaterialName))
                 .Distinct()
                 .Select(x => _flatMaterials.SingleOrDefault(y => y.Name == x))
                 .Where(x => x is not null)
@@ -646,7 +651,7 @@ public partial class CryCharacter {
 
         private void Step03WriteMeshes() {
             var mesh = new GltfMesh();
-            foreach (var cryMesh in _character.Model.Meshes) {
+            foreach (var cryMesh in _character.Model.Nodes.SelectMany(x => x.Meshes)) {
                 var cryMaterial = _flatMaterials.SingleOrDefault(x => x.Name == cryMesh.MaterialName);
                 mesh.Primitives.Add(
                     new() {
@@ -697,7 +702,8 @@ public partial class CryCharacter {
                             null,
                             cryMesh.Indices.AsSpan(),
                             target: GltfBufferViewTarget.ElementArrayBuffer),
-                        Material = cryMesh.MaterialName is null ? null : _materialNameToIndex[cryMesh.MaterialName],
+                        Material = cryMesh.MaterialName is null ? null :
+                            _materialNameToIndex.TryGetValue(cryMesh.MaterialName, out var mi) ? mi : null,
                     });
             }
 

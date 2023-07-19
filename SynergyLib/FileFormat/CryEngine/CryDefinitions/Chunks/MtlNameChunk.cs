@@ -73,10 +73,11 @@ public class MtlNameChunk : ICryChunk {
     public override string ToString() => $"{nameof(MtlNameChunk)}: {Header}: {Name}";
 
     public static MtlNameChunk FindChunkForMainMesh(CryChunks chunks) {
-        var nodeChunk = chunks.Values.OfType<NodeChunk>().Where(x => x.ParentId == -1).ToArray();
-        if (nodeChunk.Length == 1)
-            return (MtlNameChunk) chunks[nodeChunk.First().MaterialId];
-        return (MtlNameChunk) chunks[nodeChunk
-            .Single(x => !((MeshChunk) chunks[x.ObjectId]).Flags.HasFlag(MeshChunkFlags.MeshIsEmpty)).MaterialId];
+        return chunks.Values.OfType<NodeChunk>()
+            .Select(x => x.MaterialId)
+            .Where(x => x != 0)
+            .Distinct()
+            .Select(x => (MtlNameChunk) chunks[x])
+            .First();
     }
 }

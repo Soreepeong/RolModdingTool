@@ -35,6 +35,26 @@ public static class MathExtrasExtensions {
         return true;
     }
 
+    public static bool IsZero(this Matrix4x4 m, double threshold) {
+        if (MathF.Abs(m.M11) >= threshold) return false;
+        if (MathF.Abs(m.M22) >= threshold) return false;
+        if (MathF.Abs(m.M33) >= threshold) return false;
+        if (MathF.Abs(m.M44) >= threshold) return false;
+        if (MathF.Abs(m.M12) >= threshold) return false;
+        if (MathF.Abs(m.M13) >= threshold) return false;
+        if (MathF.Abs(m.M14) >= threshold) return false;
+        if (MathF.Abs(m.M21) >= threshold) return false;
+        if (MathF.Abs(m.M23) >= threshold) return false;
+        if (MathF.Abs(m.M24) >= threshold) return false;
+        if (MathF.Abs(m.M31) >= threshold) return false;
+        if (MathF.Abs(m.M32) >= threshold) return false;
+        if (MathF.Abs(m.M34) >= threshold) return false;
+        if (MathF.Abs(m.M41) >= threshold) return false;
+        if (MathF.Abs(m.M42) >= threshold) return false;
+        if (MathF.Abs(m.M43) >= threshold) return false;
+        return true;
+    }
+
     public static List<float>? ToFloatList(this Vector3 val, Vector3 defaultValue, float threshold) {
         if (Math.Abs(val.X - defaultValue.X) < threshold &&
             Math.Abs(val.Y - defaultValue.Y) < threshold &&

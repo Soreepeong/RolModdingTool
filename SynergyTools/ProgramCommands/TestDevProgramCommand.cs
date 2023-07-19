@@ -1,6 +1,7 @@
 ﻿using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SynergyLib.FileFormat;
@@ -45,7 +46,7 @@ public class TestDevProgramCommand : RootProgramCommand {
         // var metal = CryCharacter.FromCryEngineFiles(rfn, "objects/characters/5_minibosses/metal_sonic/metal_sonic");
 
         var aabbSonic = AaBb.NegativeExtreme;
-        foreach (var m in sonic.Model.Meshes)
+        foreach (var m in sonic.Model.Nodes.SelectMany(x => x.Meshes))
         foreach (var p in m.Vertices)
             aabbSonic.Expand(p.Position);
 
@@ -61,7 +62,7 @@ public class TestDevProgramCommand : RootProgramCommand {
 
         var char2 = CryCharacter.FromGltf(GltfTuple.FromStream(File.OpenRead("Z:/ROL3D/m0361_b0001_v0001.glb")));
         var aabbM2 = AaBb.NegativeExtreme;
-        foreach (var m in char2.Model.Meshes)
+        foreach (var m in char2.Model.Nodes.SelectMany(x => x.Meshes))
         foreach (var p in m.Vertices)
             aabbM2.Expand(p.Position);
 

@@ -77,6 +77,7 @@ public class PublicParams {
     public float? ReflectAmount;
     public float? BumpScaleLayer1;
     public float? FoamDeform;
+    public float? FoamAmount;
     public float? BumpScaleLayer0;
     public float? AnimAmplitudeWav0;
     public float? FuzzynessSpread;
@@ -90,6 +91,7 @@ public class PublicParams {
     public float? Noise;
     public float? NoiseScale;
     public float? ScaleXz;
+    public float? ScaleXzEnd;
     public float? NoiseSpeed;
     public float? SpecFromDiffAlphaBias;
     public float? SpecFromDiffAlphaMult;
@@ -112,6 +114,74 @@ public class PublicParams {
     public float? ViewDependencyFactor;
     public float? OrigLength;
     public float? OrigWidth;
+    public int? BlendLayerToDefault;
+    public float? ParallaxOffset;
+    public float? BlurAmount;
+    public float? SelfShadowStrength;
+    public float? ObmDisplacement;
+    public float? HeightBias;
+    public float? DetailBumpTillingU;
+    public float? DetailDiffuseScale;
+    public float? DetailBumpScale;
+    public float? DetailGlossScale;
+    public float? NormalsScale;
+    public float? Tilling;
+    public float? FoamCrestAmount;
+    public float? SubSurfaceScatteringScale;
+    public float? RipplesNormalsScale;
+    public float? DetailNormalsScale;
+    public float? DetailTilling;
+    public float? ReflectionScale;
+    public float? FoamSoftIntersectionFactor;
+    public float? FoamTilling;
+    public float? ReflectionBumpScale;
+    public float? RainTilling;
+    public float? PomDisplacement;
+    public int? ParallaxShadowMode;
+    public float? BlendLayerAlphaConstant;
+    public float? SpecularNoiseTiling;
+    public int? SpecularNoiseMode;
+    public float? CloudDistantTiling;
+    public float? CloudSkyColorMultiplier;
+    public float? FogOpacity;
+    public float? CloudDistantHeight;
+    public float? FogBottomToTopColor;
+    public float? FogHeight;
+    public int? BlurEnvironmentMap;
+    public float? CloudDistantScrollSpeedX;
+    public float? CloudOpacity;
+    public float? CloudDistantScrollSpeedY;
+    public float? CubeRotateZ;
+    public float? CubeRotationSpeed;
+    public float? CloudTranslucency;
+    public float? CubemapStretch;
+    public float? WaterDistantBump;
+    public float? WaterReflectionStrength;
+    public float? CubemapHorizonOffset;
+    public float? GrainAmount;
+    public float? DeformAmount;
+    public float? DeformTillingY;
+    public float? GrainTilling;
+    public float? InterlacingTilling;
+    public float? DeformTillingX;
+    public float? GrainSaturation;
+    public float? InterlacingAmount;
+    public float? VSyncFreq;
+    public float? ChromaShift;
+    public float? DeformFreq;
+    public float? BlendVectorBump;
+    public float? BlendVectorCoverage;
+    public float? BlendVectorFeather;
+    public float? BlendVectorWorldX;
+    public float? BlendVectorWorldY;
+    public float? BlendVectorWorldZ;
+    public float? BlendHeightScale;
+    public float? WaterWallBumpScale;
+    public float? WaterWallFoamAmount;
+    public float? WaterWallParallaxOffset;
+    public float? WaterWallRefractionBumpScale;
+    public float? WaterWallSunshaftIntensity;
+    public float? BlendMaskTiling;
 
     [XmlAttribute("SilhouetteColor")]
     public string? SilhouetteColorString {
@@ -545,6 +615,12 @@ public class PublicParams {
         set => FoamDeform = value is null ? null : float.Parse(value);
     }
 
+    [XmlAttribute("FoamAmount")]
+    public string? FoamAmountString {
+        get => FoamAmount?.ToString();
+        set => FoamAmount = value is null ? null : float.Parse(value);
+    }
+
     [XmlAttribute("BumpScaleLayer0")]
     public string? BumpScaleLayer0String {
         get => BumpScaleLayer0?.ToString();
@@ -618,9 +694,15 @@ public class PublicParams {
     }
 
     [XmlAttribute("ScaleXZ")]
-    public string? ScaleXZString {
+    public string? ScaleXzString {
         get => ScaleXz?.ToString();
         set => ScaleXz = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("ScaleXZend")]
+    public string? ScaleXzEndString {
+        get => ScaleXzEnd?.ToString();
+        set => ScaleXzEnd = value is null ? null : float.Parse(value);
     }
 
     [XmlAttribute("NoiseSpeed")]
@@ -753,5 +835,413 @@ public class PublicParams {
     public string? OrigWidthString {
         get => OrigWidth?.ToString();
         set => OrigWidth = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("BlendLayerToDefault")]
+    public string? BlendLayerToDefaultString {
+        get => BlendLayerToDefault?.ToString();
+        set => BlendLayerToDefault = value is null ? null : int.Parse(value);
+    }
+
+    [XmlAttribute("ParallaxOffset")]
+    public string? ParallaxOffsetString {
+        get => ParallaxOffset?.ToString();
+        set => ParallaxOffset = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("BlurAmount")]
+    public string? BlurAmountString {
+        get => BlurAmount?.ToString();
+        set => BlurAmount = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("SelfShadowStrength")]
+    public string? SelfShadowStrengthString {
+        get => SelfShadowStrength?.ToString();
+        set => SelfShadowStrength = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("ObmDisplacement")]
+    public string? ObmDisplacementString {
+        get => ObmDisplacement?.ToString();
+        set => ObmDisplacement = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("HeightBias")]
+    public string? HeightBiasString {
+        get => HeightBias?.ToString();
+        set => HeightBias = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("DetailBumpTillingU")]
+    public string? DetailBumpTillingUString {
+        get => DetailBumpTillingU?.ToString();
+        set => DetailBumpTillingU = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("DetailDiffuseScale")]
+    public string? DetailDiffuseScaleString {
+        get => DetailDiffuseScale?.ToString();
+        set => DetailDiffuseScale = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("DetailBumpScale")]
+    public string? DetailBumpScaleString {
+        get => DetailBumpScale?.ToString();
+        set => DetailBumpScale = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("DetailGlossScale")]
+    public string? DetailGlossScaleString {
+        get => DetailGlossScale?.ToString();
+        set => DetailGlossScale = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("NormalsScale")]
+    public string? NormalsScaleString {
+        get => NormalsScale?.ToString();
+        set => NormalsScale = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("Tilling")]
+    public string? TillingString {
+        get => Tilling?.ToString();
+        set => Tilling = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("FoamCrestAmount")]
+    public string? FoamCrestAmountString {
+        get => FoamCrestAmount?.ToString();
+        set => FoamCrestAmount = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("SubSurfaceScatteringScale")]
+    public string? SubSurfaceScatteringScaleString {
+        get => SubSurfaceScatteringScale?.ToString();
+        set => SubSurfaceScatteringScale = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("RipplesNormalsScale")]
+    public string? RipplesNormalsScaleString {
+        get => RipplesNormalsScale?.ToString();
+        set => RipplesNormalsScale = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("DetailNormalsScale")]
+    public string? DetailNormalsScaleString {
+        get => DetailNormalsScale?.ToString();
+        set => DetailNormalsScale = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("DetailTilling")]
+    public string? DetailTillingString {
+        get => DetailTilling?.ToString();
+        set => DetailTilling = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("ReflectionScale")]
+    public string? ReflectionScaleString {
+        get => ReflectionScale?.ToString();
+        set => ReflectionScale = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("FoamSoftIntersectionFactor")]
+    public string? FoamSoftIntersectionFactorString {
+        get => FoamSoftIntersectionFactor?.ToString();
+        set => FoamSoftIntersectionFactor = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("FoamTilling")]
+    public string? FoamTillingString {
+        get => FoamTilling?.ToString();
+        set => FoamTilling = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("ReflectionBumpScale")]
+    public string? ReflectionBumpScaleString {
+        get => ReflectionBumpScale?.ToString();
+        set => ReflectionBumpScale = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("RainTilling")]
+    public string? RainTillingString {
+        get => RainTilling?.ToString();
+        set => RainTilling = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("PomDisplacement")]
+    public string? PomDisplacementString {
+        get => PomDisplacement?.ToString();
+        set => PomDisplacement = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("ParallaxShadowMode")]
+    public string? ParallaxShadowModeString {
+        get => ParallaxShadowMode?.ToString();
+        set => ParallaxShadowMode = value is null ? null : int.Parse(value);
+    }
+
+    [XmlAttribute("BlendLayerAlphaConstant")]
+    public string? BlendLayerAlphaConstantString {
+        get => BlendLayerAlphaConstant?.ToString();
+        set => BlendLayerAlphaConstant = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("SpecularNoiseTiling")]
+    public string? SpecularNoiseTilingString {
+        get => SpecularNoiseTiling?.ToString();
+        set => SpecularNoiseTiling = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("SpecularNoiseMode")]
+    public string? SpecularNoiseModeString {
+        get => SpecularNoiseMode?.ToString();
+        set => SpecularNoiseMode = value is null ? null : int.Parse(value);
+    }
+
+    [XmlAttribute("CloudDistantTiling")]
+    public string? CloudDistantTilingString {
+        get => CloudDistantTiling?.ToString();
+        set => CloudDistantTiling = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("CloudSkyColorMultiplier")]
+    public string? CloudSkyColorMultiplierString {
+        get => CloudSkyColorMultiplier?.ToString();
+        set => CloudSkyColorMultiplier = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("FogOpacity")]
+    public string? FogOpacityString {
+        get => FogOpacity?.ToString();
+        set => FogOpacity = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("CloudDistantHeight")]
+    public string? CloudDistantHeightString {
+        get => CloudDistantHeight?.ToString();
+        set => CloudDistantHeight = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("FogBottomToTopColor")]
+    public string? FogBottomToTopColorString {
+        get => FogBottomToTopColor?.ToString();
+        set => FogBottomToTopColor = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("FogHeight")]
+    public string? FogHeightString {
+        get => FogHeight?.ToString();
+        set => FogHeight = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("BlurEnvironmentMap")]
+    public string? BlurEnvironmentMapString {
+        get => BlurEnvironmentMap?.ToString();
+        set => BlurEnvironmentMap = value is null ? null : int.Parse(value);
+    }
+
+    [XmlAttribute("CloudDistantScrollSpeedX")]
+    public string? CloudDistantScrollSpeedXString {
+        get => CloudDistantScrollSpeedX?.ToString();
+        set => CloudDistantScrollSpeedX = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("CloudOpacity")]
+    public string? CloudOpacityString {
+        get => CloudOpacity?.ToString();
+        set => CloudOpacity = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("CloudDistantScrollSpeedY")]
+    public string? CloudDistantScrollSpeedYString {
+        get => CloudDistantScrollSpeedY?.ToString();
+        set => CloudDistantScrollSpeedY = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("CubeRotateZ")]
+    public string? CubeRotateZString {
+        get => CubeRotateZ?.ToString();
+        set => CubeRotateZ = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("CubeRotationSpeed")]
+    public string? CubeRotationSpeedString {
+        get => CubeRotationSpeed?.ToString();
+        set => CubeRotationSpeed = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("CloudTranslucency")]
+    public string? CloudTranslucencyString {
+        get => CloudTranslucency?.ToString();
+        set => CloudTranslucency = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("CubemapStretch")]
+    public string? CubemapStretchString {
+        get => CubemapStretch?.ToString();
+        set => CubemapStretch = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("WaterDistantBump")]
+    public string? WaterDistantBumpString {
+        get => WaterDistantBump?.ToString();
+        set => WaterDistantBump = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("WaterReflectionStrength")]
+    public string? WaterReflectionStrengthString {
+        get => WaterReflectionStrength?.ToString();
+        set => WaterReflectionStrength = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("CubemapHorizonOffset")]
+    public string? CubemapHorizonOffsetString {
+        get => CubemapHorizonOffset?.ToString();
+        set => CubemapHorizonOffset = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("GrainAmount")]
+    public string? GrainAmountString {
+        get => GrainAmount?.ToString();
+        set => GrainAmount = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("DeformAmount")]
+    public string? DeformAmountString {
+        get => DeformAmount?.ToString();
+        set => DeformAmount = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("DeformTillingY")]
+    public string? DeformTillingYString {
+        get => DeformTillingY?.ToString();
+        set => DeformTillingY = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("GrainTilling")]
+    public string? GrainTillingString {
+        get => GrainTilling?.ToString();
+        set => GrainTilling = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("InterlacingTilling")]
+    public string? InterlacingTillingString {
+        get => InterlacingTilling?.ToString();
+        set => InterlacingTilling = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("DeformTillingX")]
+    public string? DeformTillingXString {
+        get => DeformTillingX?.ToString();
+        set => DeformTillingX = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("GrainSaturation")]
+    public string? GrainSaturationString {
+        get => GrainSaturation?.ToString();
+        set => GrainSaturation = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("InterlacingAmount")]
+    public string? InterlacingAmountString {
+        get => InterlacingAmount?.ToString();
+        set => InterlacingAmount = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("VSyncFreq")]
+    public string? VSyncFreqString {
+        get => VSyncFreq?.ToString();
+        set => VSyncFreq = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("ChromaShift")]
+    public string? ChromaShiftString {
+        get => ChromaShift?.ToString();
+        set => ChromaShift = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("DeformFreq")]
+    public string? DeformFreqString {
+        get => DeformFreq?.ToString();
+        set => DeformFreq = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("BlendVectorBump")]
+    public string? BlendVectorBumpString {
+        get => BlendVectorBump?.ToString();
+        set => BlendVectorBump = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("BlendVectorCoverage")]
+    public string? BlendVectorCoverageString {
+        get => BlendVectorCoverage?.ToString();
+        set => BlendVectorCoverage = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("BlendVectorFeather")]
+    public string? BlendVectorFeatherString {
+        get => BlendVectorFeather?.ToString();
+        set => BlendVectorFeather = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("BlendVectorWorldX")]
+    public string? BlendVectorWorldXString {
+        get => BlendVectorWorldX?.ToString();
+        set => BlendVectorWorldX = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("BlendVectorWorldY")]
+    public string? BlendVectorWorldYString {
+        get => BlendVectorWorldY?.ToString();
+        set => BlendVectorWorldY = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("BlendVectorWorldZ")]
+    public string? BlendVectorWorldZString {
+        get => BlendVectorWorldZ?.ToString();
+        set => BlendVectorWorldZ = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("BlendHeightScale")]
+    public string? BlendHeightScaleString {
+        get => BlendHeightScale?.ToString();
+        set => BlendHeightScale = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("WaterWallBumpScale")]
+    public string? WaterWallBumpScaleString {
+        get => WaterWallBumpScale?.ToString();
+        set => WaterWallBumpScale = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("WaterWallFoamAmount")]
+    public string? WaterWallFoamAmountString {
+        get => WaterWallFoamAmount?.ToString();
+        set => WaterWallFoamAmount = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("WaterWallParallaxOffset")]
+    public string? WaterWallParallaxOffsetString {
+        get => WaterWallParallaxOffset?.ToString();
+        set => WaterWallParallaxOffset = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("WaterWallRefractionBumpScale")]
+    public string? WaterWallRefractionBumpScaleString {
+        get => WaterWallRefractionBumpScale?.ToString();
+        set => WaterWallRefractionBumpScale = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("WaterWallSunshaftIntensity")]
+    public string? WaterWallSunshaftIntensityString {
+        get => WaterWallSunshaftIntensity?.ToString();
+        set => WaterWallSunshaftIntensity = value is null ? null : float.Parse(value);
+    }
+
+    [XmlAttribute("BlendMaskTiling")]
+    public string? BlendMaskTilingString {
+        get => BlendMaskTiling?.ToString();
+        set => BlendMaskTiling = value is null ? null : float.Parse(value);
     }
 }

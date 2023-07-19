@@ -18,6 +18,11 @@ public class Mesh {
         Indices = indices;
     }
 
+    public void ChangeScale(float scale) {
+        for (var i = 0; i < Vertices.Length; i++)
+            Vertices[i].Position *= scale;
+    }
+
     public Mesh Clone() => new(MaterialName, IsProxy, (Vertex[]) Vertices.Clone(), (ushort[]) Indices.Clone());
 
     public override string ToString() =>
