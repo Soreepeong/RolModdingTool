@@ -366,17 +366,17 @@ public class QuickModProgramCommand : RootProgramCommand {
                         0,
                         1),
                     new(
-                        1 / 3f,
-                        1 / 3f,
-                        1 / 3f,
+                        1 / 6f,
+                        1 / 6f,
+                        1 / 6f,
                         0,
-                        1 / 3f,
-                        1 / 3f,
-                        1 / 3f,
+                        1 / 6f,
+                        1 / 6f,
+                        1 / 6f,
                         0,
-                        1 / 3f,
-                        1 / 3f,
-                        1 / 3f,
+                        1 / 6f,
+                        1 / 6f,
+                        1 / 6f,
                         0,
                         0,
                         0,
@@ -592,9 +592,6 @@ public class QuickModProgramCommand : RootProgramCommand {
 
         sonic.Model.Meshes.Clear();
         sonic.Model.Meshes.AddRange(reference.Model.Meshes.Select(x => x.Clone()));
-
-        foreach (var c in sonic.Model.Controllers)
-            c.RelativeBindPoseMatrix = Matrix4x4.Identity;
 
         foreach (var controller in reference.Model.Controllers) {
             var target = sonic.Model.Controllers.SingleOrDefault(x => x.Id == controller.Id);
