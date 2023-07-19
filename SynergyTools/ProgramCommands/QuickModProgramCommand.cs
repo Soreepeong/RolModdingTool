@@ -43,11 +43,11 @@ public class QuickModProgramCommand : RootProgramCommand {
     private const string SonicBaseName = "objects/characters/1_heroes/sonic/sonic";
 
     private static readonly Tuple<string, int>[] DesaturationTargetTextures = {
-        Tuple.Create("art/textures/effects/playerfx/ball_blue.dds", 18),
-        Tuple.Create("art/textures/effects/playerfx/glide_sonic.dds", 3),
-        Tuple.Create("art/textures/effects/playerfx/glide_sonic_soft.dds", 3),
-        Tuple.Create("art/textures/effects/playerfx/bungee_sonic.dds", 3),
-        Tuple.Create("art/textures/effects/playerfx/bungee_sonic_additive.dds", 3),
+        Tuple.Create("art/textures/effects/playerfx/ball_blue.dds", 0),
+        Tuple.Create("art/textures/effects/playerfx/glide_sonic.dds", 1),
+        Tuple.Create("art/textures/effects/playerfx/glide_sonic_soft.dds", 1),
+        Tuple.Create("art/textures/effects/playerfx/bungee_sonic.dds", 1),
+        Tuple.Create("art/textures/effects/playerfx/bungee_sonic_additive.dds", 1),
     };
 
     public static readonly Dictionary<string, string> SonicToShadowExertionMap = new() {
@@ -311,10 +311,8 @@ public class QuickModProgramCommand : RootProgramCommand {
 
             Console.WriteLine("Patching graphics...");
 
-            if (Mode == Characters.Shadow)
-                await PatchSpinDashBallColor(cancellationToken);
-
             await Task.WhenAll(
+                PatchSonicFxColor(cancellationToken),
                 PatchSonicModel(cancellationToken),
                 PatchAddCloneTextures(cancellationToken));
 
@@ -345,8 +343,66 @@ public class QuickModProgramCommand : RootProgramCommand {
         return 0;
     }
 
-    private async Task PatchSpinDashBallColor(
-        CancellationToken cancellationToken) {
+    private Task PatchSonicFxColor(CancellationToken cancellationToken) {
+        switch (Mode) {
+            case Characters.Shadow:
+                return PatchSonicFxColor(
+                    cancellationToken,
+                    new(
+                        1 / 18f,
+                        1 / 18f,
+                        1 / 18f,
+                        0,
+                        1 / 18f,
+                        1 / 18f,
+                        1 / 18f,
+                        0,
+                        1 / 18f,
+                        1 / 18f,
+                        1 / 18f,
+                        0,
+                        0,
+                        0,
+                        0,
+                        1),
+                    new(
+                        1 / 3f,
+                        1 / 3f,
+                        1 / 3f,
+                        0,
+                        1 / 3f,
+                        1 / 3f,
+                        1 / 3f,
+                        0,
+                        1 / 3f,
+                        1 / 3f,
+                        1 / 3f,
+                        0,
+                        0,
+                        0,
+                        0,
+                        1));
+            case Characters.Sticks:
+                return PatchSonicFxColor(
+                    cancellationToken,
+                    new(
+                        0, 1, 0, 0,
+                        0, 1, 0, 0,
+                        1, 0, 0, 0,
+                        0, 0, 0, 1),
+                    new(
+                        0, 1, 0, 0,
+                        0, 1, 0, 0,
+                        1, 0, 0, 0,
+                        0, 0, 0, 1));
+            case Characters.Sonic:
+            case Characters.MetalSonic:
+            default:
+                return Task.CompletedTask;
+        }
+    }
+    
+    private async Task PatchSonicFxColor(CancellationToken cancellationToken, params Matrix4x4[] patchMatrices) {
         // Turn Sonic's blue spindash ball grey
         var decoder = new BcDecoder();
         var encoder = new BcEncoder {
@@ -358,7 +414,7 @@ public class QuickModProgramCommand : RootProgramCommand {
         };
 
         using var ms = new MemoryStream();
-        foreach (var (filename, divisor) in DesaturationTargetTextures) {
+        foreach (var (filename, patchMatrixIndex) in DesaturationTargetTextures) {
             var entry = Heroes!.GetEntry(filename, false);
             var image = await decoder.DecodeToImageRgba32Async(
                 new MemoryStream(entry.Source.ReadRaw(cancellationToken)),
@@ -370,8 +426,12 @@ public class QuickModProgramCommand : RootProgramCommand {
                     for (var y = 0; y < row.Height; y++) {
                         var span = row.GetRowSpan(y);
                         for (var i = 0; i < span.Length; i++) {
-                            span[i].R = span[i].G = span[i].B =
-                                (byte) ((span[i].R + span[i].G + span[i].B) / divisor);
+                            var item = new Vector4(span[i].R, span[i].G, span[i].B, span[i].A) / 255;
+                            item = Vector4.Transform(item, patchMatrices[patchMatrixIndex]);
+                            span[i].R = (byte)float.Clamp(item.X * 255, 0, 255);
+                            span[i].G = (byte)float.Clamp(item.Y * 255, 0, 255);
+                            span[i].B = (byte)float.Clamp(item.Z * 255, 0, 255);
+                            span[i].A = (byte)float.Clamp(item.W * 255, 0, 255);
                             hasAlpha |= span[i].A != 255;
                         }
                     }
