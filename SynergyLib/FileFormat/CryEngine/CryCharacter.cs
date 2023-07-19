@@ -386,6 +386,8 @@ public partial class CryCharacter {
 
     private static List<string> StripCommonParentPaths(ICollection<string> fullNames) {
         var namesDepths = new List<List<string>>();
+        fullNames = fullNames.Select(x => x.Replace("\\", "/")).ToList();
+        var maxDepth = fullNames.Max(x => x.Count(y => y == '/'));
 
         var names = new List<string>();
         for (var i = 0; i < fullNames.Count; i++) {
@@ -395,9 +397,14 @@ public partial class CryCharacter {
                     break;
             }
 
-            if (nameDepth == namesDepths.Count)
+            if (nameDepth == namesDepths.Count) {
                 namesDepths.Add(
                     fullNames.Select(x => string.Join('/', x.Split('/').TakeLast(nameDepth + 1))).ToList());
+                if (nameDepth < maxDepth) {
+                    i--;
+                    continue;
+                }
+            }
 
             names.Add(namesDepths[nameDepth][i]);
         }

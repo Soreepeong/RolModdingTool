@@ -517,23 +517,21 @@ public class CryModel {
             };
         }
 
-        var shapeDeformations = meshChunk.ShapeDeformationChunkId == 0
-            ? Array.Empty<MeshShapeDeformation>()
-            : ((DataChunk) chunks[meshChunk.ShapeDeformationChunkId]).AsArray<MeshShapeDeformation>();
+        // TODO: figure this out if necessary
+        // var shapeDeformations = meshChunk.ShapeDeformationChunkId == 0
+        //     ? Array.Empty<MeshShapeDeformation>()
+        //     : ((DataChunk) chunks[meshChunk.ShapeDeformationChunkId]).AsArray<MeshShapeDeformation>();
+        // var physicsData = meshChunk.PhysicsDataChunkId[0] == 0
+        //     ? Array.Empty<byte[]>()
+        //     : new[] {
+        //         ((MeshPhysicsDataChunk) Chunks[meshChunk.PhysicsDataChunkId[0]]).Data
+        //     };
+        
         var boneMappings = !hasBones
             ? Array.Empty<MeshBoneMapping>()
             : ((DataChunk) chunks[meshChunk.BoneMappingChunkId]).AsArray<MeshBoneMapping>();
 
         var indices = ((DataChunk) chunks[meshChunk.IndicesChunkId]).AsArray<ushort>();
-        // PhysicsData = meshChunk.PhysicsDataChunkId[0] == 0
-        //     ? Array.Empty<byte[]>()
-        //     : new[] {
-        //         ((MeshPhysicsDataChunk) Chunks[meshChunk.PhysicsDataChunkId[0]]).Data
-        //     };
-
-        // Test: ShapeDeformation.Index are all set to 0xFF
-        foreach (var sd in shapeDeformations)
-            NotSupportedIfFalse(sd.Index.All(x => x is 0xFF or 1 or 0));
 
         // Test: Ensure subset counts match
         NotSupportedIfFalse(subsetsChunk.Subsets.Count == meshChunk.SubsetsCount);

@@ -332,31 +332,35 @@ public partial class CryCharacter {
             using var deriv32 = new DerivativeTextureManager<Bgra32>();
             using var deriv8 = new DerivativeTextureManager<L8>();
 
-            foreach (var texture in await Task.WhenAll(
-                         cryMaterials.Where(x => x.Textures is not null)
-                             .SelectMany(x => x.Textures!)
-                             .Where(x => x.File is not null && x.File != "nearest_cubemap")
-                             .Select(x => x.File!)
-                             .DistinctBy(x => x.ToLowerInvariant())
-                             .Select(
-                                 path => Task.Run(
-                                     async () => {
-                                         var baseName = Path.GetFileNameWithoutExtension(path).ToLowerInvariant();
-                                         var ddsFile = new DdsFile(
-                                             baseName + ".dds",
-                                             await _getStreamAsync(
-                                                 Path.ChangeExtension(path, ".dds"),
-                                                 _cancellationToken));
-                                         var image = ddsFile.ToImageBgra32(0, 0, 0);
-                                         return new AddedTexture<Bgra32>(
-                                             baseName,
-                                             -1,
-                                             ddsFile.PixelFormat.Alpha != AlphaType.None,
-                                             image,
-                                             _exportOnlyRequiredTextures ? null : ddsFile);
-                                     },
-                                     _cancellationToken))))
-                src32.Add(DerivativeTextureKey.Raw(texture.Path), texture);
+            var texturePaths = cryMaterials.Where(x => x.Textures is not null)
+                .SelectMany(x => x.Textures!)
+                .Where(x => x.File is not null && x.File != "nearest_cubemap")
+                .Select(x => x.File!)
+                .DistinctBy(x => x.ToLowerInvariant())
+                .ToArray();
+            var textureNames = StripCommonParentPaths(texturePaths)
+                .Select(x => Path.GetFileNameWithoutExtension(x.Replace("/", "_")))
+                .ToArray();
+
+            foreach (var (texture, name) in texturePaths.Zip(textureNames)
+                         .Select(
+                             pathAndName => Task.Run(
+                                 async () => {
+                                     var (path, name) = pathAndName;
+                                     var ddsFile = new DdsFile(
+                                         name + ".dds",
+                                         await _getStreamAsync(Path.ChangeExtension(path, ".dds"), _cancellationToken));
+                                     return new AddedTexture<Bgra32>(
+                                         name,
+                                         -1,
+                                         ddsFile.PixelFormat.Alpha != AlphaType.None,
+                                         ddsFile.ToImageBgra32(0, 0, 0),
+                                         _exportOnlyRequiredTextures ? null : ddsFile);
+                                 },
+                                 _cancellationToken))
+                         .Zip(textureNames)) {
+                src32.Add(DerivativeTextureKey.Raw(name), await texture);
+            }
 
             foreach (var cryMaterial in cryMaterials) {
                 var name = cryMaterial.Name!;
@@ -366,7 +370,7 @@ public partial class CryCharacter {
                     .ToDictionary(
                         x => x.Map,
                         x => src32[DerivativeTextureKey.Raw(
-                            Path.GetFileNameWithoutExtension(x.File!).ToLowerInvariant())]);
+                            textureNames.Zip(texturePaths).Single(y => y.Second == x.File).First)]);
 
                 var genMask = new ParsedGenMask(cryMaterial.GenMaskSet);
 
@@ -493,7 +497,8 @@ public partial class CryCharacter {
                                     }
                                 });
                         }
-                    }
+                    } else
+                        normalTexture = normalRaw;
                 }
 
                 var glossTextureAny = glossFromSpecularTexture ?? glossFromNormalTexture;
