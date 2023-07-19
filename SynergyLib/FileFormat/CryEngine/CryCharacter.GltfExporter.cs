@@ -9,6 +9,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
+using SynergyLib.FileFormat.CryEngine.CryModelElements;
 using SynergyLib.FileFormat.CryEngine.CryXml;
 using SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 using SynergyLib.FileFormat.DirectDrawSurface;
@@ -651,7 +652,8 @@ public partial class CryCharacter {
 
         private void Step03WriteMeshes() {
             var mesh = new GltfMesh();
-            foreach (var cryMesh in _character.Model.Nodes.SelectMany(x => x.Meshes)) {
+            foreach (var cryNode in _character.Model.Nodes)
+            foreach (var cryMesh in cryNode.Meshes) {
                 var cryMaterial = _flatMaterials.SingleOrDefault(x => x.Name == cryMesh.MaterialName);
                 mesh.Primitives.Add(
                     new() {
@@ -668,7 +670,7 @@ public partial class CryCharacter {
                                 null,
                                 cryMesh.Vertices.Select(x => SwapAxesTangent(x.Tangent.Tangent)).ToArray().AsSpan(),
                                 target: GltfBufferViewTarget.ArrayBuffer),
-                            Color0 = cryMaterial?.ContainsGenMask("VERTCOLORS") is true
+                            Color0 = cryMaterial?.ContainsGenMask("VERTCOLORS") is not true || !cryNode.HasColors
                                 ? null
                                 : _gltf.AddAccessor(
                                     null,
