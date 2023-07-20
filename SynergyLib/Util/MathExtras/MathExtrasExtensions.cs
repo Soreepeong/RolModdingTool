@@ -15,6 +15,8 @@ public static class MathExtrasExtensions {
         return m;
     }
 
+    public static Vector3 DropW(this Vector4 value) => new(value.X, value.Y, value.Z);
+
     public static bool IsIdentity(this Matrix4x4 m, double threshold) {
         if (MathF.Abs(m.M11 - 1) >= threshold) return false;
         if (MathF.Abs(m.M22 - 1) >= threshold) return false;

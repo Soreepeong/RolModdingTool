@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using SynergyLib.FileFormat.CryEngine.CryXml;
 
 namespace SynergyLib.FileFormat.GltfInterop.Models;
 
@@ -14,4 +15,7 @@ public class GltfExtensions : BaseGltfObject {
 
     [JsonProperty("MSFT_texture_dds", NullValueHandling = NullValueHandling.Ignore)]
     public GltfExtensionMsftTextureDds? MsftTextureDds;
+
+    [JsonProperty("SynergyTools_cryMaterial", NullValueHandling = NullValueHandling.Ignore)]
+    public Material? SynergyToolsCryMaterial;
 }

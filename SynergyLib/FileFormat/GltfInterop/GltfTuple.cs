@@ -34,7 +34,7 @@ public class GltfTuple {
         Root = root;
     }
 
-    public static GltfTuple FromStream(Stream glbStream, bool leaveOpen = false) {
+    public static GltfTuple FromStream(Stream glbStream, string? basePath, bool leaveOpen = false) {
         using var lbr = new NativeReader(glbStream, Encoding.UTF8, leaveOpen);
         if (lbr.ReadUInt32() != GlbMagic)
             throw new InvalidDataException("Not a glb file.");
@@ -54,12 +54,43 @@ public class GltfTuple {
         if (lbr.ReadUInt32() != GlbDataMagic)
             throw new InvalidDataException("Second entry must be a data file.");
 
-        var res = new GltfTuple(root);
         var ms = new MemoryStream();
         ms.SetLength(dataLength);
         glbStream.ReadExactly(ms.GetBuffer().AsSpan(0, dataLength));
-        res.DataStreams.Add(ms);
+        return FromObject(root, basePath, ms);
+    }
+
+    public static GltfTuple FromObject(GltfRoot root, string? basePath, MemoryStream? embeddedData) {
+        var res = new GltfTuple(root);
+        if (res.Root.Buffers.Count(x => x.Uri is null) > 1)
+            throw new ArgumentException("Number of buffers without uri > 1", nameof(root));
+        foreach (var uri in res.Root.Buffers.Select(buffer => buffer.Uri)) {
+            if (uri is null) {
+                res.DataStreams.Add(embeddedData ?? throw new ArgumentNullException(nameof(embeddedData)));
+            } else {
+                var ms = new MemoryStream();
+                using var fs = File.OpenRead(Path.Join(basePath, uri));
+                ms.SetLength(fs.Length);
+                fs.CopyTo(ms);
+                res.DataStreams.Add(ms);
+            }
+        }
+
         return res;
+    }
+
+    public static GltfTuple FromFile(string filePath) {
+        var basePath = Path.GetDirectoryName(filePath);
+        try {
+            return FromObject(
+                JsonConvert.DeserializeObject<GltfRoot>(File.ReadAllText(filePath)) ?? throw new InvalidDataException(),
+                basePath,
+                null);
+        } catch (Exception e) {
+            Console.WriteLine(e);
+
+            return FromStream(File.OpenRead(filePath), basePath);
+        }
     }
 
     public void Compile(Stream target) {
@@ -156,9 +187,8 @@ public class GltfTuple {
         GltfBufferViewTarget? target,
         ReadOnlySpan<T> data)
         where T : unmanaged {
-        
         int dataStreamIndex;
-        lock (DataStreams){
+        lock (DataStreams) {
             if (Root.Buffers.Count != DataStreams.Count)
                 throw new InvalidOperationException("len(Buffers) != len(DataStreams)");
 

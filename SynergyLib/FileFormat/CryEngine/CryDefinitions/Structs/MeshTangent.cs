@@ -36,6 +36,7 @@ public struct MeshTangent {
     public static MeshTangent FromNormalAndTangent(Vector3 normal, Vector4 tangent) =>
         new() {
             Tangent = tangent,
-            Binormal = new(Vector3.Cross(new(tangent.X, tangent.Y, tangent.Z), normal), tangent.W),
+            Binormal = new(Vector3.Cross(tangent.DropW(), normal), tangent.W),
+            // ^ TODO: might have to use normal/uv maps
         };
 }

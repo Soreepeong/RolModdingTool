@@ -4,13 +4,15 @@ using Newtonsoft.Json.Converters;
 namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
 [JsonConverter(typeof(StringEnumConverter))]
-public enum ETexModMoveType {
-    NoChange,
-    Fixed,
-    Constant,
-    Jitter,
-    Pan,
-    Stretch,
-    StretchRepeat,
-    Max
+public enum TextureMapType {
+    Diffuse,
+    Normals,
+    Specular,
+    Env,
+    Detail,
+    Opacity,
+    Decal,
+    SubSurface,
+    Custom,
+    Custom2,
 }

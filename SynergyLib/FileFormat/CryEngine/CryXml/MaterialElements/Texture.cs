@@ -1,128 +1,99 @@
 ﻿using System.ComponentModel;
 using System.Xml.Serialization;
+using Newtonsoft.Json;
+using SynergyLib.FileFormat.GltfInterop.Models;
 
 namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
-/// <summary>The texture object</summary>
 [XmlRoot("Texture")]
 public class Texture {
-    public enum TypeEnum {
-        [XmlEnum("0")]
-        Default = 0,
-
-        [XmlEnum("3")]
-        Environment = 3,
-
-        [XmlEnum("5")]
-        Interface = 5,
-
-        [XmlEnum("7")]
-        CubeMap = 7,
-
-        [XmlEnum("Nearest Cube-Map probe for alpha blended")]
-        NearestCubeMap = 8
-    }
-
-    public enum MapTypeEnum {
-        Unknown,
-        Diffuse,
-        Normals,
-        Specular,
-        Env,
-        Detail,
-        Opacity,
-        Decal,
-        SubSurface,
-        Custom,
-        Custom2,
-    }
-
+    [JsonIgnore]
     [XmlAttribute("Map")]
     public string? MapString { get; set; }
 
-    /// <summary>Diffuse, Specular, Bumpmap, Environment, HeightMamp or Custom</summary>
+    [JsonProperty]
     [XmlIgnore]
-    public MapTypeEnum Map {
+    public TextureMapType Map {
         get => MapString switch {
-            "Diffuse" => MapTypeEnum.Diffuse,
-            "Specular" => MapTypeEnum.Specular,
-            "Bumpmap" => MapTypeEnum.Normals,
-            "Environment" => MapTypeEnum.Env,
-            "Detail" => MapTypeEnum.Detail,
-            "Opacity" => MapTypeEnum.Opacity,
-            "Decal" => MapTypeEnum.Decal,
-            "SubSurface" => MapTypeEnum.SubSurface,
-            "Custom" => MapTypeEnum.Custom,
-            "[1] Custom" => MapTypeEnum.Custom2,
+            "Diffuse" => TextureMapType.Diffuse,
+            "Specular" => TextureMapType.Specular,
+            "Bumpmap" => TextureMapType.Normals,
+            "Environment" => TextureMapType.Env,
+            "Detail" => TextureMapType.Detail,
+            "Opacity" => TextureMapType.Opacity,
+            "Decal" => TextureMapType.Decal,
+            "SubSurface" => TextureMapType.SubSurface,
+            "Custom" => TextureMapType.Custom,
+            "[1] Custom" => TextureMapType.Custom2,
             _ => 0,
         };
         set => MapString = value switch {
-            MapTypeEnum.Diffuse => "Diffuse",
-            MapTypeEnum.Specular => "Specular",
-            MapTypeEnum.Normals => "Bumpmap",
-            MapTypeEnum.Env => "Environment",
-            MapTypeEnum.Detail => "Detail",
-            MapTypeEnum.Opacity => "Opacity",
-            MapTypeEnum.Decal => "Decal",
-            MapTypeEnum.SubSurface => "SubSurface",
-            MapTypeEnum.Custom => "Custom",
-            MapTypeEnum.Custom2 => "[1] Custom",
+            TextureMapType.Diffuse => "Diffuse",
+            TextureMapType.Specular => "Specular",
+            TextureMapType.Normals => "Bumpmap",
+            TextureMapType.Env => "Environment",
+            TextureMapType.Detail => "Detail",
+            TextureMapType.Opacity => "Opacity",
+            TextureMapType.Decal => "Decal",
+            TextureMapType.SubSurface => "SubSurface",
+            TextureMapType.Custom => "Custom",
+            TextureMapType.Custom2 => "[1] Custom",
             _ => $"({value})",
         };
     }
 
-    /// <summary>Location of the texture</summary>
+    [JsonProperty]
     [XmlAttribute("File")]
     public string? File { get; set; }
 
-    /// <summary>The type of the texture</summary>
+    [JsonProperty]
     [XmlAttribute("TexType")]
-    [DefaultValue(TypeEnum.Default)]
-    public TypeEnum TexType;
+    [DefaultValue(TextureType.Default)]
+    public TextureType TexType;
 
+    [JsonIgnore]
     [XmlAttribute("IsTileU")]
     [DefaultValue(1)]
     public int IsTileUInt { get; set; } = 1;
 
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
     [XmlIgnore]
+    [DefaultValue(true)]
     public bool IsTileU {
         get => IsTileUInt != 0;
         set => IsTileUInt = value ? 1 : 0;
     }
 
+    [JsonIgnore]
     [XmlAttribute("IsTileV")]
     [DefaultValue(1)]
     public int IsTileVInt { get; set; } = 1;
 
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
     [XmlIgnore]
+    [DefaultValue(true)]
     public bool IsTileV {
         get => IsTileVInt != 0;
         set => IsTileVInt = value ? 1 : 0;
     }
 
+    [JsonIgnore]
     [XmlAttribute("Filter")]
     [DefaultValue(-1)]
     public int FilterInt { get; set; } = -1;
 
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
     [XmlIgnore]
     public TextureFilter Filter {
         get => (TextureFilter) FilterInt;
         set => FilterInt = (int) value;
     }
 
-    /// <summary>The modifier to apply to the texture</summary>
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
     [XmlElement("TexMod")]
     public TextureModifier? Modifier;
-}
 
-public enum TextureFilter {
-    None = -1,
-    Point,
-    Linear,
-    Bilinear,
-    Trilinear,
-    Aniso2X,
-    Aniso4X,
-    Aniso8X,
-    Anosi16X,
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+    [XmlIgnore]
+    public GltfTextureInfo? GltfTextureInfo;
 }

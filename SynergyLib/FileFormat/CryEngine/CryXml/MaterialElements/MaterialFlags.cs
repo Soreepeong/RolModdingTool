@@ -1,9 +1,12 @@
 ﻿using System;
+using Newtonsoft.Json;
+using SynergyLib.Util.CustomJsonConverters;
 
 namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
 [Flags]
-public enum MaterialFlags {
+[JsonConverter(typeof(FlagsEnumJsonConverter<MaterialFlags>))]
+public enum MaterialFlags : uint {
     Wire = 0x0001,
     TwoSided = 0x0002,
     Additive = 0x0004,

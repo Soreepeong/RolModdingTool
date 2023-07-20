@@ -75,7 +75,7 @@ public class DdsFile {
         Unsafe.SizeOf<DdsHeaderLegacy>() +
         (UseDxt10Header ? Unsafe.SizeOf<DdsHeaderDxt10>() : 0);
 
-    public Stream CreateStream() => new MemoryStream(_data, false);
+    public MemoryStream CreateStream() => new(_data, false);
 
     public DdsHeader Header => LegacyHeader.Header;
 

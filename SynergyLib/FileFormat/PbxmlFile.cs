@@ -31,10 +31,12 @@ public class PbxmlFile {
             CultureInfo.CurrentCulture = (CultureInfo) oldCulture.Clone();
             CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator = ".";
             CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator = ",";
+            var xns = new XmlSerializerNamespaces();
             var serializer = new XmlSerializer(typeof(T));
+            xns.Add(string.Empty, string.Empty);
             var doc = new XmlDocument();
             using (var w = doc.CreateNavigator()!.AppendChild())
-                serializer.Serialize(w, obj);
+                serializer.Serialize(w, obj, xns);
             return new(doc);
         } finally {
             CultureInfo.CurrentCulture = oldCulture;

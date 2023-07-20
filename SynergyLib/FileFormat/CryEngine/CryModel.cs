@@ -20,14 +20,18 @@ using SynergyLib.Util.MathExtras;
 namespace SynergyLib.FileFormat.CryEngine;
 
 public class CryModel {
-    public readonly Material? Material;
     public readonly List<PseudoMaterial> PseudoMaterials = new();
     public readonly List<Node> Nodes = new();
     public readonly Dictionary<string, MemoryStream> ExtraTextures = new();
+    public Material? Material;
     public Controller? RootController;
     public bool MergeAllNodes;
     public bool HaveAutoLods;
     public bool UseCustomNormals;
+
+    public CryChunks? OriginalChunks;
+
+    public CryModel() { }
 
     public CryModel(Material? material) {
         Material = material;
@@ -60,10 +64,23 @@ public class CryModel {
                         Flags = pseudoMaterial.Flags,
                         Name = pseudoMaterial.Name,
                         ShOpacity = pseudoMaterial.ShOpacity,
-                        SubMaterialChunkIds = new(pseudoMaterial.Children.Count)
+                        SubMaterialChunkIds = new(),
                     });
-                if (parent is not null)
+                if (Material is not null) {
+                    if (parent is null) {
+                        chunk.SubMaterialChunkIds.EnsureCapacity(Material?.SubMaterialsAndRefs?.Count ?? 0);
+                    } else {
+                        var index = Material.SubMaterials!.Select((x, i) => (x, i))
+                            .First(x => x.x!.Name == pseudoMaterial.Name).i;
+                        var smci = ((MtlNameChunk) chunks[pseudoMaterials[parent]]).SubMaterialChunkIds;
+                        while (smci.Count <= index)
+                            smci.Add(0);
+                        smci[index] = chunk.Header.Id;
+                    }
+                } else if (parent is not null) {
                     ((MtlNameChunk) chunks[pseudoMaterials[parent]]).SubMaterialChunkIds.Add(chunk.Header.Id);
+                }
+
                 pseudoMaterials[pseudoMaterial] = chunk.Header.Id;
             }
         }
@@ -81,54 +98,54 @@ public class CryModel {
                 .Select((x, i) => (x, i))
                 .ToDictionary(x => x.x.ControllerId, x => (ushort) x.i);
 
-            // TODO
-            // chunks.AddChunkBE(
-            //     ChunkType.CompiledPhysicalBones,
-            //     0x800,
-            //     new CompiledPhysicalBonesChunk {Bones = Controller.ToBoneEntityList(Controllers)});
-            //
-            // chunks.AddChunkBE(ChunkType.CompiledPhysicalProxies, 0x800, new CompiledPhysicalProxyChunk());
-            //
-            // chunks.AddChunkBE(ChunkType.CompiledMorphTargets, 0x800, new CompiledMorphTargetsChunk());
-            //
-            // intSkinVertices = chunks.AddChunkBE(
-            //     ChunkType.CompiledIntSkinVertices,
-            //     0x800,
-            //     new CompiledIntSkinVerticesChunk {
-            //         Vertices = Mesh.ToIntSkinVertices(RootNode.Meshes, controllerIdToBoneId, out extToInt),
-            //     });
-            //
-            // chunks.AddChunkBE(
-            //     ChunkType.CompiledIntFaces,
-            //     0x800,
-            //     new CompiledIntFacesChunk {Faces = Mesh.ToIntFaces(RootNode.Meshes, extToInt)});
-            //
-            // chunks.AddChunkBE(
-            //     ChunkType.CompiledExt2IntMap,
-            //     0x800,
-            //     new CompiledExtToIntMapChunk {Map = extToInt});
-            //
-            // foreach (var controller in Controllers) {
-            //     var boneId = controllerIdToBoneId[controller.Id];
-            //     var boneVertexIndices = new List<ushort>();
-            //     var aabb = AaBb.NegativeExtreme;
-            //     foreach (var extIndex in Enumerable.Range(0, extToInt.Count)) {
-            //         var intIndex = extToInt[extIndex];
-            //         if (!intSkinVertices.Vertices[intIndex].BoneIds.Contains(boneId))
-            //             continue;
-            //
-            //         boneVertexIndices.Add((ushort) extIndex);
-            //         aabb.Expand(intSkinVertices.Vertices[intIndex].Position1);
-            //     }
-            //
-            //     if (!boneVertexIndices.Any())
-            //         continue;
-            //
-            //     chunks.AddChunkBE(
-            //         ChunkType.BonesBoxes,
-            //         0x801,
-            //         new BonesBoxesChunk {BoneId = boneId, Indices = boneVertexIndices, AaBb = aabb});
-            // }
+            chunks.AddChunkBE(
+                ChunkType.CompiledPhysicalBones,
+                0x800,
+                new CompiledPhysicalBonesChunk {Bones = RootController.ToBoneEntityList().ToList()});
+
+            chunks.AddChunkBE(ChunkType.CompiledPhysicalProxies, 0x800, new CompiledPhysicalProxyChunk());
+
+            chunks.AddChunkBE(ChunkType.CompiledMorphTargets, 0x800, new CompiledMorphTargetsChunk());
+
+            var meshes = Nodes.Single().Meshes;
+            intSkinVertices = chunks.AddChunkBE(
+                ChunkType.CompiledIntSkinVertices,
+                0x800,
+                new CompiledIntSkinVerticesChunk {
+                    Vertices = Mesh.ToIntSkinVertices(meshes, controllerIdToBoneId, out extToInt),
+                });
+
+            chunks.AddChunkBE(
+                ChunkType.CompiledIntFaces,
+                0x800,
+                new CompiledIntFacesChunk {Faces = Mesh.ToIntFaces(meshes, extToInt)});
+
+            chunks.AddChunkBE(
+                ChunkType.CompiledExt2IntMap,
+                0x800,
+                new CompiledExtToIntMapChunk {Map = extToInt});
+
+            foreach (var controller in RootController.GetEnumeratorBreadthFirst()) {
+                var boneId = controllerIdToBoneId[controller.Id];
+                var boneVertexIndices = new List<ushort>();
+                var aabb = AaBb.NegativeExtreme;
+                foreach (var extIndex in Enumerable.Range(0, extToInt.Count)) {
+                    var intIndex = extToInt[extIndex];
+                    if (!intSkinVertices.Vertices[intIndex].BoneIds.Contains(boneId))
+                        continue;
+
+                    boneVertexIndices.Add((ushort) extIndex);
+                    aabb.Expand(intSkinVertices.Vertices[intIndex].Position1);
+                }
+
+                if (!boneVertexIndices.Any())
+                    continue;
+
+                chunks.AddChunkBE(
+                    ChunkType.BonesBoxes,
+                    0x801,
+                    new BonesBoxesChunk {BoneId = boneId, Indices = boneVertexIndices, AaBb = aabb});
+            }
         }
 
         chunks.AddChunkLE(
@@ -405,7 +422,9 @@ public class CryModel {
                     ChunkType.Node,
                     0x823,
                     new NodeChunk {
-                        MaterialId = pseudoMaterials.Last(x => x.Key.Name == node.MaterialName).Value,
+                        MaterialId = node.MaterialName is null
+                            ? 0
+                            : pseudoMaterials.Last(x => x.Key.Name == node.MaterialName).Value,
                         Name = node.Name,
                         ObjectId = meshChunk.Header.Id,
                         ParentId = parent is null ? -1 : nodes[parent],
@@ -532,20 +551,14 @@ public class CryModel {
             foreach (var b in bonesPhysical)
                 NotSupportedIfFalse(b.Physics.IsDefault, "PhysicalBones is not default: {0:X08}", b.ControllerId);
 
-            // bones: BFS
-            // bonesPhysical: DFS
-            var bonesPhysicalTest = new List<uint>();
-
-            void TestBonesPhysical(in CompiledBone bone, int index) {
-                bonesPhysicalTest.Add(bone.ControllerId);
-                for (var i = index + bone.ChildOffset; i < index + bone.ChildOffset + bone.ChildCount; i++)
-                    TestBonesPhysical(bones[i], i);
-            }
-
-            TestBonesPhysical(bones[0], 0);
             NotSupportedIfFalse(
-                bonesPhysicalTest.SequenceEqual(bonesPhysical.Select(x => x.ControllerId)),
-                "Stored PhysicalBones order does not match our ordering");
+                cryModel.RootController.GetEnumeratorBreadthFirst().Select(x => x.Id)
+                    .SequenceEqual(bones.Select(x => x.ControllerId)),
+                "Stored CompiledBones order does not match our ordering");
+            NotSupportedIfFalse(
+                cryModel.RootController.GetEnumeratorDepthFirst().Select(x => x.Id)
+                    .SequenceEqual(bonesPhysical.Select(x => x.ControllerId)),
+                "Stored CompiledPhysicalBones order does not match our ordering");
         }
 
         // Test: Ensure MtlNameChunks are what we expect
@@ -562,8 +575,8 @@ public class CryModel {
                 pseudoMaterials.Add(chunk.Header.Id, mat = new(chunk));
 
             foreach (var submatChunk in mtlNameChunks.Where(x => chunk.SubMaterialChunkIds.Contains(x.Header.Id))) {
-                if (!pseudoMaterials.TryGetValue(chunk.Header.Id, out var submat))
-                    pseudoMaterials.Add(chunk.Header.Id, submat = new(submatChunk));
+                if (!pseudoMaterials.TryGetValue(submatChunk.Header.Id, out var submat))
+                    pseudoMaterials.Add(submatChunk.Header.Id, submat = new(submatChunk));
                 mat.Children.Add(submat);
             }
 
@@ -642,6 +655,8 @@ public class CryModel {
         //     NotSupportedIfFalse(Math.Abs(diff.Z) < 1e-6);
         //     NotSupportedIfFalse(Math.Abs((aabb.Center - aabb.Min).Length() - subset.Radius) < 1e-6);
         // }
+
+        cryModel.OriginalChunks = chunks;
         return cryModel;
     }
 

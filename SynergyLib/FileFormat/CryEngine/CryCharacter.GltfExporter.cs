@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -55,7 +55,7 @@ public partial class CryCharacter {
             _gltf.Root.ExtensionsUsed.Add("KHR_materials_emissive_strength");
         }
 
-        public async Task<GltfTuple> Convert() {
+        public async Task<GltfTuple> Process() {
             Step01WriteSkin();
             await Step02WriteMaterials();
             Step03WriteMeshes();
@@ -89,6 +89,8 @@ public partial class CryCharacter {
                         Translation = SwapAxes(tra).ToFloatList(Vector3.Zero, 1e-6f),
                         Rotation = SwapAxes(rot).ToFloatList(Quaternion.Identity, 1e-6f),
                     });
+                Debug.Assert(SwapAxes(SwapAxes(tra)) == tra);
+                Debug.Assert(SwapAxes(SwapAxes(rot)) == rot);
                 skin.Joints.Add(nodeIndex);
                 _controllerIdToNodeIndex.Add(controller.Id, nodeIndex);
                 _controllerIdToBoneIndex.Add(controller.Id, boneIndex);
@@ -102,37 +104,6 @@ public partial class CryCharacter {
             skin.InverseBindMatrices = _gltf.AddAccessor(
                 null,
                 controllers.Select(x => SwapAxes(x.AbsoluteBindPoseMatrix).Normalize()).ToArray().AsSpan());
-        }
-
-        [SuppressMessage("ReSharper", "NotAccessedField.Local")]
-        private class ParsedGenMask {
-            public readonly bool UseScatterInNormalMap;
-            public readonly bool UseHeightInNormalMap;
-            public readonly bool UseSpecAlphaInDiffuseMap;
-            public readonly bool UseGlossInSpecularMap;
-            public readonly bool UseNormalMapInDetailMap;
-            public readonly bool UseInvertedBlendMap;
-            public readonly bool UseGlowDecalMap;
-            public readonly bool UseBlendSpecularInSubSurfaceMap;
-            public readonly bool UseBlendDiffuseInCustomMap;
-            public readonly bool UseDirtLayerInCustomMap2;
-            public readonly bool UseAddNormalInCustomMap2;
-            public readonly bool UseBlurRefractionInCustomMap2;
-
-            public ParsedGenMask(IReadOnlySet<string> genMaskSet) {
-                UseScatterInNormalMap = genMaskSet.Contains("TEMP_SKIN");
-                UseHeightInNormalMap = genMaskSet.Contains("BLENDHEIGHT_DISPL");
-                UseSpecAlphaInDiffuseMap = genMaskSet.Contains("GLOSS_DIFFUSEALPHA");
-                UseGlossInSpecularMap = genMaskSet.Contains("SPECULARPOW_GLOSSALPHA");
-                UseNormalMapInDetailMap = genMaskSet.Contains("DETAIL_TEXTURE_IS_NORMALMAP");
-                UseInvertedBlendMap = genMaskSet.Contains("BLENDHEIGHT_INVERT");
-                UseGlowDecalMap = genMaskSet.Contains("DECAL_ALPHAGLOW");
-                UseBlendSpecularInSubSurfaceMap = genMaskSet.Contains("BLENDSPECULAR");
-                UseBlendDiffuseInCustomMap = genMaskSet.Contains("BLENDLAYER");
-                UseDirtLayerInCustomMap2 = genMaskSet.Contains("DIRTLAYER");
-                UseAddNormalInCustomMap2 = genMaskSet.Contains("BLENDNORMAL_ADD");
-                UseBlurRefractionInCustomMap2 = genMaskSet.Contains("BLUR_REFRACTION");
-            }
         }
 
         private readonly struct DerivativeTextureKey : IEquatable<DerivativeTextureKey> {
@@ -231,10 +202,10 @@ public partial class CryCharacter {
 
             public bool HasGltfTextureIndex => _gltfTextureIndex != -1;
 
-            private int GetGltfTextureIndex(GltfTuple gltf) {
+            private int GetGltfTextureIndex(GltfTuple gltf, string pathPrefix = "") {
                 if (_gltfTextureIndex == -1) {
                     _gltfTextureIndex = gltf.AddTexture(
-                        Path,
+                        pathPrefix + Path,
                         Image,
                         UseAlphaChannel ? PngColorType.RgbWithAlpha : PngColorType.Rgb,
                         DdsFile);
@@ -243,32 +214,8 @@ public partial class CryCharacter {
                 return _gltfTextureIndex;
             }
 
-            public GltfTextureInfo GetGltfTextureInfo(GltfTuple gltf) => new() {Index = GetGltfTextureIndex(gltf)};
-
-            // public string SuggestSuffix() =>
-            //     CryTexture.Map switch {
-            //         Texture.MapTypeEnum.Diffuse => "dif",
-            //         Texture.MapTypeEnum.Normals when UseScatterInNormalMap => "bsg_nrm",
-            //         Texture.MapTypeEnum.Normals when UseHeightInNormalMap => "bhg_nrm",
-            //         Texture.MapTypeEnum.Normals => "nrm",
-            //         Texture.MapTypeEnum.Specular => "spec",
-            //         Texture.MapTypeEnum.Env => "env",
-            //         Texture.MapTypeEnum.Detail when UseNormalMapInDetailMap => "n_detail",
-            //         Texture.MapTypeEnum.Detail => "detail",
-            //         Texture.MapTypeEnum.Opacity when UseInvertedBlendMap => "invert_blend",
-            //         Texture.MapTypeEnum.Opacity => "blend",
-            //         Texture.MapTypeEnum.Decal when UseGlowDecalMap => "glow_decal",
-            //         Texture.MapTypeEnum.Decal => "decal",
-            //         Texture.MapTypeEnum.SubSurface when UseBlendSpecularInSubSurfaceMap => "blendspec_sss",
-            //         Texture.MapTypeEnum.SubSurface => "sss",
-            //         Texture.MapTypeEnum.Custom when UseBlendDiffuseInCustomMap => "blenddif_cust",
-            //         Texture.MapTypeEnum.Custom => "cust",
-            //         Texture.MapTypeEnum.Custom2 when UseDirtLayerInCustomMap2 => "dirt_cust2",
-            //         Texture.MapTypeEnum.Custom2 when UseAddNormalInCustomMap2  => "addnrm_cust2",
-            //         Texture.MapTypeEnum.Custom2 when UseBlurRefractionInCustomMap2  => "refraction_cust2",
-            //         Texture.MapTypeEnum.Custom2 => "cust2",
-            //         _ => $"{(int) CryTexture.Map}",
-            //     };
+            public GltfTextureInfo GetGltfTextureInfo(GltfTuple gltf, string pathPrefix = "") =>
+                new() {Index = GetGltfTextureIndex(gltf, pathPrefix)};
 
             public void ClearAlpha() {
                 HasAlphaValues = false;
@@ -323,10 +270,12 @@ public partial class CryCharacter {
         }
 
         private async Task Step02WriteMaterials() {
+            _gltf.Root.ExtensionsUsed.Add("SynergyTools_cryMaterial");
+
             if (_character.Model.Material is not null) {
                 _flatMaterials.Add(_character.Model.Material);
                 for (var i = 0; i < _flatMaterials.Count; i++) {
-                    if (!_flatMaterials[i].MaterialFlags.HasFlag(MaterialFlags.MultiSubmtl))
+                    if (!_flatMaterials[i].Flags.HasFlag(MaterialFlags.MultiSubmtl))
                         continue;
                     if (_flatMaterials[i].SubMaterials is not { } subMaterials)
                         continue;
@@ -403,11 +352,11 @@ public partial class CryCharacter {
                     .Where(x => x.Item2 is not null)
                     .ToDictionary(x => x.Item1, x => x.Item2!);
 
-                var genMask = new ParsedGenMask(cryMaterial.GenMaskSet);
+                var genMask = new ParsedGenMask(cryMaterial.GenMask);
 
-                var diffuseRaw = materialTextures.GetValueOrDefault(Texture.MapTypeEnum.Diffuse);
-                var normalRaw = materialTextures.GetValueOrDefault(Texture.MapTypeEnum.Normals);
-                var specularRaw = materialTextures.GetValueOrDefault(Texture.MapTypeEnum.Specular);
+                var diffuseRaw = materialTextures.GetValueOrDefault(TextureMapType.Diffuse);
+                var normalRaw = materialTextures.GetValueOrDefault(TextureMapType.Normals);
+                var specularRaw = materialTextures.GetValueOrDefault(TextureMapType.Specular);
 
                 AddedTexture<Bgra32>? specularTexture = null;
                 AddedTexture<Bgra32>? specularGlossinessTexture = null;
@@ -579,14 +528,14 @@ public partial class CryCharacter {
                         AlphaMode = cryMaterial.AlphaTest == 0
                             ? GltfMaterialAlphaMode.Opaque
                             : GltfMaterialAlphaMode.Mask,
-                        DoubleSided = cryMaterial.MaterialFlags.HasFlag(MaterialFlags.TwoSided),
+                        DoubleSided = cryMaterial.Flags.HasFlag(MaterialFlags.TwoSided),
                         NormalTexture = normalTexture?.GetGltfTextureInfo(_gltf),
                         PbrMetallicRoughness = new() {
                             BaseColorTexture = diffuseTexture?.GetGltfTextureInfo(_gltf),
                             BaseColorFactor = new[] {
-                                (cryMaterial.DiffuseColor ?? Vector3.One).X,
-                                (cryMaterial.DiffuseColor ?? Vector3.One).Y,
-                                (cryMaterial.DiffuseColor ?? Vector3.One).Z,
+                                cryMaterial.DiffuseColor.X,
+                                cryMaterial.DiffuseColor.Y,
+                                cryMaterial.DiffuseColor.Z,
                                 float.Clamp(cryMaterial.Opacity, 0f, 1f),
                             },
                             MetallicFactor = float.Clamp(cryMaterial.PublicParams?.Metalness ?? 1, 0, 1),
@@ -604,24 +553,24 @@ public partial class CryCharacter {
                                 SpecularTexture = specularTexture?.GetGltfTextureInfo(_gltf),
                                 SpecularFactor = float.Clamp(cryMaterial.Shininess / 255f, 0f, 1f),
                                 SpecularColorFactor = new[] {
-                                    (cryMaterial.SpecularColor ?? Vector3.One).X,
-                                    (cryMaterial.SpecularColor ?? Vector3.One).Y,
-                                    (cryMaterial.SpecularColor ?? Vector3.One).Z,
+                                    cryMaterial.SpecularColor.X,
+                                    cryMaterial.SpecularColor.Y,
+                                    cryMaterial.SpecularColor.Z,
                                 },
                                 SpecularColorTexture = specularTexture?.GetGltfTextureInfo(_gltf),
                             },
                             KhrMaterialsPbrSpecularGlossiness = new() {
                                 DiffuseFactor = new[] {
-                                    (cryMaterial.DiffuseColor ?? Vector3.One).X,
-                                    (cryMaterial.DiffuseColor ?? Vector3.One).Y,
-                                    (cryMaterial.DiffuseColor ?? Vector3.One).Z,
+                                    cryMaterial.DiffuseColor.X,
+                                    cryMaterial.DiffuseColor.Y,
+                                    cryMaterial.DiffuseColor.Z,
                                     float.Clamp(cryMaterial.Opacity, 0f, 1f),
                                 },
                                 DiffuseTexture = diffuseTexture?.GetGltfTextureInfo(_gltf),
                                 SpecularFactor = new[] {
-                                    (cryMaterial.SpecularColor ?? Vector3.One).X,
-                                    (cryMaterial.SpecularColor ?? Vector3.One).Y,
-                                    (cryMaterial.SpecularColor ?? Vector3.One).Z,
+                                    cryMaterial.SpecularColor.X,
+                                    cryMaterial.SpecularColor.Y,
+                                    cryMaterial.SpecularColor.Z,
                                 },
                                 GlossinessFactor = float.Clamp(cryMaterial.Shininess / 255f, 0f, 1f),
                                 SpecularGlossinessTexture = specularGlossinessTexture?.GetGltfTextureInfo(_gltf),
@@ -631,23 +580,33 @@ public partial class CryCharacter {
                                 : new() {
                                     EmissiveStrength = cryMaterial.GlowAmount,
                                 },
+                            SynergyToolsCryMaterial = cryMaterial,
                         },
                     });
             }
 
             if (!_exportOnlyRequiredTextures) {
                 foreach (var k in src32.Values.Concat(deriv32.Values).Where(x => !x.HasGltfTextureIndex))
-                    _gltf.AddTexture(
-                        "extras/" + k.Path,
-                        k.Image,
-                        k.HasAlphaValues ? PngColorType.RgbWithAlpha : PngColorType.Rgb,
-                        k.DdsFile);
+                    k.GetGltfTextureInfo(_gltf, "extras/");
                 foreach (var k in deriv8.Values.Where(x => !x.HasGltfTextureIndex))
-                    _gltf.AddTexture(
-                        "extras/" + k.Path,
-                        k.Image,
-                        PngColorType.Grayscale,
-                        k.DdsFile);
+                    k.GetGltfTextureInfo(_gltf, "extras/");
+            }
+
+            foreach (var m in _gltf.Root.Materials) {
+                if (m.Extensions?.SynergyToolsCryMaterial?.Textures is { } cryTextures) {
+                    foreach (var ct in cryTextures) {
+                        var index = Array.IndexOf(texturePaths, ct.File);
+                        if (index == -1)
+                            continue;
+
+                        var key = DerivativeTextureKey.Raw(textureNames[index]);
+                        if (!src32.TryGetValue(key, out var addedTexture))
+                            continue;
+
+                        if (addedTexture.HasGltfTextureIndex)
+                            ct.GltfTextureInfo = addedTexture.GetGltfTextureInfo(_gltf);
+                    }
+                }
             }
         }
 
@@ -671,7 +630,7 @@ public partial class CryCharacter {
                                 null,
                                 cryMesh.Vertices.Select(x => SwapAxesTangent(x.Tangent.Tangent)).ToArray().AsSpan(),
                                 target: GltfBufferViewTarget.ArrayBuffer),
-                            Color0 = cryMaterial?.ContainsGenMask("VERTCOLORS") is not true || !cryNode.HasColors
+                            Color0 = cryMaterial?.GenMask.UseVertexColors is not true || !cryNode.HasColors
                                 ? null
                                 : _gltf.AddAccessor(
                                     null,

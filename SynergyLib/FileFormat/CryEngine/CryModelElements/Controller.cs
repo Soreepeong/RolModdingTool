@@ -180,36 +180,36 @@ public class Controller {
         : $"{nameof(Controller)}: {Name} #{Id:X08} (Leaf)";
 
     public IEnumerable<CompiledBone> ToCompiledBonesList() {
-        var boneId = 0;
+        var boneIndex = 0;
         var nextAvailableIndex = 1;
-        var controllerToBoneId = new Dictionary<Controller, int>();
+        var controllerToBoneIndex = new Dictionary<Controller, int>();
         foreach (var c in GetEnumeratorBreadthFirst()) {
             yield return new() {
                 ChildCount = c.Children.Count,
-                ChildOffset = nextAvailableIndex,
+                ChildOffset = nextAvailableIndex - boneIndex,
                 ControllerId = c.Id,
                 LimbId = uint.MaxValue,
                 LocalTransformMatrix = Matrix3x4.CreateFromMatrix4x4(Matrix4x4.Transpose(c.AbsoluteBindPoseMatrix)),
                 Mass = 0,
                 Name = c.Name,
-                ParentOffset = c.Parent is null ? 0 : controllerToBoneId[c.Parent] - boneId,
+                ParentOffset = c.Parent is null ? 0 : controllerToBoneIndex[c.Parent] - boneIndex,
                 PhysicsLive = new(),
                 PhysicsDead = default,
                 WorldTransformMatrix =
                     Matrix3x4.CreateFromMatrix4x4(Matrix4x4.Transpose(c.InverseAbsoluteBindPoseMatrix)),
             };
-            controllerToBoneId[c] = boneId;
+            controllerToBoneIndex[c] = boneIndex;
             nextAvailableIndex += c.Children.Count;
-            boneId++;
+            boneIndex++;
         }
     }
 
     public IEnumerable<BoneEntity> ToBoneEntityList() {
-        var boneId = 0;
+        var boneIndex = 0;
         var controllerToBoneId = new Dictionary<Controller, int>();
         foreach (var c in GetEnumeratorDepthFirst()) {
             yield return new() {
-                BoneId = boneId,
+                BoneId = boneIndex,
                 ChildCount = c._children.Count,
                 ControllerId = c.Id,
                 ParentId = c.Parent is null ? -1 : controllerToBoneId[c.Parent],
@@ -217,8 +217,8 @@ public class Controller {
                 Properties = string.Empty,
             };
 
-            controllerToBoneId[c] = boneId;
-            boneId++;
+            controllerToBoneId[c] = boneIndex;
+            boneIndex++;
         }
     }
 }

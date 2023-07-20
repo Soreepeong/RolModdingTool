@@ -1,4 +1,5 @@
-﻿using System.CommandLine;
+﻿using System;
+using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.IO;
 using System.Linq;
@@ -36,7 +37,7 @@ public class TestDevProgramCommand : RootProgramCommand {
         var reader = new GameFileSystemReader();
         foreach (var p in InPathArray)
             reader.WithRootDirectory(p);
-        
+
         var rfn = reader.AsFunc(SkinFlag.LookupDefault);
         var sonic = await CryCharacter.FromCryEngineFiles(
             rfn,
@@ -50,8 +51,8 @@ public class TestDevProgramCommand : RootProgramCommand {
         foreach (var p in m.Vertices)
             aabbSonic.Expand(p.Position);
 
-        await using (var os = File.Create("Z:/ROL3D/sonic.glb"))
-            (await sonic.ToGltf(rfn, true, false, cancellationToken)).Compile(os);
+        // await using (var os = File.Create("Z:/ROL3D/sonic.glb"))
+        //     (await sonic.ToGltf(rfn, true, false, cancellationToken)).Compile(os);
         // var char2 = CryCharacter.FromGltf(GltfTuple.FromStream(File.OpenRead("Z:/ROL3D/sonic.glb")));
         // foreach (var k in sonic.CryAnimationDatabase.Animations.Keys.ToArray()) {
         //     // var orig = sonic.CryAnimationDatabase.Animations[k];
@@ -60,27 +61,30 @@ public class TestDevProgramCommand : RootProgramCommand {
         //     sonic.CryAnimationDatabase.Animations[k] = recr;
         // }
 
-        var char2 = CryCharacter.FromGltf(GltfTuple.FromStream(File.OpenRead("Z:/ROL3D/m0361_b0001_v0001.glb")));
-        var aabbM2 = AaBb.NegativeExtreme;
-        foreach (var m in char2.Model.Nodes.SelectMany(x => x.Meshes))
-        foreach (var p in m.Vertices)
-            aabbM2.Expand(p.Position);
-
-        char2.Scale(2 * aabbSonic.Radius / aabbM2.Radius);
+        var char2 = CryCharacter.FromGltf(
+            GltfTuple.FromFile("Z:/ROL3D/sonic.glb"),
+            // GltfTuple.FromFile("Z:/m0361b0001.glb"),
+            cancellationToken);
+        // var aabbM2 = AaBb.NegativeExtreme;
+        // foreach (var m in char2.Model.Nodes.SelectMany(x => x.Meshes))
+        // foreach (var p in m.Vertices)
+        //     aabbM2.Expand(p.Position);
+        // char2.Scale(2 * aabbSonic.Radius / aabbM2.Radius);
 
         var level = await reader.GetPackfile(testLevelName);
         foreach (var (k, v) in char2.Model.ExtraTextures)
             level.PutEntry(0, k, new(v.ToArray()));
         level.GetEntry(sonic.Definition!.Model!.File!, false).Source = new(char2.Model.GetGeometryBytes());
-        level.GetEntry(sonic.Definition!.Model!.Material!, false).Source =
-            new(char2.Model.GetMaterialBytes());
+        // using (var s = File.Create("Z:/rol3d/test2.xml"))
+        //     PbxmlFile.FromObject(sonic.Model.Material).WriteText(s);
+        level.GetEntry(sonic.Definition!.Model!.Material!, false).Source = new(char2.Model.GetMaterialBytes());
 
-        sonic.CryAnimationDatabase!.Animations["animations/characters/1_heroes/sonic/final/combat_idle.caf"] =
-            sonic.CryAnimationDatabase.Animations["animations/characters/1_heroes/sonic/final/idle.caf"] =
-                char2.CryAnimationDatabase!.Animations[
-                    "chara/monster/m0361/animation/a0001/bt_common/resident/monster.pap/cbbm_id0"];
-        level.GetEntry(sonic.CharacterParameters!.TracksDatabasePath!, false).Source =
-            new(sonic.CryAnimationDatabase!.GetBytes());
+        // sonic.CryAnimationDatabase!.Animations["animations/characters/1_heroes/sonic/final/combat_idle.caf"] =
+        //     sonic.CryAnimationDatabase.Animations["animations/characters/1_heroes/sonic/final/idle.caf"] =
+        //         char2.CryAnimationDatabase!.Animations[
+        //             "chara/monster/m0361/animation/a0001/bt_common/resident/monster.pap/cbbm_id0"];
+        // level.GetEntry(sonic.CharacterParameters!.TracksDatabasePath!, false).Source =
+        //     new(sonic.CryAnimationDatabase!.GetBytes());
         var targetPath = reader.GetPackfilePath(testLevelName);
         while (targetPath.EndsWith(".bak"))
             targetPath = targetPath[..^4];
