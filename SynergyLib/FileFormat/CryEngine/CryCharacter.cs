@@ -100,19 +100,15 @@ public partial class CryCharacter {
         var root = gltf.Root;
         var rootNode = root.Nodes[root.Scenes[root.Scene].Nodes.Single()];
 
-        var model = new CryModel(new(){SubMaterialsAndRefs = new()});
+        var model = new CryModel(new() {SubMaterialsAndRefs = new()});
 
         var boneIdToControllerId = new Dictionary<int, uint>();
         var nodeIdToControllerId = new Dictionary<int, uint>();
 
         if (rootNode.Skin is not null && root.Skins[rootNode.Skin.Value] is {Joints: not null} skin) {
-            var ibm = skin.InverseBindMatrices is null
-                ? throw new InvalidDataException()
-                : gltf.ReadTypedArray<Matrix4x4>(skin.InverseBindMatrices.Value)
-                    .Select(SwapAxes).ToArray();
-            model.Controllers.EnsureCapacity(skin.Joints.Count);
-
             var pendingTraversal = rootNode.Children.Select(x => Tuple.Create(x, (Controller?) null)).ToList();
+            if (pendingTraversal.Count != 1)
+                throw new NotSupportedException("Currently a root node with 2+ child nodes are unsupported.");
             while (pendingTraversal.Any()) {
                 var (nodeIndex, parentController) = pendingTraversal.First();
                 pendingTraversal.RemoveAt(0);
@@ -122,18 +118,30 @@ public partial class CryCharacter {
                     throw new InvalidDataException();
 
                 var node = root.Nodes[nodeIndex];
-                var controller =
-                    node.Name?.IndexOf("$$") is { } sharp && sharp != -1
-                        ? new(
-                            Convert.ToUInt32(node.Name[(sharp + 2)..], 16),
-                            node.Name[..sharp],
-                            ibm[skin.Joints.IndexOf(nodeIndex)],
-                            parentController)
-                        : new Controller(
-                            node.Name ?? $"Bone#{model.Controllers.Count}",
-                            ibm[skin.Joints.IndexOf(nodeIndex)],
-                            parentController);
-                model.Controllers.Add(controller);
+                string controllerName;
+                uint controllerId;
+                if (node.Name?.IndexOf("$$") is { } sharp && sharp != -1) {
+                    controllerName = node.Name[..sharp];
+                    controllerId = Convert.ToUInt32(node.Name[(sharp + 2)..], 16);
+                } else {
+                    controllerName = node.Name ?? $"Bone_{boneIndex}";
+                    controllerId = Crc32.CryE.Get(controllerName);
+                }
+
+                var matrix = Matrix4x4.Identity;
+                if (node.Scale is not null)
+                    matrix *= Matrix4x4.CreateScale(SwapAxesScale(node.Scale.ToVector3()));
+                if (node.Rotation is not null)
+                    matrix *= Matrix4x4.CreateFromQuaternion(SwapAxes(node.Rotation.ToQuaternion()));
+                if (node.Translation is not null)
+                    matrix *= Matrix4x4.CreateScale(node.Translation.ToVector3());
+
+                var controller = new Controller(controllerId, controllerName, matrix);
+                if (parentController is not null)
+                    parentController.Children.Add(controller);
+                else if (model.RootController is not null)
+                    throw new InvalidDataException("Multiple roots are not supported.");
+
                 nodeIdToControllerId[nodeIndex] = boneIdToControllerId[boneIndex] = controller.Id;
                 pendingTraversal.AddRange(node.Children.Select(child => Tuple.Create(child, controller))!);
             }
@@ -240,7 +248,7 @@ public partial class CryCharacter {
                             Map = Texture.MapTypeEnum.Specular,
                         });
                 } else if (material?.Extensions?.KhrMaterialsSpecular?.SpecularTexture?.Index is
-                    { } specularTextureIndex) {
+                           { } specularTextureIndex) {
                     cryMaterial.StringGenMask += "%GLOSS_MAP";
                     var image = Image.Load<Rgba32>(
                             gltf.ReadBufferView(
@@ -298,7 +306,7 @@ public partial class CryCharacter {
 
                     Vector4<float>[]? weights = null;
                     Vector4<ushort>[]? joints = null;
-                    if (model.Controllers.Any()) {
+                    if (model.RootController is not null) {
                         if (primitive.Attributes.Weights0 is null
                             || primitive.Attributes.Joints0 is null)
                             throw new InvalidDataException();
@@ -387,6 +395,7 @@ public partial class CryCharacter {
     }
 
     protected static Vector3 SwapAxes(Vector3 val) => new(-val.X, val.Z, val.Y);
+    protected static Vector3 SwapAxesScale(Vector3 val) => new(val.X, val.Z, val.Y);
     protected static Vector4 SwapAxesTangent(Vector4 val) => new(-val.X, val.Z, val.Y, val.W);
     protected static Quaternion SwapAxes(Quaternion val) => new(-val.X, val.Z, val.Y, val.W);
 

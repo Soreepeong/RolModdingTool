@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -9,7 +10,6 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
-using SynergyLib.FileFormat.CryEngine.CryModelElements;
 using SynergyLib.FileFormat.CryEngine.CryXml;
 using SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 using SynergyLib.FileFormat.DirectDrawSurface;
@@ -65,8 +65,8 @@ public partial class CryCharacter {
         }
 
         private void Step01WriteSkin() {
-            var controllers = _character.Model.Controllers.OrderBy(x => x.Depth).ToArray();
-            if (!controllers.Any())
+            var controllers = _character.Model.RootController?.GetEnumeratorBreadthFirst().ToArray();
+            if (controllers?.Any() is not true)
                 return;
 
             _controllerIdToNodeIndex.EnsureCapacity(controllers.Length);
@@ -104,6 +104,7 @@ public partial class CryCharacter {
                 controllers.Select(x => SwapAxes(x.AbsoluteBindPoseMatrix).Normalize()).ToArray().AsSpan());
         }
 
+        [SuppressMessage("ReSharper", "NotAccessedField.Local")]
         private class ParsedGenMask {
             public readonly bool UseScatterInNormalMap;
             public readonly bool UseHeightInNormalMap;

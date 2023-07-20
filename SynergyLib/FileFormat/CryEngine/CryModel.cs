@@ -23,8 +23,8 @@ public class CryModel {
     public readonly Material? Material;
     public readonly List<PseudoMaterial> PseudoMaterials = new();
     public readonly List<Node> Nodes = new();
-    public readonly List<Controller> Controllers = new();
     public readonly Dictionary<string, MemoryStream> ExtraTextures = new();
+    public Controller? RootController;
     public bool MergeAllNodes;
     public bool HaveAutoLods;
     public bool UseCustomNormals;
@@ -37,10 +37,11 @@ public class CryModel {
         foreach (var node in Nodes)
             node.ChangeScale(scale);
 
-        foreach (var c in Controllers) {
-            var (tra, rot) = c.Decomposed;
-            c.Decomposed = Tuple.Create(tra * scale, rot);
-        }
+        if (RootController is not null)
+            foreach (var c in RootController.GetEnumeratorDepthFirst()) {
+                var (tra, rot) = c.Decomposed;
+                c.Decomposed = Tuple.Create(tra * scale, rot);
+            }
     }
 
     public void WriteGeometryTo(NativeWriter writer) {
@@ -70,11 +71,11 @@ public class CryModel {
         Dictionary<uint, ushort>? controllerIdToBoneId = null;
         List<ushort>? extToInt = null;
         CompiledIntSkinVerticesChunk? intSkinVertices = null;
-        if (Controllers.Any()) {
+        if (RootController is not null) {
             var compiledBones = chunks.AddChunkBE(
                 ChunkType.CompiledBones,
                 0x800,
-                new CompiledBonesChunk {Bones = Controller.ToCompiledBonesList(Controllers)});
+                new CompiledBonesChunk {Bones = RootController.ToCompiledBonesList().ToList()});
 
             controllerIdToBoneId = compiledBones.Bones
                 .Select((x, i) => (x, i))
@@ -524,7 +525,7 @@ public class CryModel {
                 NotSupportedIfFalse(bone.PhysicsDead.IsEmpty, "PhysicsDead is not empty: {0}", bone.Name);
             }
 
-            cryModel.Controllers.AddRange(Controller.ListFromCompiledBones(bones));
+            cryModel.RootController = new(bones);
 
             // Test: PhysicalBones are ordered as expected and all items have the default value
             var bonesPhysical = chunks.Values.OfType<CompiledPhysicalBonesChunk>().Single().Bones;
@@ -579,12 +580,13 @@ public class CryModel {
 
         var nodeChunks = chunks.Values.OfType<NodeChunk>().ToArray();
         var nodes = new Dictionary<int, Node>();
+        var orderedControllers = cryModel.RootController?.GetEnumeratorBreadthFirst().ToArray();
         foreach (var chunk in nodeChunks) {
             if (chunks[chunk.ObjectId] is not MeshChunk mc)
                 continue;
             if (mc.SubsetsChunkId == 0)
                 continue;
-            
+
             if (!nodes.TryGetValue(chunk.Header.Id, out var node))
                 nodes.Add(
                     chunk.Header.Id,
@@ -593,7 +595,7 @@ public class CryModel {
                         chunk,
                         material,
                         chunk.MaterialId == 0 ? null : pseudoMaterials[chunk.MaterialId].Name,
-                        cryModel.Controllers));
+                        orderedControllers));
 
             if (chunk.ParentId != -1) {
                 if (!nodes.TryGetValue(chunk.ParentId, out var parent)) {
@@ -605,7 +607,7 @@ public class CryModel {
                             parentChunk,
                             material,
                             chunk.MaterialId == 0 ? null : pseudoMaterials[chunk.MaterialId].Name,
-                            cryModel.Controllers));
+                            orderedControllers));
                 }
 
                 parent.Children.Add(node);

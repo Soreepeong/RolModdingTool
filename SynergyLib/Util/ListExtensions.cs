@@ -22,11 +22,20 @@ public static class ListExtensions {
 
     public static Vector3 ToVector3(this IEnumerable<float> value) {
         using var a = value.GetEnumerator();
-        var res = new Vector3 {
+        return new() {
             X = a.MoveNext() ? a.Current : throw new ArgumentOutOfRangeException(nameof(value), value, null),
             Y = a.MoveNext() ? a.Current : throw new ArgumentOutOfRangeException(nameof(value), value, null),
             Z = a.MoveNext() ? a.Current : throw new ArgumentOutOfRangeException(nameof(value), value, null),
         };
-        return res;
+    }
+
+    public static Quaternion ToQuaternion(this IEnumerable<float> value) {
+        using var a = value.GetEnumerator();
+        return new() {
+            X = a.MoveNext() ? a.Current : throw new ArgumentOutOfRangeException(nameof(value), value, null),
+            Y = a.MoveNext() ? a.Current : throw new ArgumentOutOfRangeException(nameof(value), value, null),
+            Z = a.MoveNext() ? a.Current : throw new ArgumentOutOfRangeException(nameof(value), value, null),
+            W = a.MoveNext() ? a.Current : throw new ArgumentOutOfRangeException(nameof(value), value, null),
+        };
     }
 }

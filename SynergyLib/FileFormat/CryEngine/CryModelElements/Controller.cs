@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
@@ -15,33 +18,67 @@ public class Controller {
 
     public readonly uint Id;
     public readonly string Name;
+    private readonly ObservableCollection<Controller> _children;
 
-    public Controller? Parent;
-    public readonly List<Controller> Children = new();
-
-    public Controller(uint id, string name, in Matrix4x4 absoluteBindPoseMatrix, Controller? parent = null) {
+    public Controller(uint id, string name) {
         Id = id;
         Name = name;
-        Parent = parent;
-        Parent?.Children.Add(this);
-
-        if (!Matrix4x4.Invert(absoluteBindPoseMatrix, out var inverseAbsoluteBindPoseMatrix))
-            throw new InvalidOperationException();
-
-        _relativeBindPoseMatrix = Parent is null
-            ? absoluteBindPoseMatrix
-            : Parent.InverseAbsoluteBindPoseMatrix * absoluteBindPoseMatrix;
-        _inverseRelativeBindPoseMatrix = Parent is null
-            ? inverseAbsoluteBindPoseMatrix
-            : inverseAbsoluteBindPoseMatrix * Parent.AbsoluteBindPoseMatrix;
+        _children = new();
+        _children.CollectionChanged += ChildrenOnCollectionChanged;
     }
 
-    public Controller(string name, in Matrix4x4 bindPoseMatrix, Controller? parent = null)
-        : this(Crc32.CryE.Get(name), name, bindPoseMatrix, parent) { }
+    public Controller(uint id, string name, Matrix4x4 relativeBindPoseMatrix) : this(id, name) {
+        Id = id;
+        Name = name;
+
+        _relativeBindPoseMatrix = relativeBindPoseMatrix;
+        _inverseRelativeBindPoseMatrix = Matrix4x4.Invert(relativeBindPoseMatrix, out var inverted)
+            ? inverted
+            : throw new InvalidDataException();
+    }
+
+    public Controller(IReadOnlyList<CompiledBone> compiledBones) : this(
+        compiledBones,
+        compiledBones.Select((x, i) => (x, i)).Single(x => x.x.ParentOffset == 0).i) { }
+
+    private Controller(IReadOnlyList<CompiledBone> compiledBones, int index) : this(
+        compiledBones[index].ControllerId,
+        compiledBones[index].Name) {
+        var bone = compiledBones[index];
+
+        var hasParent = compiledBones[index].ParentOffset != 0;
+        _relativeBindPoseMatrix = Matrix4x4.Transpose(bone.LocalTransformMatrix.Transformation);
+        if (hasParent) {
+            var parentBone = compiledBones[index + bone.ParentOffset];
+            var parentInverseAbsoluteBindPose = Matrix4x4.Transpose(parentBone.WorldTransformMatrix.Transformation);
+            _relativeBindPoseMatrix = parentInverseAbsoluteBindPose * _relativeBindPoseMatrix;
+        }
+
+        _inverseRelativeBindPoseMatrix = Matrix4x4.Invert(_relativeBindPoseMatrix, out var inverted)
+            ? inverted
+            : throw new InvalidDataException();
+
+        for (var i = 0; i < bone.ChildCount; i++)
+            _children.Add(new(compiledBones, index + bone.ChildOffset + i));
+
+        if (!hasParent) {
+            if (Count != compiledBones.Count)
+                throw new InvalidDataException("Number of bones do not match after tree generation.");
+
+            foreach (var (c1, c2) in GetEnumeratorBreadthFirst().Zip(compiledBones)) {
+                if (c1.Id != c2.ControllerId)
+                    throw new InvalidDataException("Order of controllers do not match tree generation.");
+            }
+        }
+    }
+
+    public Controller? Parent { get; private set; }
+
+    public IList<Controller> Children => _children;
 
     public uint CalculatedId => Crc32.CryE.Get(Name);
 
-    public int Depth => 1 + (Parent?.Depth ?? 0);
+    public int Count => 1 + _children.Sum(x => x.Count);
 
     public Matrix4x4 AbsoluteBindPoseMatrix {
         get => Parent is null
@@ -109,95 +146,79 @@ public class Controller {
             Matrix4x4.CreateTranslation(value.Item1));
     }
 
-    public Controller CloneInto(Controller parent, IList<Controller> controllerList) {
-        var res = new Controller(Id, Name, AbsoluteBindPoseMatrix, parent);
-        controllerList.Add(res);
-        foreach (var c in Children)
-            c.CloneInto(res, controllerList);
-        return res;
-    }
-
-    public static List<Controller> ListFromCompiledBones(IReadOnlyList<CompiledBone> bones) {
-        var controllers = new List<Controller>(bones.Count);
-        foreach (var compiledBone in bones)
-            controllers.Add(
-                new(
-                    compiledBone.ControllerId,
-                    compiledBone.Name,
-                    Matrix4x4.Transpose(compiledBone.LocalTransformMatrix.Transformation),
-                    compiledBone.ParentOffset == 0
-                        ? null
-                        : controllers[controllers.Count + compiledBone.ParentOffset]));
-        return controllers;
-    }
-
-    public static List<CompiledBone> ToCompiledBonesList(IReadOnlyList<Controller> controllers) {
-        var bones = new List<CompiledBone>(controllers.Count);
-        var pendingControllers = controllers
-            .Where(x => x.Parent is null)
-            .Select(x => (controller: x, parentIndex: -1))
-            .ToList();
-        while (pendingControllers.Any()) {
-            var (controller, parentIndex) = pendingControllers.First();
-            pendingControllers.RemoveAt(0);
-            if (controller.Parent is not null) {
-                if (bones[parentIndex].ChildCount++ == 0)
-                    bones[parentIndex].ChildOffset = bones.Count - parentIndex;
+    private void ChildrenOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) {
+        if (e.OldItems is not null)
+            foreach (var c in e.OldItems.Cast<Controller>()) {
+                Debug.Assert(c.Parent is not null);
+                c.Parent = null;
             }
 
-            bones.Add(
-                new() {
-                    ChildCount = 0,
-                    ChildOffset = 0,
-                    ControllerId = controller.Id,
-                    LimbId = uint.MaxValue,
-                    LocalTransformMatrix =
-                        Matrix3x4.CreateFromMatrix4x4(Matrix4x4.Transpose(controller.AbsoluteBindPoseMatrix)),
-                    Mass = 0,
-                    Name = controller.Name,
-                    ParentOffset = controller.Parent is null ? bones.Count : parentIndex - bones.Count,
-                    PhysicsLive = new(),
-                    PhysicsDead = default,
-                    WorldTransformMatrix =
-                        Matrix3x4.CreateFromMatrix4x4(Matrix4x4.Transpose(controller.InverseAbsoluteBindPoseMatrix)),
-                });
-            pendingControllers.AddRange(controller.Children.Select(x => (controller: x, bones.Count - 1)));
-        }
-
-        Debug.Assert(bones.Count == controllers.Count);
-
-        return bones;
+        if (e.NewItems is not null)
+            foreach (var c in e.NewItems.Cast<Controller>()) {
+                Debug.Assert(c.Parent is null);
+                c.Parent = this;
+            }
     }
 
-    public static List<BoneEntity> ToBoneEntityList(IReadOnlyList<Controller> controllers) {
-        var result = new List<BoneEntity>(controllers.Count);
-
-        void WriteController(Controller controller, int parentId) {
-            var boneId = result.Count;
-            result.Add(
-                new() {
-                    BoneId = boneId,
-                    ChildCount = controller.Children.Count,
-                    ControllerId = controller.Id,
-                    ParentId = parentId,
-                    Physics = new(),
-                    Properties = string.Empty,
-                });
-
-            foreach (var c in controller.Children)
-                WriteController(c, boneId);
-        }
-
-        foreach (var c in controllers)
-            if (c.Parent is null)
-                WriteController(c, -1);
-
-        Debug.Assert(result.Count == controllers.Count);
-
-        return result;
+    public IEnumerable<Controller> GetEnumeratorDepthFirst() {
+        yield return this;
+        foreach (var child in _children.SelectMany(x => x.GetEnumeratorDepthFirst()))
+            yield return child;
     }
 
-    public override string ToString() => Children.Any()
+    public IEnumerable<Controller> GetEnumeratorBreadthFirst(bool yieldThis = true) {
+        if (yieldThis)
+            yield return this;
+        foreach (var child in _children)
+            yield return child;
+        foreach (var child in _children.SelectMany(x => x.GetEnumeratorBreadthFirst(false)))
+            yield return child;
+    }
+
+    public override string ToString() => _children.Any()
         ? $"{nameof(Controller)}: {Name} #{Id:X08}"
         : $"{nameof(Controller)}: {Name} #{Id:X08} (Leaf)";
+
+    public IEnumerable<CompiledBone> ToCompiledBonesList() {
+        var boneId = 0;
+        var nextAvailableIndex = 1;
+        var controllerToBoneId = new Dictionary<Controller, int>();
+        foreach (var c in GetEnumeratorBreadthFirst()) {
+            yield return new() {
+                ChildCount = c.Children.Count,
+                ChildOffset = nextAvailableIndex,
+                ControllerId = c.Id,
+                LimbId = uint.MaxValue,
+                LocalTransformMatrix = Matrix3x4.CreateFromMatrix4x4(Matrix4x4.Transpose(c.AbsoluteBindPoseMatrix)),
+                Mass = 0,
+                Name = c.Name,
+                ParentOffset = c.Parent is null ? 0 : controllerToBoneId[c.Parent] - boneId,
+                PhysicsLive = new(),
+                PhysicsDead = default,
+                WorldTransformMatrix =
+                    Matrix3x4.CreateFromMatrix4x4(Matrix4x4.Transpose(c.InverseAbsoluteBindPoseMatrix)),
+            };
+            controllerToBoneId[c] = boneId;
+            nextAvailableIndex += c.Children.Count;
+            boneId++;
+        }
+    }
+
+    public IEnumerable<BoneEntity> ToBoneEntityList() {
+        var boneId = 0;
+        var controllerToBoneId = new Dictionary<Controller, int>();
+        foreach (var c in GetEnumeratorDepthFirst()) {
+            yield return new() {
+                BoneId = boneId,
+                ChildCount = c._children.Count,
+                ControllerId = c.Id,
+                ParentId = c.Parent is null ? -1 : controllerToBoneId[c.Parent],
+                Physics = new(),
+                Properties = string.Empty,
+            };
+
+            controllerToBoneId[c] = boneId;
+            boneId++;
+        }
+    }
 }

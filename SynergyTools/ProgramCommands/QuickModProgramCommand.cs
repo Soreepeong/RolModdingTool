@@ -620,10 +620,14 @@ public class QuickModProgramCommand : RootProgramCommand {
         sonic.Model.Nodes.Clear();
         sonic.Model.Nodes.AddRange(reference.Model.Nodes.Select(x => x.Clone()));
 
-        foreach (var controller in reference.Model.Controllers) {
-            var target = sonic.Model.Controllers.SingleOrDefault(x => x.Id == controller.Id);
+        var sonicControllers = sonic.Model.RootController?.GetEnumeratorBreadthFirst().ToList() ??
+            throw new InvalidDataException("Sonic.RootController is not set");
+        var referenceControllers = reference.Model.RootController?.GetEnumeratorBreadthFirst().ToList() ??
+            throw new InvalidDataException("Reference.RootController is not set");
+        foreach (var controller in referenceControllers) {
+            var target = sonicControllers.SingleOrDefault(x => x.Id == controller.Id);
             if (target is null) {
-                target = sonic.Model.Controllers.SingleOrDefault(
+                target = sonicControllers.SingleOrDefault(
                     x => x.Name + "_joint" == controller.Name
                         || x.Name == controller.Name + "_joint"
                         || x.Name == controller.Name[..2] + "mouth_" + controller.Name[2..]
@@ -634,10 +638,13 @@ public class QuickModProgramCommand : RootProgramCommand {
                 if (target is null) {
                     var parent = controller.Parent is null
                         ? null
-                        : sonic.Model.Controllers.Single(x => x.Name == controller.Parent.Name);
+                        : sonicControllers.Single(x => x.Name == controller.Parent.Name);
 
-                    target = new(controller.Id, controller.Name, controller.AbsoluteBindPoseMatrix, parent);
-                    sonic.Model.Controllers.Add(target);
+                    target = new(controller.Id, controller.Name);
+                    parent?.Children.Add(target);
+                    sonicControllers.Add(target);
+                    // need hierarchy info to calculate new relative bind pose matrix from absolute bind pose matrix
+                    target.AbsoluteBindPoseMatrix = controller.AbsoluteBindPoseMatrix;
                 } else {
                     foreach (var mesh in sonic.Model.Nodes.SelectMany(node => node.Meshes))
                         for (var i = 0; i < mesh.Vertices.Length; i++) {
