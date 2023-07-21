@@ -1,25 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
-using BCnEncoder.Encoder;
-using BCnEncoder.ImageSharp;
-using BCnEncoder.Shared;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SynergyLib.FileFormat.CryEngine.CryAnimationDatabaseElements;
-using SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
-using SynergyLib.FileFormat.CryEngine.CryModelElements;
 using SynergyLib.FileFormat.CryEngine.CryXml;
 using SynergyLib.FileFormat.CryEngine.CryXml.CharacterDefinitionElements;
-using SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 using SynergyLib.FileFormat.GltfInterop;
-using SynergyLib.FileFormat.GltfInterop.Models;
-using SynergyLib.Util;
-using SynergyLib.Util.MathExtras;
 
 namespace SynergyLib.FileFormat.CryEngine;
 
@@ -99,6 +86,22 @@ public partial class CryCharacter {
         return res;
     }
 
+    /*
+     * https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#coordinate-system-and-units
+     * glTF uses a right-handed coordinate system.
+     * glTF defines +Y as up, +Z as forward, and -X as right.
+     * the front of a glTF asset faces +Z.
+     *
+     * https://docs.cryengine.com/display/CEPROG/Math
+     * CRYENGINE uses a right-handed coordinate system
+     * where positive X-axis points to the right, positive Y-axis away from the viewer and positive Z-axis points up.
+     * In the context of characters this means that positive X is right, positive Y is forward, and positive Z is up.
+     *
+     *         glTF cryengine
+     * Right     -X        +X
+     * Up        +Y        +Z
+     * Forward   +Z        +Y
+     */
 
     public static Vector3 SwapAxes(Vector3 val) => new(-val.X, val.Z, val.Y);
     protected static Vector3 SwapAxesScale(Vector3 val) => new(val.X, val.Z, val.Y);

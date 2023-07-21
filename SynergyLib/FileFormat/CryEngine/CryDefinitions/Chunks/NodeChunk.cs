@@ -38,7 +38,7 @@ public class NodeChunk : ICryChunk {
             IsGroupMember = 0 != reader.ReadByte();
             reader.EnsureZeroesOrThrow(2); // padding
             Transform = reader.ReadMatrix4x4();
-            Position = reader.ReadVector3();
+            Position = reader.ReadVector3() / 100f;
             Rotation = reader.ReadQuaternion();
             Scale = reader.ReadVector3();
             reader.ReadInto(out PositionControllerId);

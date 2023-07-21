@@ -19,9 +19,9 @@ public class Node {
     public string? MaterialName;
     public bool HasColors;
     public bool DoNotMerge;
-    public Vector3 Position;
-    public Quaternion Rotation;
-    public Vector3 Scale;
+    public Vector3 Position = Vector3.Zero;
+    public Quaternion Rotation = Quaternion.Identity;
+    public Vector3 Scale = Vector3.One;
 
     public Node(string name, string? material) {
         Name = name;
@@ -58,7 +58,7 @@ public class Node {
         NotSupportedIfFalse(
             !nodeChunk.IsGroupMember,
             "NodeChunk.IsGroupMember is set");
-        Position = nodeChunk.Position;
+        Position = nodeChunk.Position / 100f;
         Rotation = nodeChunk.Rotation;
         Scale = nodeChunk.Scale;
         var meshChunk = NotSupportedIfNull<MeshChunk>(

@@ -1,8 +1,5 @@
 using System;
-using System.IO;
 using System.Numerics;
-using System.Text;
-using SynergyLib.FileFormat.CryEngine.CryDefinitions.Enums;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
 using SynergyLib.Util.BinaryRW;
 using SynergyLib.Util.MathExtras;

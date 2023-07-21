@@ -6,9 +6,6 @@ using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading;
-using BCnEncoder.Encoder;
-using BCnEncoder.ImageSharp;
-using BCnEncoder.Shared;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SynergyLib.FileFormat.CryEngine.CryAnimationDatabaseElements;
@@ -30,7 +27,6 @@ public partial class CryCharacter {
     public class GltfImporter {
         private readonly GltfTuple _gltf;
         private readonly CancellationToken _cancellationToken;
-        private readonly GltfNode _rootNode;
 
         private readonly Dictionary<int, uint> _boneIdToControllerId = new();
         private readonly Dictionary<int, uint> _nodeIdToControllerId = new();
@@ -42,9 +38,11 @@ public partial class CryCharacter {
         public GltfImporter(GltfTuple gltf, string? name, CancellationToken cancellationToken) {
             _gltf = gltf;
             _cancellationToken = cancellationToken;
-            _rootNode = _gltf.Root.Nodes[_gltf.Root.Scenes[_gltf.Root.Scene].Nodes.Single()];
-            _name = name ?? _rootNode.Name ?? "untitled";
+            _name = name ?? RootNodes.FirstOrDefault(x => x.Name is not null)?.Name ?? "untitled";
         }
+
+        private IEnumerable<GltfNode> RootNodes =>
+            _gltf.Root.Scenes[_gltf.Root.Scene].Nodes.Select(x => _gltf.Root.Nodes[x]);
 
         public CryCharacter Process() {
             Step01ReadSkin();
@@ -56,16 +54,19 @@ public partial class CryCharacter {
         }
 
         private void Step01ReadSkin() {
-            if (_rootNode.Skin is null)
+            var skinnedNodes = RootNodes.Where(x => x.Skin.HasValue).ToArray();
+            if (skinnedNodes.Length != 1)
                 return;
 
-            if (_gltf.Root.Skins.Count <= _rootNode.Skin.Value || _rootNode.Skin.Value < 0)
+            var skinnedRootNode = skinnedNodes[0];
+
+            if (_gltf.Root.Skins.Count <= skinnedRootNode.Skin!.Value || skinnedRootNode.Skin.Value < 0)
                 throw new InvalidDataException("RootNode.Skin is out of range");
 
-            if (_gltf.Root.Skins[_rootNode.Skin.Value].Joints is not { } joints)
+            if (_gltf.Root.Skins[skinnedRootNode.Skin.Value].Joints is not { } joints)
                 throw new InvalidDataException("skin.Joints is null");
 
-            var pendingTraversal = _rootNode.Children.Select(x => Tuple.Create(x, (Controller?) null)).ToList();
+            var pendingTraversal = skinnedRootNode.Children.Select(x => Tuple.Create(x, (Controller?) null)).ToList();
             if (pendingTraversal.Count != 1)
                 throw new NotSupportedException("Currently a root node with 2+ child nodes are unsupported.");
             while (pendingTraversal.Any()) {
@@ -108,7 +109,7 @@ public partial class CryCharacter {
 
         private bool GetGltfTextureDds(
             GltfTextureInfo? gltfTextureInfo,
-            [MaybeNullWhen(false)] out DirectDrawSurface.DdsFile ddsFile) {
+            [MaybeNullWhen(false)] out DdsFile ddsFile) {
             ddsFile = null!;
 
             _cancellationToken.ThrowIfCancellationRequested();
@@ -251,8 +252,6 @@ public partial class CryCharacter {
                     AlphaTest = material.AlphaCutoff ?? 0f,
                     Flags = (material.DoubleSided is true ? MaterialFlags.TwoSided : 0) |
                         MaterialFlags.ShaderGenMask64Bit | MaterialFlags.PureChild,
-                    // DiffuseColor = new(0.5f,0.5f,0.5f),
-                    // SpecularColor = new(0,0,0),
                     DiffuseColor = material.PbrMetallicRoughness?.BaseColorFactor?.ToVector3() ?? Vector3.One,
                     SpecularColor = material.Extensions?.KhrMaterialsSpecular?.SpecularColorFactor?.ToVector3() ??
                         Vector3.One,
@@ -389,107 +388,161 @@ public partial class CryCharacter {
                     cryMaterial.GenMask.UseBumpMap = true;
                     cryMaterial.GenMask.UseScatterGlossInNormalMap = false;
                     AddCryTexture(cryMaterialIndex, cryMaterial, TextureMapType.Normals, normalImage, false);
-                } else
-                    cryMaterial.GenMask.UseBumpMap = false;
+                // } else {
+                //     normalImage = new(8, 8);
+                //     for (var i = 0; i < 8; i++)
+                //     for (var j = 0; j < 8; j++)
+                //         normalImage[i, j] = new(127, 127, 255, 255);
+                //
+                //     cryMaterial.GenMask.UseBumpMap = true;
+                //     cryMaterial.GenMask.UseScatterGlossInNormalMap = false;
+                //     AddCryTexture(cryMaterialIndex, cryMaterial, TextureMapType.Normals, normalImage, false);
+                }
             }
         }
 
         private void Step03GenerateMesh() {
-            if (_rootNode.Mesh is null)
-                return;
+            foreach (var gltfNode in RootNodes.Where(x => x.Mesh.HasValue)) {
+                var mesh = _gltf.Root.Meshes[gltfNode.Mesh!.Value];
+                var cryMeshNode = new Node(gltfNode.Name ?? $"unnamed_{_model.Nodes.Count}", _name) {
+                    HasColors = _gltf.Root.Meshes.SelectMany(x => x.Primitives)
+                        .All(x => x.Attributes.Color0 is not null),
+                };
+                _model.Nodes.Add(cryMeshNode);
 
-            var mesh = _gltf.Root.Meshes[_rootNode.Mesh.Value];
-            var cryMeshNode = new Node(_rootNode.Name ?? "unnamed", _rootNode.Name) {
-                HasColors = _gltf.Root.Meshes.SelectMany(x => x.Primitives).All(x => x.Attributes.Color0 is not null),
-            };
-            _model.Nodes.Add(cryMeshNode);
-            foreach (var materialIndex in Enumerable.Range(-1, 1 + _gltf.Root.Materials.Count)) {
-                var primitives = mesh.Primitives
-                    .Where(x => (x.Material is null && materialIndex == -1) || x.Material == materialIndex)
-                    .ToArray();
-                if (!primitives.Any())
-                    continue;
+                foreach (var materialIndex in Enumerable.Range(-1, 1 + _gltf.Root.Materials.Count)) {
+                    var primitives = mesh.Primitives
+                        .Where(x => (x.Material is null && materialIndex == -1) || x.Material == materialIndex)
+                        .ToArray();
+                    if (!primitives.Any())
+                        continue;
 
-                var vertices = new List<Vertex>();
-                var indices = new List<ushort>();
-                foreach (var primitive in primitives) {
-                    if (primitive.Indices is null
-                        || primitive.Attributes.Position is null
-                        || primitive.Attributes.Normal is null
-                        || primitive.Attributes.Tangent is null
-                        || primitive.Attributes.TexCoord0 is null)
-                        throw new InvalidDataException();
-
-                    var externalIndices = _gltf.ReadUInt16Array(primitive.Indices.Value);
-                    var usedIndices = externalIndices.Distinct().Order().Select((x, i) => (x, i))
-                        .ToDictionary(x => x.x, x => checked((ushort) (vertices.Count + x.i)));
-
-                    var positions = _gltf.ReadVector3Array(primitive.Attributes.Position.Value);
-                    var normals = _gltf.ReadVector3Array(primitive.Attributes.Normal.Value);
-                    var tangents = _gltf.ReadVector4Array(primitive.Attributes.Tangent.Value);
-                    var texCoords = _gltf.ReadVector2Array(primitive.Attributes.TexCoord0.Value);
-                    if (positions.Length != normals.Length
-                        || positions.Length != tangents.Length
-                        || positions.Length != texCoords.Length)
-                        throw new InvalidDataException();
-
-                    Vector4<float>[]? weights = null;
-                    Vector4<ushort>[]? joints = null;
-                    if (_model.RootController is not null) {
-                        if (primitive.Attributes.Weights0 is null
-                            || primitive.Attributes.Joints0 is null)
+                    var vertices = new List<Vertex>();
+                    var indices = new List<ushort>();
+                    foreach (var primitive in primitives) {
+                        if (primitive.Indices is null
+                            || primitive.Attributes.Position is null
+                            || primitive.Attributes.Normal is null
+                            || primitive.Attributes.TexCoord0 is null)
                             throw new InvalidDataException();
 
-                        weights = _gltf.ReadVector4SingleArray(primitive.Attributes.Weights0.Value);
-                        joints = _gltf.ReadVector4UInt16Array(primitive.Attributes.Joints0.Value);
-                    }
+                        var externalIndices = _gltf.ReadUInt16Array(primitive.Indices.Value);
+                        var usedIndices = externalIndices.Distinct().Order().Select((x, i) => (x, i))
+                            .ToDictionary(x => x.x, x => checked((ushort) (vertices.Count + x.i)));
 
-                    indices.EnsureCapacity(indices.Count + externalIndices.Length);
-                    indices.AddRange(externalIndices.Select(i => usedIndices[i]));
-
-                    var verticesRangeStart = vertices.Count;
-                    vertices.EnsureCapacity(vertices.Count + usedIndices.Count);
-                    vertices.AddRange(
-                        usedIndices.Keys.Order()
-                            .Select(
-                                i => new Vertex {
-                                    Position = SwapAxes(positions[i]),
-                                    Normal = SwapAxes(normals[i]),
-                                    Tangent = MeshTangent.FromNormalAndBinormal(
-                                        SwapAxes(normals[i]),
-                                        SwapAxesTangent(tangents[i])),
-                                    // ^ Note: see comments in GltfExporter
-                                    TexCoord = texCoords[i],
-                                    Weights = weights?[i] ?? default(Vector4<float>),
-                                    ControllerIds = joints is null
-                                        ? default
-                                        : new(
-                                            joints[i]
-                                                .Zip(weights![i])
-                                                .Select(x => x.Second > 0 ? _boneIdToControllerId[x.First] : 0)),
-                                }));
-
-                    if (primitive.Attributes.Color0 is not null) {
-                        var colors = _gltf.ReadVector4Array(primitive.Attributes.Color0.Value);
-                        if (positions.Length != colors.Length)
+                        var positions = _gltf.ReadVector3Array(primitive.Attributes.Position.Value);
+                        var normals = _gltf.ReadVector3Array(primitive.Attributes.Normal.Value);
+                        var texCoords = _gltf.ReadVector2Array(primitive.Attributes.TexCoord0.Value);
+                        if (positions.Length != normals.Length || positions.Length != texCoords.Length)
                             throw new InvalidDataException();
-                        var verticesSpan = CollectionsMarshal.AsSpan(vertices)[verticesRangeStart..];
-                        foreach (var i in usedIndices.Keys.Order()) {
-                            verticesSpan[i].Color = new(
-                                Enumerable.Range(0, 4).Select(j => (byte) (colors[i][j] * 255f)));
+
+                        Vector4<float>[]? weights = null;
+                        Vector4<ushort>[]? joints = null;
+                        if (_model.RootController is not null) {
+                            if (primitive.Attributes.Weights0 is null
+                                || primitive.Attributes.Joints0 is null)
+                                throw new InvalidDataException();
+
+                            weights = _gltf.ReadVector4SingleArray(primitive.Attributes.Weights0.Value);
+                            joints = _gltf.ReadVector4UInt16Array(primitive.Attributes.Joints0.Value);
+                        }
+
+                        indices.EnsureCapacity(indices.Count + externalIndices.Length);
+                        indices.AddRange(externalIndices.Select(i => usedIndices[i]));
+
+                        vertices.EnsureCapacity(vertices.Count + usedIndices.Count);
+                        vertices.AddRange(
+                            usedIndices.Keys.Order()
+                                .Select(
+                                    i => new Vertex {
+                                        Position = SwapAxes(positions[i]),
+                                        Normal = SwapAxes(normals[i]),
+                                        TexCoord = texCoords[i],
+                                        Weights = weights?[i] ?? default(Vector4<float>),
+                                        ControllerIds = joints is null
+                                            ? default
+                                            : new(
+                                                joints[i]
+                                                    .Zip(weights![i])
+                                                    .Select(x => x.Second > 0 ? _boneIdToControllerId[x.First] : 0)),
+                                    }));
+
+                        var indicesSpan = CollectionsMarshal.AsSpan(indices)[^externalIndices.Length..];
+                        var verticesSpan = CollectionsMarshal.AsSpan(vertices)[^usedIndices.Count..];
+
+                        if (primitive.Attributes.Color0 is not null) {
+                            var colors = _gltf.ReadVector4Array(primitive.Attributes.Color0.Value);
+                            if (positions.Length != colors.Length)
+                                throw new InvalidDataException();
+                            foreach (var i in usedIndices.Keys.Order()) {
+                                verticesSpan[i].Color = new(
+                                    Enumerable.Range(0, 4).Select(j => (byte) (colors[i][j] * 255f)));
+                            }
+                        }
+
+                        if (primitive.Attributes.Tangent is not null) {
+                            var tangents = _gltf.ReadVector4Array(primitive.Attributes.Tangent.Value);
+                            if (positions.Length != tangents.Length)
+                                throw new InvalidDataException();
+                            foreach (var i in usedIndices.Keys.Order()) {
+                                verticesSpan[i].Tangent = MeshTangent.FromNormalAndBinormal(
+                                    verticesSpan[i].Normal,
+                                    SwapAxesTangent(tangents[i]));
+                                // ^ note: See GltfExporter for why is it putting tangents into binormal
+                            }
+                        } else {
+                            var accAreas = new float[verticesSpan.Length];
+                            var accNormals = new Vector3[verticesSpan.Length];
+                            var accTangents = new Vector3[verticesSpan.Length];
+                            var accBinormals = new Vector3[verticesSpan.Length];
+                            for (var i = 0; i < indicesSpan.Length; i += 3) {
+                                ref var v0 = ref verticesSpan[indicesSpan[i + 0]];
+                                ref var v1 = ref verticesSpan[indicesSpan[i + 1]];
+                                ref var v2 = ref verticesSpan[indicesSpan[i + 2]];
+                                var area = Vertex.CalculateArea(v0, v1, v2);
+                                Vertex.CalculateNormalTangentBinormals(v0, v1, v2, out var n, out var t, out var b);
+                                accAreas[indicesSpan[i + 0]] += area;
+                                accAreas[indicesSpan[i + 1]] += area;
+                                accAreas[indicesSpan[i + 2]] += area;
+                                accNormals[indicesSpan[i + 0]] += area * n;
+                                accNormals[indicesSpan[i + 1]] += area * n;
+                                accNormals[indicesSpan[i + 2]] += area * n;
+                                accTangents[indicesSpan[i + 0]] += area * t;
+                                accTangents[indicesSpan[i + 1]] += area * t;
+                                accTangents[indicesSpan[i + 2]] += area * t;
+                                accBinormals[indicesSpan[i + 0]] += area * b;
+                                accBinormals[indicesSpan[i + 1]] += area * b;
+                                accBinormals[indicesSpan[i + 2]] += area * b;
+                            }
+
+                            for (var i = 0; i < verticesSpan.Length; i++) {
+                                var area = accAreas[i];
+                                if (area <= 0f)
+                                    continue;
+                                verticesSpan[i].Normal = Vector3.Normalize(accNormals[i] / area);
+                                verticesSpan[i].Tangent.Tangent = new(Vector3.Normalize(accTangents[i] / area), -1);
+                                verticesSpan[i].Tangent.Binormal = new(Vector3.Normalize(accBinormals[i] / area), -1);
+                            }
                         }
                     }
-                }
 
-                cryMeshNode.Meshes.Add(
-                    new(
-                        _model.Material?.SubMaterials?.ElementAtOrDefault(materialIndex)?.Name,
-                        false,
-                        vertices.ToArray(),
-                        indices.ToArray()));
+                    cryMeshNode.Meshes.Add(
+                        new(
+                            _model.Material?.SubMaterials?.ElementAtOrDefault(materialIndex)?.Name,
+                            false,
+                            vertices.ToArray(),
+                            indices.ToArray()));
+                }
             }
 
-            _model.PseudoMaterials.Add(new(cryMeshNode.MaterialName ?? _name) {Flags = MtlNameFlags.MultiMaterial});
+            if (_model.Nodes.Count > 1) {
+                var realRootNode = new Node(_name, _name);
+                realRootNode.Children.AddRange(_model.Nodes);
+                _model.Nodes.Clear();
+                _model.Nodes.Add(realRootNode);
+            }
+
+            _model.PseudoMaterials.Add(new(_name) {Flags = MtlNameFlags.MultiMaterial});
             foreach (var m in _model.Material!.SubMaterials!) {
                 var npm = new PseudoMaterial(m!.Name!) {Flags = MtlNameFlags.SubMaterial};
                 _model.PseudoMaterials[0].Children.Add(npm);

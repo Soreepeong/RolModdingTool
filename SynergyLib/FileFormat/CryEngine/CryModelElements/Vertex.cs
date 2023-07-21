@@ -30,4 +30,34 @@ public struct Vertex : IEquatable<Vertex> {
 
     public override int GetHashCode() =>
         HashCode.Combine(Position, Normal, TexCoord, Color, Tangent, ControllerIds, Weights);
+
+    public static float CalculateArea(in Vertex v0, in Vertex v1, in Vertex v2) =>
+        MathF.Abs(
+            v0.Position.X * (v1.Position.Y - v2.Position.Y)
+            + v1.Position.X * (v2.Position.Y - v0.Position.Y)
+            + v2.Position.X * (v0.Position.Y - v1.Position.Y));
+
+    public static void CalculateNormalTangentBinormals(
+        in Vertex v0,
+        in Vertex v1,
+        in Vertex v2,
+        out Vector3 normal,
+        out Vector3 tangent,
+        out Vector3 binormal) {
+        // See:
+        // https://gamedev.net/forums/topic/571707-how-to-calculate-tangent-binormal-normal-vectors-thanks/4650612/
+        // https://stackoverflow.com/questions/5255806/how-to-calculate-tangent-and-binormal
+        
+        var p = v1.Position - v0.Position;
+        var q = v2.Position - v0.Position;
+        var s1 = v1.TexCoord.X - v0.TexCoord.X;
+        var t1 = v1.TexCoord.Y - v0.TexCoord.Y;
+        var s2 = v2.TexCoord.X - v0.TexCoord.X;
+        var t2 = v2.TexCoord.Y - v0.TexCoord.Y;
+        var tmp = float.Abs(s1 * t2 - s2 * t1) <= 1e-4 ? 1f : 1.0f / (s1 * t2 - s2 * t1);
+
+        normal = Vector3.Normalize(Vector3.Cross(p, q));
+        tangent = Vector3.Normalize((t2 * p - t1 * q) * tmp);
+        binormal = Vector3.Normalize((s1 * q - s2 * p) * tmp);
+    }
 }

@@ -55,10 +55,10 @@ public class MeshSubsetsChunk : ICryChunk {
         Header.WriteTo(writer, false);
         using (writer.ScopedBigEndian(useBigEndian)) {
             if (Flags.HasFlag(MeshSubsetsFlags.BoneIndices)) {
-                if (BoneIds.Count == 0)
-                    throw new InvalidDataException("Flags has BoneIndices but BoneIds.Count == 0");
                 if (BoneIds.Count != Subsets.Count)
                     throw new InvalidDataException("BoneIds.Count != Subsets.Count");
+                if (BoneIds.Count == 0 && Subsets.Count != 0)
+                    throw new InvalidDataException("Flags has BoneIndices but BoneIds.Count == 0");
             }
 
             if (!Flags.HasFlag(MeshSubsetsFlags.BoneIndices) && BoneIds.Count != 0)

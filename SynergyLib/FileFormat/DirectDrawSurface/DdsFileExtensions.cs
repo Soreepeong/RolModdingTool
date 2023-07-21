@@ -77,14 +77,8 @@ public static class DdsFileExtensions {
             s.CopyTo(dds.Data);
         }
 
-        Span<Bgra32> buffer;
-        if (image.DangerousTryGetSinglePixelMemory(out var memory)) {
-            buffer = memory.Span;
-        } else {
-            buffer = new Bgra32[dds.Header.Width * dds.Header.Height];
-            image.CopyPixelDataTo(buffer);
-        }
-
+        Span<Bgra32> buffer = new Bgra32[dds.Header.Width * dds.Header.Height];
+        image.CopyPixelDataTo(buffer);
         Span<Bgra32> mipmapBuffer = new Bgra32[buffer.Length / 4];
 
         unsafe {
@@ -160,17 +154,12 @@ public static class DdsFileExtensions {
                                 buffer[y * mipWidth + x].FromVector4(
                                     (
                                         mipmapBuffer[(y * 2 + 0) * prevWidth + x * 2 + 0].ToVector4() +
-                                        mipmapBuffer[(y * 2 + 0) * prevWidth + x * 2 + 1].ToVector4() +
-                                        mipmapBuffer[(y * 2 + 1) * prevWidth + x * 2 + 0].ToVector4() +
-                                        mipmapBuffer[(y * 2 + 1) * prevWidth + x * 2 + 1].ToVector4()) / 4);
+                                        mipmapBuffer[(y * 2 + 0) * prevWidth + x * 2 + 1].ToVector4()) / 2);
                             }
 
                             if (loopW != mipWidth) {
                                 var x = mipWidth - 1;
-                                buffer[y * mipWidth + x].FromVector4(
-                                    (
-                                        mipmapBuffer[(y * 2 + 0) * prevWidth + x * 2 + 0].ToVector4() +
-                                        mipmapBuffer[(y * 2 + 1) * prevWidth + x * 2 + 0].ToVector4()) / 2);
+                                buffer[y * mipWidth + x] = mipmapBuffer[(y * 2 + 0) * prevWidth + x * 2 + 0];
                             }
                         }
                     }
