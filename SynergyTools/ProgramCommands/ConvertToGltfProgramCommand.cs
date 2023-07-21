@@ -112,7 +112,7 @@ public class ConvertToGltfProgramCommand : RootProgramCommand {
 
         var reader = new GameFileSystemReader();
         foreach (var p in InPathArray) {
-            if (!reader.AddRootDirectory(p)) {
+            if (!reader.TryAddRootDirectory(p)) {
                 using (ScopedConsoleColor.Foreground(ConsoleColor.Yellow))
                     Console.WriteLine("Folder \"Sonic_Crytek\" not found in: {0}", p);
             }
@@ -149,7 +149,7 @@ public class ConvertToGltfProgramCommand : RootProgramCommand {
             Console.WriteLine("Found {0} file(s).", pathList.Count);
         } else
             pathList.AddRange(SubPathArray);
-        
+
         pathList = pathList.DistinctBy(x => Path.ChangeExtension(x, null)).Order().ToList();
         var outputNameList = pathList.StripCommonParentPaths();
 
@@ -188,19 +188,14 @@ public class ConvertToGltfProgramCommand : RootProgramCommand {
                     cancellationToken);
                 if (UseSingleFile) {
                     Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
-                    await using var s = File.Create(outPath);
-                    gltf.Compile(s);
-                    
+                    gltf.CompileSingleBufferToFile(outPath);
                     Console.WriteLine("=> File created at: {0}", outPath);
                 } else {
-                    Directory.CreateDirectory(outPath);
-                    foreach (var (name, strm) in gltf.CompileToFiles(Path.GetFileNameWithoutExtension(path))) {
-                        var filePath = Path.Join(outPath, name);
-                        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
-                        await using var s = File.Create(filePath);
-                        await strm.CopyToAsync(s, cancellationToken);
-                    }
-                    
+                    await gltf.CompileSingleBufferToFiles(
+                        outPath,
+                        Path.GetFileNameWithoutExtension(path),
+                        cancellationToken);
+
                     Console.WriteLine("=> Directory created at: {0}", outPath);
                 }
             } catch (Exception e) {

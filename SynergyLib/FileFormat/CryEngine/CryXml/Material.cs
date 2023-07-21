@@ -172,4 +172,13 @@ public class Material : MaterialOrRef {
 
     public override string ToString() =>
         $"Name: {Name}, Shader: {Shader}, Submaterials: {SubMaterialsAndRefs?.Count ?? 0}";
+
+    public IEnumerable<Material> EnumerateHierarchy() {
+        yield return this;
+        if (SubMaterials is { } sme)
+            foreach (var m in sme.Where(x => x is not null))
+                yield return m!;
+    }
+
+    public Texture? FindTexture(TextureMapType mapType) => Textures?.SingleOrDefault(x => x.Map == mapType);
 }

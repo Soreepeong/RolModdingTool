@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
@@ -93,7 +95,7 @@ public class GltfTuple {
         }
     }
 
-    public void Compile(Stream target) {
+    public void CompileSingleBuffer(Stream target) {
         var oldBufferViews = Root.BufferViews;
         var oldBuffers = Root.Buffers;
         try {
@@ -158,7 +160,12 @@ public class GltfTuple {
         }
     }
 
-    public IEnumerable<Tuple<string, MemoryStream>> CompileToFiles(string gltfName) {
+    public void CompileSingleBufferToFile(string path) {
+        using var f = File.Create(path);
+        CompileSingleBuffer(f);
+    }
+
+    public IEnumerable<Tuple<string, MemoryStream>> CompileMultiBuffers(string gltfName) {
         var oldBuffers = Root.Buffers;
         try {
             Root.Buffers = oldBuffers.Select(
@@ -181,6 +188,16 @@ public class GltfTuple {
         }
     }
 
+    public async Task CompileSingleBufferToFiles(string outPath, string gltfName, CancellationToken cancellationToken) {
+        Directory.CreateDirectory(outPath);
+        foreach (var (name, strm) in CompileMultiBuffers(gltfName)) {
+            var filePath = Path.Join(outPath, name);
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+            await using var s = File.Create(filePath);
+            await strm.CopyToAsync(s, cancellationToken);
+        }
+    }
+    
     private unsafe int AddBufferView<T>(
         string? uri,
         string? baseName,

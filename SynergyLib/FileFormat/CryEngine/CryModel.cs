@@ -14,6 +14,7 @@ using SynergyLib.FileFormat.CryEngine.CryDefinitions.Enums;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
 using SynergyLib.FileFormat.CryEngine.CryModelElements;
 using SynergyLib.FileFormat.CryEngine.CryXml;
+using SynergyLib.Util;
 using SynergyLib.Util.BinaryRW;
 using SynergyLib.Util.MathExtras;
 
@@ -37,9 +38,9 @@ public class CryModel {
         Material = material;
     }
 
-    public void ChangeScale(float scale) {
+    public void ApplyScaleTransformation(float scale) {
         foreach (var node in Nodes)
-            node.ChangeScale(scale);
+            node.ApplyScaleTransformation(scale);
 
         if (RootController is not null)
             foreach (var c in RootController.GetEnumeratorDepthFirst()) {
@@ -48,7 +49,15 @@ public class CryModel {
             }
     }
 
-    public void WriteGeometryTo(NativeWriter writer) {
+    public AaBb CalculateBoundingBox() => AaBb.FromEnumerable(Nodes.Select(x => x.CalculateBoundingBox()));
+
+    public Material? FindMaterial(string? materialName) => materialName is null
+        ? null
+        : Material?.EnumerateHierarchy().SingleOrDefault(x => x.Name == materialName);
+
+    public void WriteGeometryTo(NativeWriter writer, bool leaveOpen = false) {
+        using var _01 = leaveOpen ? StreamExtensions.DummyDisposable : writer;
+
         var chunks = new CryChunks {
             Type = CryFileType.Geometry,
             Version = CryFileVersion.CryTek3
@@ -288,9 +297,9 @@ public class CryModel {
                                     .Select(x => mesh.Indices[x]).Min();
                                 var lastVertId = Enumerable.Range(firstIndexId, nextIndexId - firstIndexId)
                                     .Select(x => mesh.Indices[x]).Max();
-                                var aabb = AaBb.NegativeExtreme;
-                                for (var i = firstIndexId; i < nextIndexId; i++)
-                                    aabb.Expand(mesh.Vertices[mesh.Indices[i]].Position);
+                                var aabb = AaBb.FromEnumerable(
+                                    Enumerable.Range(firstIndexId, nextIndexId - firstIndexId)
+                                        .Select(i => mesh.Vertices[mesh.Indices[i]].Position));
 
                                 meshSubsetsChunk.Subsets.Add(
                                     new() {
@@ -336,9 +345,7 @@ public class CryModel {
                         } else {
                             var firstVertId = mesh.Indices.Min();
                             var lastVertId = mesh.Indices.Max();
-                            var aabb = AaBb.NegativeExtreme;
-                            foreach (var index in mesh.Indices)
-                                aabb.Expand(mesh.Vertices[index].Position);
+                            var aabb = AaBb.FromEnumerable(mesh.Indices.Select(x => mesh.Vertices[x].Position));
 
                             meshSubsetsChunk.Subsets.Add(
                                 new() {
@@ -399,7 +406,7 @@ public class CryModel {
                     ChunkType.Mesh,
                     0x800,
                     new MeshChunk {
-                        Bbox = AaBb.FromVectorEnumerable(
+                        Bbox = AaBb.FromEnumerable(
                             node.Meshes.SelectMany(x => x.Vertices.Select(y => y.Position))),
                         BoneMappingChunkId = boneMappingsChunk?.Header.Id ?? 0,
                         ColorsChunkId = colorsChunk.Header.Id,
@@ -440,7 +447,8 @@ public class CryModel {
         chunks.WriteTo(writer);
     }
 
-    public void WriteGeometryTo(Stream stream) => WriteGeometryTo(new NativeWriter(stream, Encoding.UTF8, true));
+    public void WriteGeometryTo(Stream stream, bool leaveOpen = false) =>
+        WriteGeometryTo(new NativeWriter(stream, Encoding.UTF8, true), leaveOpen);
 
     public byte[] GetGeometryBytes() {
         var ms = new MemoryStream();
@@ -450,10 +458,15 @@ public class CryModel {
 
     public bool HasMaterial => Material is not null;
 
-    public void WriteMaterialTo(MemoryStream ms) {
-        if (Material is null)
-            throw new InvalidOperationException();
-        PbxmlFile.FromObject(Material).WriteBinary(ms);
+    public void WriteMaterialTo(Stream ms, bool leaveOpen = false) {
+        try {
+            if (Material is null)
+                throw new InvalidOperationException();
+            PbxmlFile.FromObject(Material).WriteBinary(ms, true);
+        } finally {
+            if (!leaveOpen)
+                ms.Dispose();
+        }
     }
 
     public byte[] GetMaterialBytes() {

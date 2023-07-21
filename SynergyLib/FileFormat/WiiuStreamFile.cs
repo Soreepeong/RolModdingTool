@@ -152,7 +152,7 @@ public class WiiuStreamFile {
                 if (!saveConfig.PreserveXml && raw.StartsWith("<?xml"u8)) {
                     compressionBuffer.SetLength(compressionBuffer.Position = 0);
                     rawStream.Position = 0;
-                    PbxmlFile.FromStream(rawStream).WriteBinary(compressionBufferWriter);
+                    PbxmlFile.FromStream(rawStream).WriteBinary(compressionBufferWriter, true);
                     rawStream.SetLength(compressionBuffer.Length);
                     rawStream.Position = 0;
                     compressionBuffer.Position = 0;

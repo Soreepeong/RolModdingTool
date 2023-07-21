@@ -124,7 +124,7 @@ public partial class CryCharacter {
         val.M44);
 
     public void Scale(float scale) {
-        Model.ChangeScale(scale);
+        Model.ApplyScaleTransformation(scale);
         CryAnimationDatabase?.Scale(scale);
         // todo: scale attachments
     }

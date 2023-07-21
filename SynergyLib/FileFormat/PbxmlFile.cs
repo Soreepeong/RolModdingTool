@@ -25,6 +25,59 @@ public class PbxmlFile {
         Document = document;
     }
 
+    public T DeserializeAs<T>(bool throwOnUnknown = true) where T : class {
+        var oldCulture = CultureInfo.CurrentCulture;
+        try {
+            CultureInfo.CurrentCulture = (CultureInfo) oldCulture.Clone();
+            CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator = ".";
+            CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator = ",";
+            var serializer = new XmlSerializer(typeof(T));
+            if (throwOnUnknown) {
+                serializer.UnknownAttribute += (_, args) =>
+                    throw new NotSupportedException($"Unknown attribute: {args.Attr.Name}");
+                serializer.UnknownElement += (_, args) =>
+                    throw new NotSupportedException($"Unknown element: {args.Element.Name}");
+            }
+
+            using var reader = new XmlNodeReader(Document);
+            return serializer.Deserialize(reader) as T ?? throw new NullReferenceException();
+        } finally {
+            CultureInfo.CurrentCulture = oldCulture;
+        }
+    }
+
+    public void WriteBinaryToFile(string file) => WriteBinary(File.Create(file));
+
+    public void WriteBinary(Stream stream, bool leaveOpen = false) =>
+        WriteBinary(new BinaryWriter(stream, Encoding.UTF8, true), leaveOpen);
+
+    public void WriteBinary(BinaryWriter target, bool leaveOpen = false) {
+        try {
+            target.Write(Magic.AsSpan());
+            PackElement(target, Document.ChildNodes.OfType<XmlElement>().Single());
+        } finally {
+            if (!leaveOpen)
+                target.Dispose();
+        }
+    }
+
+    public void WriteTextToFile(string file) => WriteText(File.Create(file));
+
+    public void WriteText(Stream target, bool leaveOpen = false) =>
+        WriteText(new StreamWriter(target, new UTF8Encoding(), -1, true), leaveOpen);
+
+    public void WriteText(StreamWriter target, bool leaveOpen = false) {
+        try {
+            Document.Save(new XmlTextWriter(target) {Formatting = Formatting.Indented});
+        } finally {
+            if (!leaveOpen)
+                target.Dispose();
+        }
+    }
+
+    public static void SaveObjectToTextFile<T>(string path, T obj) where T : class =>
+        FromObject(obj).WriteTextToFile(path);
+
     public static PbxmlFile FromObject<T>(T obj) where T : class {
         var oldCulture = CultureInfo.CurrentCulture;
         try {
@@ -73,39 +126,6 @@ public class PbxmlFile {
         using var stream = File.OpenRead(Path.Join(path));
         return FromStream(stream);
     }
-
-    public T DeserializeAs<T>(bool throwOnUnknown = true) where T : class {
-        var oldCulture = CultureInfo.CurrentCulture;
-        try {
-            CultureInfo.CurrentCulture = (CultureInfo) oldCulture.Clone();
-            CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator = ".";
-            CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator = ",";
-            var serializer = new XmlSerializer(typeof(T));
-            if (throwOnUnknown) {
-                serializer.UnknownAttribute += (_, args) =>
-                    throw new NotSupportedException($"Unknown attribute: {args.Attr.Name}");
-                serializer.UnknownElement += (_, args) =>
-                    throw new NotSupportedException($"Unknown element: {args.Element.Name}");
-            }
-
-            using var reader = new XmlNodeReader(Document);
-            return serializer.Deserialize(reader) as T ?? throw new NullReferenceException();
-        } finally {
-            CultureInfo.CurrentCulture = oldCulture;
-        }
-    }
-
-    public void WriteBinary(Stream stream) => WriteBinary(new BinaryWriter(stream, Encoding.UTF8, true));
-
-    public void WriteBinary(BinaryWriter target) {
-        target.Write(Magic.AsSpan());
-        PackElement(target, Document.ChildNodes.OfType<XmlElement>().Single());
-    }
-
-    public void WriteText(Stream target) => WriteText(new StreamWriter(target, new UTF8Encoding(), -1, true));
-
-    public void WriteText(StreamWriter target) =>
-        Document.Save(new XmlTextWriter(target) {Formatting = Formatting.Indented});
 
     public static bool IsPbxmlFile(ReadOnlySpan<byte> buffer) =>
         buffer.Length >= Magic.Length &&

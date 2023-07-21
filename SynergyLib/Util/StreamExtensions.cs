@@ -5,12 +5,18 @@ using System.Threading;
 namespace SynergyLib.Util;
 
 public static class StreamExtensions {
+    public static readonly IDisposable DummyDisposable = new DummyDisposableClass();
+
     public static byte ReadByteOrThrow(this Stream stream) => stream.ReadByte() switch {
         -1 => throw new EndOfStreamException(),
-        var r => (byte) r
+        var r => (byte) r,
     };
 
-    public static void CopyToLength(this Stream source, Stream destination, int length, CancellationToken cancellationToken) {
+    public static void CopyToLength(
+        this Stream source,
+        Stream destination,
+        int length,
+        CancellationToken cancellationToken) {
         Span<byte> buffer = stackalloc byte[4096];
         while (length > 0) {
             cancellationToken.ThrowIfCancellationRequested();
@@ -21,5 +27,9 @@ public static class StreamExtensions {
             destination.Write(buffer[..chunk]);
             length -= chunk;
         }
+    }
+
+    private sealed class DummyDisposableClass : IDisposable {
+        public void Dispose() { }
     }
 }

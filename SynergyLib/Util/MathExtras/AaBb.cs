@@ -36,6 +36,15 @@ public struct AaBb : IEquatable<AaBb> {
         Max.Z = Math.Max(Max.Z, v.Z);
     }
 
+    public void Expand(in AaBb val) {
+        Min.X = Math.Min(Min.X, val.Min.X);
+        Min.Y = Math.Min(Min.Y, val.Min.Y);
+        Min.Z = Math.Min(Min.Z, val.Min.Z);
+        Max.X = Math.Max(Max.X, val.Max.X);
+        Max.Y = Math.Max(Max.Y, val.Max.Y);
+        Max.Z = Math.Max(Max.Z, val.Max.Z);
+    }
+
     public bool Equals(AaBb other) => Min == other.Min && Max == other.Max;
 
     public override bool Equals(object? obj) => obj is AaBb other && Equals(other);
@@ -46,12 +55,27 @@ public struct AaBb : IEquatable<AaBb> {
     
     public static bool operator !=(AaBb a, AaBb b) => a.Max != b.Max;
 
-    public static AaBb FromVectorEnumerable(IEnumerable<Vector3> items) {
+    public override string ToString() => $"{Min} .. {Max}";
+
+    public static AaBb FromEnumerable(IEnumerable<Vector3> items) {
         using var e = items.GetEnumerator();
         if (!e.MoveNext())
             return new();
 
         var res = new AaBb(e.Current);
+        do {
+            res.Expand(e.Current);
+        } while (e.MoveNext());
+
+        return res;
+    }
+
+    public static AaBb FromEnumerable(IEnumerable<AaBb> items) {
+        using var e = items.GetEnumerator();
+        if (!e.MoveNext())
+            return new();
+
+        var res = e.Current;
         do {
             res.Expand(e.Current);
         } while (e.MoveNext());

@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 using SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
+using SynergyLib.Util.MathExtras;
 
 namespace SynergyLib.FileFormat.CryEngine.CryModelElements;
 
@@ -18,12 +19,14 @@ public class Mesh {
         Indices = indices;
     }
 
-    public void ChangeScale(float scale) {
+    public void ApplyScaleTransformation(float scale) {
         for (var i = 0; i < Vertices.Length; i++)
             Vertices[i].Position *= scale;
     }
 
     public Mesh Clone() => new(MaterialName, IsProxy, (Vertex[]) Vertices.Clone(), (ushort[]) Indices.Clone());
+
+    public AaBb CalculateBoundingBox() => AaBb.FromEnumerable(Vertices.Select(x => x.Position));
 
     public override string ToString() =>
         $"{nameof(Mesh)}: {MaterialName} (vert={Vertices.Length} ind={Indices.Length})";

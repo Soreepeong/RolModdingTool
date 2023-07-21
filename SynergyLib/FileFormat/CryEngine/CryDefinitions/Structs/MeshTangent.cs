@@ -1,9 +1,10 @@
+using System;
 using System.Numerics;
 using SynergyLib.Util.MathExtras;
 
 namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Structs;
 
-public struct MeshTangent {
+public struct MeshTangent : IEquatable<MeshTangent> {
     public Vector4<short> TangentRaw;
     public Vector4<short> BinormalRaw;
 
@@ -39,4 +40,16 @@ public struct MeshTangent {
             Binormal = new(Vector3.Cross(tangent.DropW(), normal), tangent.W),
             // ^ TODO: might have to use normal/uv maps
         };
+
+    public bool Equals(MeshTangent other) => TangentRaw.Equals(other.TangentRaw) && BinormalRaw.Equals(other.BinormalRaw);
+
+    public override bool Equals(object? obj) => obj is MeshTangent other && Equals(other);
+
+    public override int GetHashCode() => HashCode.Combine(TangentRaw, BinormalRaw);
+
+    public override string ToString() => $"Tan={Tangent}, Bi={Binormal}";
+
+    public static bool operator ==(MeshTangent left, MeshTangent right) => left.Equals(right);
+
+    public static bool operator !=(MeshTangent left, MeshTangent right) => !left.Equals(right);
 }

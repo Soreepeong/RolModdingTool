@@ -18,6 +18,18 @@ public sealed class GameFileSystemReader : IAsyncDisposable, IDisposable {
     private readonly Dictionary<string, Tuple<string?, WiiuStreamFile?>> _entries = new();
     private readonly CancellationTokenSource _cancellationTokenSource = new();
 
+    public GameFileSystemReader() { }
+
+    public GameFileSystemReader(params string[] rootPaths) {
+        foreach (var r in rootPaths)
+            WithRootDirectory(r);
+    } 
+    
+    public GameFileSystemReader(IEnumerable<string> rootPaths) {
+        foreach (var r in rootPaths)
+            WithRootDirectory(r);
+    } 
+
     public void Dispose() {
         if (!_cancellationTokenSource.IsCancellationRequested) {
             _cancellationTokenSource.Cancel();
@@ -34,7 +46,7 @@ public sealed class GameFileSystemReader : IAsyncDisposable, IDisposable {
         await Task.WhenAll(_packfileLoaders);
     }
 
-    public bool AddRootDirectory(string rootDirectory) {
+    public bool TryAddRootDirectory(string rootDirectory) {
         _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
         rootDirectory = Path.GetFullPath(rootDirectory.TrimEnd('\\', '/'));
@@ -74,7 +86,7 @@ public sealed class GameFileSystemReader : IAsyncDisposable, IDisposable {
         return true;
     }
 
-    public GameFileSystemReader WithRootDirectory(string rootDirectory) => AddRootDirectory(rootDirectory)
+    public GameFileSystemReader WithRootDirectory(string rootDirectory) => TryAddRootDirectory(rootDirectory)
         ? this
         : throw new DirectoryNotFoundException(rootDirectory);
 

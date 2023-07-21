@@ -27,14 +27,7 @@ public class Node {
         Name = name;
         MaterialName = material;
     }
-
-    public Node Clone() {
-        var res = new Node(Name, MaterialName);
-        res.Meshes.AddRange(Meshes.Select(x => x.Clone()));
-        res.Children.AddRange(Children.Select(x => x.Clone()));
-        return res;
-    }
-
+    
     public Node(
         CryChunks chunks,
         NodeChunk nodeChunk,
@@ -223,7 +216,7 @@ public class Node {
                     }
                 }
 
-                var aabb = AaBb.FromVectorEnumerable(boneBox.Indices.Select(x => vertices[x].Position).ToArray());
+                var aabb = AaBb.FromEnumerable(boneBox.Indices.Select(x => vertices[x].Position).ToArray());
                 NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Min.X - aabb.Min.X) < 1e-3, "BoneBox.AaBb");
                 NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Min.Y - aabb.Min.Y) < 1e-3, "BoneBox.AaBb");
                 NotSupportedIfFalse(Math.Abs(boneBox.AaBb.Min.Z - aabb.Min.Z) < 1e-3, "BoneBox.AaBb");
@@ -317,12 +310,21 @@ public class Node {
         }
     }
 
-    public void ChangeScale(float scale) {
+    public void ApplyScaleTransformation(float scale) {
         foreach (var m in Meshes)
-            m.ChangeScale(scale);
+            m.ApplyScaleTransformation(scale);
         foreach (var c in Children)
-            c.ChangeScale(scale);
+            c.ApplyScaleTransformation(scale);
     }
+
+    public Node Clone() {
+        var res = new Node(Name, MaterialName);
+        res.Meshes.AddRange(Meshes.Select(x => x.Clone()));
+        res.Children.AddRange(Children.Select(x => x.Clone()));
+        return res;
+    }
+    
+    public AaBb CalculateBoundingBox() => AaBb.FromEnumerable(Children.Select(x => x.CalculateBoundingBox()));
 
     public IEnumerable<Tuple<Node, Node?>> EnumerateHierarchy() {
         yield return new(this, null);

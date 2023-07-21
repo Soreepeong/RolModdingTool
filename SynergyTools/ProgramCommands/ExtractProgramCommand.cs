@@ -99,7 +99,7 @@ public class ExtractProgramCommand : RootProgramCommand {
                             var writeRawFile = true;
                             if (!PreservePbxml) {
                                 try {
-                                    PbxmlFile.FromReader(msr, true).WriteText(target);
+                                    PbxmlFile.FromReader(msr, true).WriteText(target, true);
                                     writeRawFile = false;
                                 } catch (XmlException) {
                                     // pass
