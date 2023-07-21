@@ -17,6 +17,22 @@ public static class MathExtrasExtensions {
 
     public static Vector3 DropW(this Vector4 value) => new(value.X, value.Y, value.Z);
 
+    public static Vector4 ClampElements(in this Vector4 value, in Vector4 min, in Vector4 max) => new(
+        float.Clamp(value.X, min.X, max.X),
+        float.Clamp(value.Y, min.Y, max.Y),
+        float.Clamp(value.Z, min.Z, max.Z),
+        float.Clamp(value.W, min.W, max.W));
+
+    public static Vector4 TruncateElements(in this Vector4 value) =>
+        new(
+            value.X > 0f ? float.Floor(value.X) : float.Ceiling(value.X),
+            value.Y > 0f ? float.Floor(value.Y) : float.Ceiling(value.Y),
+            value.Z > 0f ? float.Floor(value.Z) : float.Ceiling(value.Z),
+            value.W > 0f ? float.Floor(value.W) : float.Ceiling(value.W));
+
+    public static bool AnyLessThan(in this Vector4 l, in Vector4 r) =>
+        l.X < r.X || l.Y < r.Y || l.Z < r.Z || l.W < r.W;
+
     public static bool IsIdentity(this Matrix4x4 m, double threshold) {
         if (MathF.Abs(m.M11 - 1) >= threshold) return false;
         if (MathF.Abs(m.M22 - 1) >= threshold) return false;

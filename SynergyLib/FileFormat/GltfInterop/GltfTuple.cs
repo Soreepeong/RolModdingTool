@@ -36,7 +36,7 @@ public class GltfTuple {
         Root = root;
     }
 
-    public static GltfTuple FromStream(Stream glbStream, string? basePath, bool leaveOpen = false) {
+    public static GltfTuple FromBinaryStream(Stream glbStream, string? basePath, bool leaveOpen = false) {
         using var lbr = new NativeReader(glbStream, Encoding.UTF8, leaveOpen);
         if (lbr.ReadUInt32() != GlbMagic)
             throw new InvalidDataException("Not a glb file.");
@@ -83,16 +83,18 @@ public class GltfTuple {
 
     public static GltfTuple FromFile(string filePath) {
         var basePath = Path.GetDirectoryName(filePath);
-        try {
-            return FromObject(
-                JsonConvert.DeserializeObject<GltfRoot>(File.ReadAllText(filePath)) ?? throw new InvalidDataException(),
+
+        using var stream = File.OpenRead(filePath);
+        var isBinary = new NativeReader(stream, Encoding.UTF8, true).ReadUInt32() == GlbMagic;
+        stream.Position = 0;
+
+        return isBinary
+            ? FromBinaryStream(stream, basePath, true)
+            : FromObject(
+                JsonSerializer.Create().Deserialize<GltfRoot>(new JsonTextReader(new StreamReader(stream)))
+                ?? throw new InvalidDataException(),
                 basePath,
                 null);
-        } catch (Exception e) {
-            Console.WriteLine(e);
-
-            return FromStream(File.OpenRead(filePath), basePath);
-        }
     }
 
     public void CompileSingleBuffer(Stream target) {
@@ -197,7 +199,7 @@ public class GltfTuple {
             await strm.CopyToAsync(s, cancellationToken);
         }
     }
-    
+
     private unsafe int AddBufferView<T>(
         string? uri,
         string? baseName,
@@ -385,7 +387,7 @@ public class GltfTuple {
                                         ddsName,
                                         ddsName,
                                         null,
-                                        ddsFile.Data),
+                                        (ReadOnlySpan<byte>) ddsFile.Data),
                                 }),
                         },
                     },

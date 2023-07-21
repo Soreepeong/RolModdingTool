@@ -29,7 +29,6 @@ public class DdsFile {
             try {
                 _data = new byte[stream.Length];
                 stream.ReadExactly(_data);
-                stream.Dispose();
             } catch (NotSupportedException) {
                 using var ms = new MemoryStream();
                 stream.CopyTo(ms);
@@ -79,9 +78,9 @@ public class DdsFile {
 
     public DdsHeader Header => LegacyHeader.Header;
 
-    public ReadOnlySpan<byte> Body => new(_data, DataOffset, _data.Length - DataOffset);
+    public Span<byte> Body => new(_data, DataOffset, _data.Length - DataOffset);
 
-    public ReadOnlySpan<byte> Data => _data.AsSpan();
+    public Span<byte> Data => _data.AsSpan();
 
     public int NumImages => UseDxt10Header ? Dxt10Header.ArraySize : 1;
 
@@ -161,7 +160,7 @@ public class DdsFile {
         return DataOffset + size * imageIndex;
     }
 
-    public ReadOnlySpan<byte> ImageData(int imageIndex) {
+    public Span<byte> ImageData(int imageIndex) {
         var offset = ImageDataOffset(imageIndex, out var size);
         return new(_data, offset, size);
     }
@@ -172,7 +171,7 @@ public class DdsFile {
         return offset + size * faceIndex;
     }
 
-    public ReadOnlySpan<byte> FaceData(int imageIndex, int faceIndex) {
+    public Span<byte> FaceData(int imageIndex, int faceIndex) {
         var offset = FaceDataOffset(imageIndex, faceIndex, out var size);
         return new(_data, offset, size);
     }
@@ -184,7 +183,7 @@ public class DdsFile {
         return baseOffset + mipOffset;
     }
 
-    public ReadOnlySpan<byte> MipmapData(int imageIndex, int faceIndex, int mipmapIndex) {
+    public Span<byte> MipmapData(int imageIndex, int faceIndex, int mipmapIndex) {
         var offset = MipmapDataOffset(imageIndex, faceIndex, mipmapIndex, out var size);
         return new(_data, offset, size);
     }
@@ -195,7 +194,7 @@ public class DdsFile {
         return offset + size * sliceIndex;
     }
 
-    public ReadOnlySpan<byte> SliceData(int imageIndex, int faceIndex, int mipmapIndex, int sliceIndex) {
+    public Span<byte> SliceData(int imageIndex, int faceIndex, int mipmapIndex, int sliceIndex) {
         var offset = SliceDataOffset(imageIndex, faceIndex, mipmapIndex, sliceIndex, out var size);
         return new(_data, offset, size);
     }
@@ -204,7 +203,7 @@ public class DdsFile {
         ? SliceDataOffset(imageIndex, sliceIndex, mipmapIndex, 0, out size)
         : SliceDataOffset(imageIndex, 0, mipmapIndex, sliceIndex, out size);
 
-    public ReadOnlySpan<byte> SliceOrFaceData(int imageIndex, int mipmapIndex, int sliceIndex) => IsCubeMap
+    public Span<byte> SliceOrFaceData(int imageIndex, int mipmapIndex, int sliceIndex) => IsCubeMap
         ? SliceData(imageIndex, sliceIndex, mipmapIndex, 0)
         : SliceData(imageIndex, 0, mipmapIndex, sliceIndex);
 

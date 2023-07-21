@@ -19,12 +19,4 @@ public class GltfSkin : BaseGltfObject {
 
     [JsonProperty("joints")]
     public List<int>? Joints;
-
-    [JsonProperty("extras", NullValueHandling = NullValueHandling.Ignore)]
-    public GltfSkinExtras? Extras;
-}
-
-public class GltfSkinExtras : BaseGltfObject {
-    public Dictionary<string, Dictionary<int, List<string>>>? Alph;
-    public Dictionary<string, List<int>>? Indices;
 }

@@ -4,13 +4,12 @@ using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 using SynergyLib.FileFormat;
 using SynergyLib.FileFormat.CryEngine;
-using SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 using SynergyLib.FileFormat.DirectDrawSurface;
+using SynergyLib.FileFormat.GltfInterop;
 using SynergyLib.Util;
 
 namespace SynergyTools.ProgramCommands;
@@ -46,6 +45,15 @@ public class TestDevProgramCommand : RootProgramCommand {
     private Task<CryCharacter> ReadSonic() =>
         CryCharacter.FromCryEngineFiles(ReaderFunc, "objects/characters/1_heroes/sonic/sonic", default);
 
+    private Task<CryCharacter> ReadAmy() =>
+        CryCharacter.FromCryEngineFiles(ReaderFunc, "objects/characters/1_heroes/amy/amy", default);
+
+    private Task<CryCharacter> ReadKnuckles() =>
+        CryCharacter.FromCryEngineFiles(ReaderFunc, "objects/characters/1_heroes/knuckles/knuckles", default);
+
+    private Task<CryCharacter> ReadTails() =>
+        CryCharacter.FromCryEngineFiles(ReaderFunc, "objects/characters/1_heroes/tails/tails", default);
+
     private Task<CryCharacter> ReadShadow() =>
         CryCharacter.FromCryEngineFiles(ReaderFunc, "objects/characters/5_minibosses/shadow/shadow", default);
 
@@ -53,12 +61,27 @@ public class TestDevProgramCommand : RootProgramCommand {
         CryCharacter.FromCryEngineFiles(ReaderFunc, "objects/characters/5_minibosses/metal_sonic/metal_sonic", default);
 
     public async Task<int> Handle() {
+        var level = await _reader.GetPackfile(TestLevelName);
         var sonic = await ReadSonic();
-
+        
         // var gltf = GltfTuple.FromFile("Z:/m0361b0001.glb");
-        var gltf = await sonic.ToGltf(ReaderFunc, false, false, default);
-        // gltf.CompileSingleBufferToFile("Z:/ROL3D/sonic.glb");
+        var gltf = await sonic.ToGltf(ReaderFunc, false, true, default);
+        foreach (var m in gltf.Root.Materials) {
+            m.Name = null;
+            m.Extensions!.SynergyToolsCryMaterial = null;
+        }
 
+        gltf.CompileSingleBufferToFile("Z:/Rol3d/sonic_r.glb");
+        var char2 = CryCharacter.FromGltf(gltf, "m0361b0001", default);
+        foreach (var (k, v) in char2.Model.ExtraTextures) {
+            using var asdf = File.Create(Path.Join("Z:/rol3d", "asdf_" + Path.GetFileName(k)));
+            v.Position = 0;
+            v.CopyTo(asdf);
+        }
+        
+        Debugger.Break();
+        // char2.ApplyScaleTransformation(5 * sonic.Model.CalculateBoundingBox().Radius / char2.Model.CalculateBoundingBox().Radius);
+        
         // foreach (var k in sonic.CryAnimationDatabase.Animations.Keys.ToArray()) {
         //     // var orig = sonic.CryAnimationDatabase.Animations[k];
         //     var recr = char2.CryAnimationDatabase.Animations.Single(x => k.EndsWith($"/{x.Key}.caf")).Value;
@@ -66,47 +89,25 @@ public class TestDevProgramCommand : RootProgramCommand {
         //     sonic.CryAnimationDatabase.Animations[k] = recr;
         // }
 
-        var char2 = CryCharacter.FromGltf(gltf, default);
-        // char2.Scale(2 * sonic.Model.CalculateBoundingBox().Radius / char2.Model.CalculateBoundingBox().Radius);
-
-        foreach (var c in char2.Model.Nodes.SelectMany(x => x.Meshes)) {
-            var mat = char2.Model.FindMaterial(c.MaterialName);
-            if (mat?.FindTexture(TextureMapType.Normals) is not {File: not null} normalTexture)
-                continue;
-            if (!char2.Model.ExtraTextures.TryGetValue(normalTexture.File, out var nms))
-                nms = new(await _reader.GetBytesAsync(normalTexture.File, SkinFlag.LookupDefault, default));
-            var dds = new DdsFile(normalTexture.File, nms);
-            var image = dds.ToImageBgra32(0, 0, 0);
-            foreach (var v in c.Vertices) {
-                var pix = image[(int) ((1 + v.TexCoord.X) * image.Width) % image.Width,
-                    (int) ((1 + v.TexCoord.Y) * image.Height) % image.Height];
-                var n = mat.GenMask.UseScatterInNormalMap || mat.GenMask.UseHeightInNormalMap
-                    ? new(
-                        pix.G / 255f,
-                        pix.A / 255f,
-                        MathF.Sqrt(
-                            1
-                            - MathF.Pow(pix.G / 255f * 2 - 1, 2)
-                            - MathF.Pow(pix.A / 255f * 2 - 1, 2)
-                        ) / 2 + 0.5f)
-                    : new Vector3(pix.R / 255f, pix.G / 255f, pix.B / 255f);
-                Debugger.Break();
-            }
-        }
-
-        var level = await _reader.GetPackfile(TestLevelName);
+        // var tt1 = char2.Model.Material!.SubMaterials!.ElementAt(2)!.Textures;
+        // var tt2 = sonic.Model.Material!.SubMaterials!.ElementAt(2)!.Textures;
+        // tt1.Clear();
+        // tt1.AddRange(tt2);
+        char2.Model.Material!.SubMaterialsAndRefs!.AddRange(sonic.Model.Material!.SubMaterialsAndRefs!);
+        char2.Model.PseudoMaterials.First().Name = char2.Model.Nodes.First().MaterialName = sonic.Model.Nodes.First().MaterialName!;
+        
         foreach (var (k, v) in char2.Model.ExtraTextures)
-            level.PutEntry(0, k, new(v.ToArray()));
+            level.PutEntry(0, k, new(v.ToArray()), SkinFlag.Sonic);
+        PbxmlFile.SaveObjectToTextFile("Z:/ROL3D/test.xml", char2.Model.Material);
         level.GetEntry(sonic.Definition!.Model!.File!, false).Source = new(char2.Model.GetGeometryBytes());
         level.GetEntry(sonic.Definition!.Model!.Material!, false).Source = new(char2.Model.GetMaterialBytes());
-        PbxmlFile.SaveObjectToTextFile("Z:/rol3d/test2.xml", sonic.Model.Material!);
-
+        
         // sonic.CryAnimationDatabase!.Animations["animations/characters/1_heroes/sonic/final/combat_idle.caf"] =
         //     sonic.CryAnimationDatabase.Animations["animations/characters/1_heroes/sonic/final/idle.caf"] =
         //         char2.CryAnimationDatabase!.Animations[
-        //             "chara/monster/m0361/animation/a0001/bt_common/resident/monster.pap/cbbm_id0"];
-        // level.GetEntry(sonic.CharacterParameters!.TracksDatabasePath!, false).Source =
-        //     new(sonic.CryAnimationDatabase!.GetBytes());
+        //             "/chara/monster/m0361/animation/a0001/bt_common/resident/monster.pap:cbbm_id0"];
+        level.GetEntry(sonic.CharacterParameters!.TracksDatabasePath!, false).Source =
+            new(sonic.CryAnimationDatabase!.GetBytes());
         var targetPath = _reader.GetPackfilePath(TestLevelName);
         while (targetPath.EndsWith(".bak"))
             targetPath = targetPath[..^4];

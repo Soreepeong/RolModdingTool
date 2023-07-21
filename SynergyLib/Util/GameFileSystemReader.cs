@@ -140,8 +140,10 @@ public sealed class GameFileSystemReader : IAsyncDisposable, IDisposable {
             await Task.WhenAny(packfileTask, Task.Delay(Timeout.Infinite, cancellationToken));
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (packfileTask.Result.TryGetEntry(out var entry, path, lookupSkinFlag))
-                return new MemoryStream(entry.Source.ReadRaw(cancellationToken));
+            if (packfileTask.Result.TryGetEntry(out var entry, path, lookupSkinFlag)) {
+                var data = entry.Source.ReadRaw(cancellationToken);
+                return new MemoryStream(data, 0, data.Length, false, true);
+            }
         }
 
         throw new FileNotFoundException($"File not found: {originalPath}");

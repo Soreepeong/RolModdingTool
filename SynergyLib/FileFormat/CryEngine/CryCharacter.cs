@@ -41,8 +41,8 @@ public partial class CryCharacter {
         CancellationToken cancellationToken) =>
         new GltfExporter(this, getStream, useAnimation, exportOnlyRequiredTextures, cancellationToken).Process();
 
-    public static CryCharacter FromGltf(GltfTuple gltf, CancellationToken cancellationToken) =>
-        new GltfImporter(gltf, cancellationToken).Process();
+    public static CryCharacter FromGltf(GltfTuple gltf, string? name, CancellationToken cancellationToken) =>
+        new GltfImporter(gltf, name, cancellationToken).Process();
 
     public static async Task<CryCharacter> FromCryEngineFiles(
         Func<string, CancellationToken, Task<Stream>> streamOpener,
@@ -123,9 +123,9 @@ public partial class CryCharacter {
         val.M42,
         val.M44);
 
-    public void Scale(float scale) {
+    public void ApplyScaleTransformation(float scale) {
         Model.ApplyScaleTransformation(scale);
-        CryAnimationDatabase?.Scale(scale);
+        CryAnimationDatabase?.ApplyScaleTransformation(scale);
         // todo: scale attachments
     }
 }

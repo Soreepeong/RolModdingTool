@@ -45,6 +45,18 @@ public struct AaBb : IEquatable<AaBb> {
         Max.Z = Math.Max(Max.Z, val.Max.Z);
     }
 
+    public AaBb GetExpanded(Vector3 val) {
+        var v = this;
+        v.Expand(val);
+        return v;
+    }
+
+    public AaBb GetExpanded(AaBb val) {
+        var v = this;
+        v.Expand(val);
+        return v;
+    }
+
     public bool Equals(AaBb other) => Min == other.Min && Max == other.Max;
 
     public override bool Equals(object? obj) => obj is AaBb other && Equals(other);

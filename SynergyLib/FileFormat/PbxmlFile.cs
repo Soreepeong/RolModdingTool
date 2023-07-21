@@ -49,7 +49,7 @@ public class PbxmlFile {
     public void WriteBinaryToFile(string file) => WriteBinary(File.Create(file));
 
     public void WriteBinary(Stream stream, bool leaveOpen = false) =>
-        WriteBinary(new BinaryWriter(stream, Encoding.UTF8, true), leaveOpen);
+        WriteBinary(new BinaryWriter(stream, Encoding.UTF8, leaveOpen));
 
     public void WriteBinary(BinaryWriter target, bool leaveOpen = false) {
         try {
@@ -63,8 +63,9 @@ public class PbxmlFile {
 
     public void WriteTextToFile(string file) => WriteText(File.Create(file));
 
-    public void WriteText(Stream target, bool leaveOpen = false) =>
-        WriteText(new StreamWriter(target, new UTF8Encoding(), -1, true), leaveOpen);
+    public void WriteText(Stream target, bool leaveOpen = false) {
+        WriteText(new StreamWriter(target, new UTF8Encoding(), -1, leaveOpen));
+    }
 
     public void WriteText(StreamWriter target, bool leaveOpen = false) {
         try {
@@ -116,9 +117,8 @@ public class PbxmlFile {
         }
     }
 
-    public static PbxmlFile FromStream(Stream stream, bool leaveOpen = false) => FromReader(
-        new(stream, Encoding.UTF8, true),
-        leaveOpen);
+    public static PbxmlFile FromStream(Stream stream, bool leaveOpen = false) => 
+        FromReader(new(stream, Encoding.UTF8, leaveOpen));
 
     public static PbxmlFile FromBytes(byte[] data) => FromStream(new MemoryStream(data));
 

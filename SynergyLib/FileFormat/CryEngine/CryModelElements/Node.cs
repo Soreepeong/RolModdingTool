@@ -13,10 +13,10 @@ using SynergyLib.Util.MathExtras;
 namespace SynergyLib.FileFormat.CryEngine.CryModelElements;
 
 public class Node {
-    public readonly string Name;
-    public readonly string? MaterialName;
     public readonly List<Mesh> Meshes = new();
     public readonly List<Node> Children = new();
+    public string Name;
+    public string? MaterialName;
     public bool HasColors;
     public bool DoNotMerge;
     public Vector3 Position;
@@ -324,7 +324,9 @@ public class Node {
         return res;
     }
     
-    public AaBb CalculateBoundingBox() => AaBb.FromEnumerable(Children.Select(x => x.CalculateBoundingBox()));
+    public AaBb CalculateBoundingBox() => 
+        AaBb.FromEnumerable(Children.Select(x => x.CalculateBoundingBox()))
+            .GetExpanded(AaBb.FromEnumerable(Meshes.Select(x => x.CalculateBoundingBox())));
 
     public IEnumerable<Tuple<Node, Node?>> EnumerateHierarchy() {
         yield return new(this, null);

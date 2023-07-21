@@ -49,9 +49,6 @@ public class GltfMaterial : BaseGltfObject {
         };
     }
 
-    [JsonProperty("extras", NullValueHandling = NullValueHandling.Ignore)]
-    public GltfMaterialExtras? Extras;
-
     public bool HasNormalTexture() =>
         NormalTexture is not null;
 

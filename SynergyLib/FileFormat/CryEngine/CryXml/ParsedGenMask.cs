@@ -11,8 +11,8 @@ public class ParsedGenMask : IEnumerable<string> {
     private readonly HashSet<string> _items;
     public bool UseBumpMap;
     public bool UseSpecularMap;
-    public bool UseScatterInNormalMap;
-    public bool UseHeightInNormalMap;
+    public bool UseScatterGlossInNormalMap;
+    public bool UseHeightGlossInNormalMap;
     public bool UseSpecAlphaInDiffuseMap;
     public bool UseGlossInSpecularMap;
     public bool UseNormalMapInDetailMap;
@@ -34,10 +34,10 @@ public class ParsedGenMask : IEnumerable<string> {
         _items = genMaskSet.ToHashSet();
         UseBumpMap = _items.Remove("BUMP_MAP");
         UseSpecularMap = _items.Remove("GLOSS_MAP");
-        UseScatterInNormalMap = _items.Remove("TEMP_SKIN");
-        UseHeightInNormalMap = _items.Remove("BLENDHEIGHT_DISPL");
+        UseHeightGlossInNormalMap = _items.Remove("BLENDHEIGHT_DISPL");
         UseSpecAlphaInDiffuseMap = _items.Remove("GLOSS_DIFFUSEALPHA");
         UseGlossInSpecularMap = _items.Remove("SPECULARPOW_GLOSSALPHA");
+        UseScatterGlossInNormalMap = _items.Remove("TEMP_SKIN");
         UseNormalMapInDetailMap = _items.Remove("DETAIL_TEXTURE_IS_NORMALMAP");
         UseInvertedBlendMap = _items.Remove("BLENDHEIGHT_INVERT");
         UseGlowDecalMap = _items.Remove("DECAL_ALPHAGLOW");
@@ -52,10 +52,10 @@ public class ParsedGenMask : IEnumerable<string> {
     public IEnumerator<string> GetEnumerator() {
         if (UseBumpMap) yield return "BUMP_MAP";
         if (UseSpecularMap) yield return "GLOSS_MAP";
-        if (UseScatterInNormalMap) yield return "TEMP_SKIN";
-        if (UseHeightInNormalMap) yield return "BLENDHEIGHT_DISPL";
+        if (UseHeightGlossInNormalMap) yield return "BLENDHEIGHT_DISPL";
         if (UseSpecAlphaInDiffuseMap) yield return "GLOSS_DIFFUSEALPHA";
         if (UseGlossInSpecularMap) yield return "SPECULARPOW_GLOSSALPHA";
+        if (UseScatterGlossInNormalMap) yield return "TEMP_SKIN";
         if (UseNormalMapInDetailMap) yield return "DETAIL_TEXTURE_IS_NORMALMAP";
         if (UseInvertedBlendMap) yield return "BLENDHEIGHT_INVERT";
         if (UseGlowDecalMap) yield return "DECAL_ALPHAGLOW";

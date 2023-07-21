@@ -438,14 +438,14 @@ public partial class CryCharacter {
                 }
 
                 if (normalRaw is not null) {
-                    if (genMask.UseScatterInNormalMap || genMask.UseHeightInNormalMap) {
+                    if (genMask.UseScatterGlossInNormalMap || genMask.UseHeightGlossInNormalMap) {
                         var added = false;
                         added |= deriv32.GetOrAdd(
                             DerivativeTextureKey.Normal(normalRaw),
                             normalRaw,
                             out normalTexture);
                         added |= deriv8.GetOrAdd(
-                            genMask.UseScatterInNormalMap
+                            genMask.UseScatterGlossInNormalMap
                                 ? DerivativeTextureKey.Scatter(normalRaw)
                                 : DerivativeTextureKey.Height(normalRaw),
                             normalRaw,
@@ -465,12 +465,13 @@ public partial class CryCharacter {
                                         var glossRow = gloss.GetRowSpan(y);
                                         for (var x = 0; x < normal.Width; x++) {
                                             var src = normalRow[x];
+                                            var srcNorm = src.NormalizeSNorm();
                                             var nz = MathF.Sqrt(
                                                 1
-                                                - MathF.Pow(src.G / 255f * 2 - 1, 2)
-                                                - MathF.Pow(src.A / 255f * 2 - 1, 2)
-                                            ) / 2 + 0.5f;
-                                            normalRow[x] = new(src.G, src.A, (byte) (nz * 255f));
+                                                - MathF.Pow(srcNorm.Y, 2)
+                                                - MathF.Pow(srcNorm.W, 2)
+                                            );
+                                            normalRow[x] = new(src.G, src.A, (byte) float.Round(nz * 127f + 127f));
                                             redRow[x].PackedValue = src.R;
                                             glossRow[x].PackedValue = src.B;
                                         }
@@ -628,8 +629,13 @@ public partial class CryCharacter {
                                 target: GltfBufferViewTarget.ArrayBuffer),
                             Tangent = _gltf.AddAccessor(
                                 null,
-                                cryMesh.Vertices.Select(x => SwapAxesTangent(x.Tangent.Tangent)).ToArray().AsSpan(),
+                                cryMesh.Vertices.Select(x => SwapAxesTangent(x.Tangent.Binormal)).ToArray().AsSpan(),
                                 target: GltfBufferViewTarget.ArrayBuffer),
+                            // ^ Note
+                            // Using binormal, because...
+                            // [binormal = normal x tangent] makes surfaces look incorrect.
+                            // [tangent = binormal x normal] makes surfaces look alright.
+                            // Not sure if normal/tangent/binormals are being used with correct names here.
                             Color0 = cryMaterial?.GenMask.UseVertexColors is not true || !cryNode.HasColors
                                 ? null
                                 : _gltf.AddAccessor(

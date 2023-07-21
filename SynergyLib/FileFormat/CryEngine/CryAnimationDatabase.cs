@@ -14,7 +14,7 @@ namespace SynergyLib.FileFormat.CryEngine;
 public class CryAnimationDatabase {
     public readonly Dictionary<string, Animation> Animations = new();
 
-    public void Scale(float scale) {
+    public void ApplyScaleTransformation(float scale) {
         foreach (var t in Animations.Values.SelectMany(x => x.Tracks.Values.Select(y => y.Position)).Distinct()) {
             if (t is null)
                 continue;

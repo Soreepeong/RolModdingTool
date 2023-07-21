@@ -7,9 +7,8 @@ using SynergyLib.FileFormat.CryEngine.CryDefinitions.Enums;
 namespace SynergyLib.FileFormat.CryEngine.CryModelElements;
 
 public class PseudoMaterial {
-    public readonly string Name;
     public readonly List<PseudoMaterial> Children = new();
-
+    public string Name;
     public MtlNameFlags Flags;
     public MtlNamePhysicsType PhysicsType;
     public float ShOpacity;
