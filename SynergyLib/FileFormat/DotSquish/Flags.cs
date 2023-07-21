@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace SynergyLib.FileFormat.DotSquish {
     public class SquishOptions {
-        public Vector4? Weights = null;
+        public Vector3? Weights = null;
         public SquishMethod Method = SquishMethod.Dxt1;
         public SquishFit Fit = SquishFit.ColorClusterFit;
         public bool WeightColorByAlpha = false;

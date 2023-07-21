@@ -7,36 +7,37 @@ namespace SynergyLib.FileFormat.DotSquish {
     internal class ClusterFit : ColorFit {
         private const int MaxIterations = 8;
 
-        private static readonly Vector4 Two = new(2.0f);
-        private static readonly Vector4 OneThirdOneThird2 = new(1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 9.0f);
-        private static readonly Vector4 TwoThirdsTwoThirds2 = new(2.0f / 3.0f, 2.0f / 3.0f, 2.0f / 3.0f, 4.0f / 9.0f);
-        private static readonly Vector4 TwoNineths = new(2.0f / 9.0f);
+        private static readonly Vector4 Two = new(2f);
+        private static readonly Vector4 OneThirdOneThird2 = new(1f / 3f, 1f / 3f, 1f / 3f, 1f / 9f);
+        private static readonly Vector4 TwoThirdsTwoThirds2 = new(2f / 3f, 2f / 3f, 2f / 3f, 4f / 9f);
+        private static readonly Vector4 TwoNineths = new(2f / 9f);
         private static readonly Vector4 HalfHalf2 = new(0.5f, 0.5f, 0.5f, 0.25f);
         private static readonly Vector4 Half = new(0.5f);
-        private static readonly Vector4 Grid = new(31.0f, 63.0f, 31.0f, 0.0f);
-        private static readonly Vector4 GridRcp = new(1.0f / 31.0f, 1.0f / 63.0f, 1.0f / 31.0f, 0.0f);
+        private static readonly Vector4 Grid = new(31f, 63f, 31f, 0f);
+        private static readonly Vector4 GridRcp = new(1f / 31f, 1f / 63f, 1f / 31f, 0f);
 
         private readonly int _iterationCount;
-        private readonly Vector3 _principle;
         private readonly byte[] _order = new byte[16 * MaxIterations];
         private readonly Vector4[] _pointsWeights = new Vector4[16];
-        private Vector4 _xsumWsum;
         private readonly Vector4 _metric;
+        private Vector3 _principle;
+        private Vector4 _xsumWsum;
         private Vector4 _besterror;
 
-        public ClusterFit(ColorSet colors, SquishOptions flags) : base(colors, flags) {
-            // set the iteration count
-            _iterationCount = flags.Fit == SquishFit.ColorIterativeClusterFit ? MaxIterations : 1;
+        public ClusterFit(ColorSet colors, SquishOptions options) : base(colors, options) {
+            _iterationCount = options.Fit == SquishFit.ColorIterativeClusterFit ? MaxIterations : 1;
+            _metric = options.Weights is not null ? new(options.Weights.Value, 1) : Vector4.One;
+        }
 
+        protected override void Reset() {
             // Initialise the best error.
             _besterror = new(float.MaxValue);
-            _metric = flags.Weights ?? Vector4.One;
 
             // get the covariance matrix
-            var covariance = Sym3x3.ComputeWeightedCovariance(colors.Count, colors.Points, colors.Weights);
+            var covariance = Sym3x3.ComputeWeightedCovariance(Colors.Count, Colors.Points, Colors.Weights);
 
             // compute the principle component
-            _principle = Sym3x3.ComputePrincipledComponent(covariance);
+            _principle = Sym3x3.ComputePrincipleComponent(covariance);
         }
 
         private bool ConstructOrdering(in Vector3 axis, int iteration) {
@@ -75,7 +76,7 @@ namespace SynergyLib.FileFormat.DotSquish {
             _xsumWsum = new();
             for (var i = 0; i < Colors.Count; ++i) {
                 var j = order[i];
-                var p = new Vector4(Colors.Points[j], 1.0f);
+                var p = new Vector4(Colors.Points[j], 1f);
                 var w = Colors.Weights[j];
                 var x = p * w;
                 _pointsWeights[i] = x;

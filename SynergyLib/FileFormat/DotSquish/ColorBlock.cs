@@ -6,9 +6,9 @@ namespace SynergyLib.FileFormat.DotSquish {
     internal static class ColorBlock {
         public static int FloatTo565(in Vector3 color) {
             // get the components in the correct range
-            var r = Alpha.FloatToInt(31.0f * color.X, 31);
-            var g = Alpha.FloatToInt(63.0f * color.Y, 63);
-            var b = Alpha.FloatToInt(31.0f * color.Z, 31);
+            var r = Alpha.FloatToInt(31f * color.X, 31);
+            var g = Alpha.FloatToInt(63f * color.Y, 63);
+            var b = Alpha.FloatToInt(31f * color.Z, 31);
 
             // pack into a single value
             return (r << 11) | (g << 5) | b;

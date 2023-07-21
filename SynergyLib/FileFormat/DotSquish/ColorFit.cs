@@ -3,16 +3,17 @@ using System;
 namespace SynergyLib.FileFormat.DotSquish {
     // From DotSquish
     internal abstract class ColorFit {
+        public readonly SquishOptions Options;
         public readonly ColorSet Colors;
-        public readonly SquishOptions Flags;
 
-        protected ColorFit(ColorSet colors, SquishOptions flags) {
+        protected ColorFit(ColorSet colors, SquishOptions options) {
             Colors = colors;
-            Flags = flags;
+            Options = options;
         }
 
         public void Compress(Span<byte> block) {
-            if (Flags.Method == SquishMethod.Dxt1) {
+            Reset();
+            if (Options.Method == SquishMethod.Dxt1) {
                 Compress3(block);
                 if (!Colors.IsTransparent)
                     Compress4(block);
@@ -20,6 +21,7 @@ namespace SynergyLib.FileFormat.DotSquish {
                 Compress4(block);
         }
 
+        protected abstract void Reset();
         protected abstract void Compress3(Span<byte> block);
         protected abstract void Compress4(Span<byte> block);
     }

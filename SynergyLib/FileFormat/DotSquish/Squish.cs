@@ -3,44 +3,53 @@ using System;
 namespace SynergyLib.FileFormat.DotSquish {
     // From DotSquish
     public static class Squish {
-        public static void CompressMasked(ColorSet colors, ReadOnlySpan<byte> bgra, int mask, Span<byte> block, SquishOptions options) {
-            var colourBlock = options.Method is SquishMethod.Dxt3 or SquishMethod.Dxt5 ? block[8..] : block;
+        private class BlockCompresser {
+            private readonly SquishOptions _options;
+            private readonly ColorSet _colors = new();
+            private readonly SingleColorFit _singleColorFit;
+            private readonly RangeFit _rangeFit;
+            private readonly ClusterFit _clusterFit;
 
-            // create the minimal point set
-            colors.Reset(bgra, mask, options);
-
-            // check the compression type and compress colour
-            if (colors.Count == 1) {
-                throw new NotSupportedException();
-                // // always do a single colour fit
-                // SingleColourFit fit( &colours, flags );
-                // fit.Compress( colourBlock );
-            } else if (options.Fit == SquishFit.ColorRangeFit || colors.Count == 0) {
-                throw new NotSupportedException();
-                // // do a range fit
-                // RangeFit fit( &colours, flags, metric );
-                // fit.Compress( colourBlock );
-            } else {
-                // default to a cluster fit (could be iterative or not)
-                var fit = new ClusterFit(colors, options);
-                fit.Compress(colourBlock);
+            public BlockCompresser(SquishOptions options) {
+                _options = options;
+                _singleColorFit = new(_colors, options);
+                _rangeFit = new(_colors, options);
+                _clusterFit = new(_colors, options);
             }
+            
+            public void CompressMasked(ReadOnlySpan<byte> bgra, int mask, Span<byte> block) {
+                var colourBlock = _options.Method is SquishMethod.Dxt3 or SquishMethod.Dxt5 ? block[8..] : block;
 
-            switch (options.Method) {
-                case SquishMethod.Dxt1:
-                    break;
-                case SquishMethod.Dxt3:
-                    Alpha.CompressAlphaDxt3(bgra, mask, block);
-                    break;
-                case SquishMethod.Dxt5:
-                    Alpha.CompressAlphaDxt5(bgra, mask, block);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
+                // create the minimal point set
+                _colors.Reset(bgra, mask, _options);
+
+                // check the compression type and compress colour
+                if (_colors.Count == 1) {
+                    // always do a single colour fit
+                    _singleColorFit.Compress(colourBlock);
+                } else if (_options.Fit == SquishFit.ColorRangeFit || _colors.Count == 0) {
+                    _rangeFit.Compress(colourBlock);
+                } else {
+                    // default to a cluster fit (could be iterative or not)
+                    _clusterFit.Compress(colourBlock);
+                }
+
+                switch (_options.Method) {
+                    case SquishMethod.Dxt1:
+                        break;
+                    case SquishMethod.Dxt3:
+                        Alpha.CompressAlphaDxt3(bgra, mask, block);
+                        break;
+                    case SquishMethod.Dxt5:
+                        Alpha.CompressAlphaDxt5(bgra, mask, block);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
             }
         }
-
-        public static void Decompress(Span<byte> bgra, ReadOnlySpan<byte> block, SquishOptions options) {
+        
+        internal static void Decompress(Span<byte> bgra, ReadOnlySpan<byte> block, SquishOptions options) {
             var colorBlock = options.Method is SquishMethod.Dxt3 or SquishMethod.Dxt5 ? block[8..] : block;
 
             switch (options.Method) {
@@ -56,7 +65,7 @@ namespace SynergyLib.FileFormat.DotSquish {
                     Alpha.DecompressAlphaDxt5(block, bgra);
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new ArgumentOutOfRangeException(nameof(options), options, null);
             }
         }
 
@@ -66,10 +75,16 @@ namespace SynergyLib.FileFormat.DotSquish {
             return blockCount * blockSize;
         }
 
-        public static void CompressImage(ReadOnlySpan<byte> bgra, int width, int height, Span<byte> blocks, SquishOptions options) {
+        public static void CompressImage(
+            ReadOnlySpan<byte> bgra,
+            int stride,
+            int width,
+            int height,
+            Span<byte> blocks,
+            SquishOptions options) {
             // initialise the block output
             var bytesPerBlock = options.Method == SquishMethod.Dxt1 ? 8 : 16;
-            var colors = new ColorSet();
+            var compresser = new BlockCompresser(options);
 
             // loop over blocks
             Span<byte> sourceBgra = stackalloc byte[16 * 4];
@@ -87,19 +102,19 @@ namespace SynergyLib.FileFormat.DotSquish {
                             // enable if we're in the image
                             if (sx < width && sy < height) {
                                 // copy the bgra value
-                                bgra.Slice(4 * (width * sy + sx), 4).CopyTo(targetPixel);
+                                bgra.Slice(stride * sy + 4 * sx, 4).CopyTo(targetPixel);
 
                                 // enable this pixel
                                 mask |= (1 << (4 * py + px));
                             }
-                            
+
                             // advance
                             targetPixel = targetPixel[4..];
                         }
                     }
 
                     // compress it into the output
-                    CompressMasked(colors, sourceBgra, mask, blocks, options);
+                    compresser.CompressMasked(sourceBgra, mask, blocks);
 
                     // advance
                     blocks = blocks[bytesPerBlock..];
@@ -107,7 +122,13 @@ namespace SynergyLib.FileFormat.DotSquish {
             }
         }
 
-        public static void DecompressImage(Span<byte> bgra, int width, int height, ReadOnlySpan<byte> blocks, SquishOptions options) {
+        public static void DecompressImage(
+            Span<byte> bgra,
+            int stride,
+            int width,
+            int height,
+            ReadOnlySpan<byte> blocks,
+            SquishOptions options) {
             // initialise the block output
             var bytesPerBlock = options.Method == SquishMethod.Dxt1 ? 8 : 16;
 
@@ -125,11 +146,11 @@ namespace SynergyLib.FileFormat.DotSquish {
                             // get the target location
                             var sx = x + px;
                             var sy = y + py;
-                            
+
                             // enable if we're in the image
                             if (sx < width && sy < height)
-                                sourcePixel[..4].CopyTo(bgra.Slice(4 * (width * sy + sx), 4));
-                            
+                                sourcePixel[..4].CopyTo(bgra.Slice(stride * sy + 4 * sx, 4));
+
                             // advance
                             sourcePixel = sourcePixel[4..];
                         }

@@ -17,6 +17,17 @@ public static class MathExtrasExtensions {
 
     public static Vector3 DropW(this Vector4 value) => new(value.X, value.Y, value.Z);
 
+    public static Vector3 ClampElements(in this Vector3 value, in Vector3 min, in Vector3 max) => new(
+        float.Clamp(value.X, min.X, max.X),
+        float.Clamp(value.Y, min.Y, max.Y),
+        float.Clamp(value.Z, min.Z, max.Z));
+
+    public static Vector3 TruncateElements(in this Vector3 value) =>
+        new(
+            value.X > 0f ? float.Floor(value.X) : float.Ceiling(value.X),
+            value.Y > 0f ? float.Floor(value.Y) : float.Ceiling(value.Y),
+            value.Z > 0f ? float.Floor(value.Z) : float.Ceiling(value.Z));
+
     public static Vector4 ClampElements(in this Vector4 value, in Vector4 min, in Vector4 max) => new(
         float.Clamp(value.X, min.X, max.X),
         float.Clamp(value.Y, min.Y, max.Y),

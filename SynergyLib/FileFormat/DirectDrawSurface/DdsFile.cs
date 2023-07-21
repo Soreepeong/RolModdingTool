@@ -13,7 +13,7 @@ public class DdsFile {
     public readonly bool UseDxt10Header;
     public readonly DdsHeaderDxt10 Dxt10Header;
 
-    private readonly byte[] _data;
+    private byte[] _data;
 
     public DdsFile(string name, DdsHeaderLegacy legacyHeader, DdsHeaderDxt10? dxt10Header, byte[] data) {
         Name = name;
@@ -206,6 +206,8 @@ public class DdsFile {
     public Span<byte> SliceOrFaceData(int imageIndex, int mipmapIndex, int sliceIndex) => IsCubeMap
         ? SliceData(imageIndex, sliceIndex, mipmapIndex, 0)
         : SliceData(imageIndex, 0, mipmapIndex, sliceIndex);
+
+    public void SetBufferUnchecked(byte[] buffer) => _data = buffer;
 
     public IPixelFormat PixelFormat {
         get {

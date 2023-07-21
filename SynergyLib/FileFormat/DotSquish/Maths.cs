@@ -116,21 +116,21 @@ namespace SynergyLib.FileFormat.DotSquish {
             switch (mi) {
                 case 0:
                 case 1:
-                    return new(-m[1], m[0], 0.0f);
+                    return new(-m[1], m[0], 0f);
 
                 case 2:
-                    return new(m[2], 0.0f, -m[0]);
+                    return new(m[2], 0f, -m[0]);
 
                 case 3:
                 case 4:
-                    return new(0.0f, -m[4], m[3]);
+                    return new(0f, -m[4], m[3]);
 
                 default:
-                    return new(0.0f, -m[5], m[4]);
+                    return new(0f, -m[5], m[4]);
             }
         }
 
-        public static Vector3 ComputePrincipledComponent(in Sym3x3 matrix) {
+        public static Vector3 ComputePrincipleComponent(in Sym3x3 matrix) {
             // Compute the cubic coefficients
             var c0 =
                 matrix[0] * matrix[3] * matrix[5]
@@ -182,7 +182,7 @@ namespace SynergyLib.FileFormat.DotSquish {
                 // Q very close to 0
                 // Two roots
                 double rt;
-                if (b < 0.0f)
+                if (b < 0f)
                     rt = -Math.Pow(-.5f * b, 1f / 3f);
                 else
                     rt = Math.Pow(.5f * b, 1f / 3f);

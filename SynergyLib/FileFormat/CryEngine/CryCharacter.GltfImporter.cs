@@ -18,6 +18,7 @@ using SynergyLib.FileFormat.CryEngine.CryModelElements;
 using SynergyLib.FileFormat.CryEngine.CryXml;
 using SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 using SynergyLib.FileFormat.DirectDrawSurface;
+using SynergyLib.FileFormat.DotSquish;
 using SynergyLib.FileFormat.GltfInterop;
 using SynergyLib.FileFormat.GltfInterop.Models;
 using SynergyLib.Util;
@@ -172,7 +173,7 @@ public partial class CryCharacter {
             int materialIndex,
             Material material,
             TextureMapType map,
-            Image<Rgba32> image,
+            Image<Bgra32> image,
             bool useAlpha) {
             _cancellationToken.ThrowIfCancellationRequested();
 
@@ -200,23 +201,6 @@ public partial class CryCharacter {
                 _ => throw new ArgumentOutOfRangeException(nameof(map), map, null),
             };
 
-            var ms = new MemoryStream();
-            var ddsEncoder = new BcEncoder {
-                OutputOptions = {
-                    GenerateMipMaps = true,
-                    Quality = CompressionQuality.BestQuality,
-                    Format = useAlpha ? CompressionFormat.Bc3 : CompressionFormat.Bc1,
-                    FileFormat = OutputFileFormat.Dds,
-                },
-            };
-            ddsEncoder.EncodeToStream(image, ms);
-            unsafe {
-                fixed (byte* p = ms.GetBuffer()) {
-                    ref var pDds = ref *(DdsHeaderLegacy*) p;
-                    pDds.Header.SetCryNonstandardHeader();
-                }
-            }
-
             var baseName = $"mod/{_name}/{material.Name ?? materialIndex.ToString()}_{suffix}";
             var counter = 2;
             while (material.Textures?.Any(x => x.File == $"{baseName}.tif") is true) {
@@ -224,8 +208,23 @@ public partial class CryCharacter {
                 counter++;
             }
 
-            ms.Position = 0;
-            _model.ExtraTextures[$"{baseName}.dds"] = ms;
+            var dds = image.ToDdsFile2D(
+                baseName,
+                new() {
+                    Method = useAlpha ? SquishMethod.Dxt5 : SquishMethod.Dxt1,
+                    Weights = Vector3.Normalize(new(0.3f, 0.3f, 1f)),
+                },
+                "CExtCEnd"u8.ToArray(),
+                9);
+            if (map is TextureMapType.Diffuse or TextureMapType.Specular or TextureMapType.SubSurface
+                or TextureMapType.Decal or TextureMapType.Custom) {
+                unsafe {
+                    fixed (byte* p = dds.Data)
+                        ((DdsHeaderLegacy*) p)->Header.SetCryFlags(CryDdsFlags.SrgbRead);
+                }
+            }
+
+            _model.ExtraTextures[$"{baseName}.dds"] = dds.CreateStream();
             material.Textures ??= new();
             material.Textures.Add(
                 new() {
@@ -251,7 +250,7 @@ public partial class CryCharacter {
                     Name = material.Name ?? "unnamed_material_" + gltfMaterialIndex,
                     AlphaTest = material.AlphaCutoff ?? 0f,
                     Flags = (material.DoubleSided is true ? MaterialFlags.TwoSided : 0) |
-                        MaterialFlags.ShaderGenMask64Bit,
+                        MaterialFlags.ShaderGenMask64Bit | MaterialFlags.PureChild,
                     // DiffuseColor = new(0.5f,0.5f,0.5f),
                     // SpecularColor = new(0,0,0),
                     DiffuseColor = material.PbrMetallicRoughness?.BaseColorFactor?.ToVector3() ?? Vector3.One,
@@ -264,21 +263,13 @@ public partial class CryCharacter {
                     Shader = "Brb_Illum",
                     StringGenMask = string.Empty,
                     PublicParams = new() {
-                        SilhouetteColor = new(0.01698805f, 0.06972709f, 0.2309982f),
-                        IndirectColor = new(0.25f, 0.25f, 0.25f),
-                        WrapColor = new(0.4205079f, 0.04777576f, 0f),
-                        SilhouetteIntensity = 1,
-                        FresnelPower = 5,
-                        FresnelScale = 1,
+                        SilhouetteColor = Vector3.Zero,
+                        SilhouetteIntensity = 0,
+                        FresnelPower = 4,
+                        FresnelScale = 0,
                         FresnelBias = 0.5f,
-                        WrapDiffuse = 1,
-                        // SilhouetteColor = Vector3.Zero,
-                        // SilhouetteIntensity = 0,
-                        // FresnelPower = 4,
-                        // FresnelScale = 0,
-                        // FresnelBias = 0.5f,
-                        // IndirectColor = Vector3.Zero,
-                        // WrapColor = Vector3.Zero,
+                        IndirectColor = Vector3.Zero,
+                        WrapColor = Vector3.Zero,
                         // Metalness = material.PbrMetallicRoughness?.MetallicFactor,
                     },
                 };
@@ -293,21 +284,21 @@ public partial class CryCharacter {
                     _model.ExtraTextures[c.File] = dds.CreateStream();
                 }
 
-                GetGltfTexture<Rgba32>(material.NormalTexture, out var normalImage);
-                if (!GetGltfTexture<Rgba32>(material.PbrMetallicRoughness?.BaseColorTexture, out var diffuseImage))
+                GetGltfTexture<Bgra32>(material.NormalTexture, out var normalImage);
+                if (!GetGltfTexture<Bgra32>(material.PbrMetallicRoughness?.BaseColorTexture, out var diffuseImage))
                     GetGltfTexture(
                         material.Extensions?.KhrMaterialsPbrSpecularGlossiness?.DiffuseTexture,
                         out diffuseImage);
-                GetGltfTexture<Rgba32>(
+                GetGltfTexture<Bgra32>(
                     material.PbrMetallicRoughness?.MetallicRoughnessTexture,
                     out var metallicRoughnessImage);
-                if (!GetGltfTexture<Rgba32>(
+                if (!GetGltfTexture<Bgra32>(
                         material.Extensions?.KhrMaterialsSpecular?.SpecularColorTexture,
                         out var specularImage))
                     GetGltfTexture(
                         material.Extensions?.KhrMaterialsSpecular?.SpecularTexture,
                         out specularImage);
-                GetGltfTexture<Rgba32>(
+                GetGltfTexture<Bgra32>(
                     material.Extensions?.KhrMaterialsPbrSpecularGlossiness?.SpecularGlossinessTexture,
                     out var specularGlossImage);
 

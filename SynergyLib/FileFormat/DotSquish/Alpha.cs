@@ -53,11 +53,11 @@ namespace SynergyLib.FileFormat.DotSquish {
             }
         }
 
-        private static void FixRange(ref int min, ref int max, int steps) {
+        private static void FixRange(ref byte min, ref byte max, int steps) {
             if (max - min < steps)
-                max = Math.Min(min + steps, 255);
+                max = (byte) Math.Min(min + steps, 255);
             if (max - min < steps)
-                min = Math.Max(0, max - steps);
+                min = (byte) Math.Max(0, max - steps);
         }
 
         private static int FitCodes(ReadOnlySpan<byte> bgra, int mask, ReadOnlySpan<byte> codes, Span<byte> indices) {
@@ -120,7 +120,7 @@ namespace SynergyLib.FileFormat.DotSquish {
             }
         }
 
-        private static void WriteAlphaBlock5(int alpha0, int alpha1, ReadOnlySpan<byte> indices, Span<byte> target) {
+        private static void WriteAlphaBlock5(int alpha0, int alpha1, ReadOnlySpan<byte> indices, Span<byte> block) {
             // Check the relative values of the endpoints.
             if (alpha0 > alpha1) {
                 Span<byte> swapped = stackalloc byte[16];
@@ -135,16 +135,16 @@ namespace SynergyLib.FileFormat.DotSquish {
                 }
 
                 // Write the block.
-                WriteAlphaBlock(alpha1, alpha0, swapped, target);
+                WriteAlphaBlock(alpha1, alpha0, swapped, block);
             } else {
                 // Write the block.
-                WriteAlphaBlock(alpha0, alpha1, indices, target);
+                WriteAlphaBlock(alpha0, alpha1, indices, block);
             }
         }
 
-        private static void WriteAlphaBlock7(int alpha0, int alpha1, ReadOnlySpan<byte> indices, Span<byte> target) {
+        private static void WriteAlphaBlock7(int alpha0, int alpha1, ReadOnlySpan<byte> indices, Span<byte> block) {
             // Check the relative values of the endpoints.
-            if (alpha0 > alpha1) {
+            if (alpha0 < alpha1) {
                 Span<byte> swapped = stackalloc byte[16];
                 for (var i = 0; i < 16; ++i) {
                     var index = indices[i];
@@ -156,17 +156,17 @@ namespace SynergyLib.FileFormat.DotSquish {
                 }
 
                 // Write the block.
-                WriteAlphaBlock(alpha1, alpha0, swapped, target);
+                WriteAlphaBlock(alpha1, alpha0, swapped, block);
             } else {
                 // Write the block.
-                WriteAlphaBlock(alpha0, alpha1, indices, target);
+                WriteAlphaBlock(alpha0, alpha1, indices, block);
             }
         }
 
         public static void CompressAlphaDxt5(ReadOnlySpan<byte> bgra, int mask, Span<byte> block) {
             // Get the range for 5-alpha and 7-alpha interpolation.
-            int min5 = 255, max5 = 0;
-            int min7 = 255, max7 = 0;
+            byte min5 = 255, max5 = 0;
+            byte min7 = 255, max7 = 0;
             for (var i = 0; i < 16; ++i) {
                 // Check this pixel is valid.
                 var bit = 1 << i;
@@ -174,7 +174,7 @@ namespace SynergyLib.FileFormat.DotSquish {
                     continue;
 
                 // Incorporate into the min/max.
-                int value = bgra[4 * i + 3];
+                var value = bgra[4 * i + 3];
                 if (value < min7)
                     min7 = value;
                 if (value > max7)
@@ -197,8 +197,8 @@ namespace SynergyLib.FileFormat.DotSquish {
 
             // Set up the 5-alpha code book.
             Span<byte> codes5 = stackalloc byte[8];
-            codes5[0] = (byte) min5;
-            codes5[1] = (byte) max5;
+            codes5[0] = min5;
+            codes5[1] = max5;
             for (var i = 1; i < 5; ++i)
                 codes5[i + 1] = (byte) (((5 - i) * min5 + i * max5) / 5);
             codes5[6] = 0;
@@ -206,8 +206,8 @@ namespace SynergyLib.FileFormat.DotSquish {
 
             // Set up the 7-alpha code book.
             Span<byte> codes7 = stackalloc byte[8];
-            codes7[0] = (byte) min7;
-            codes7[1] = (byte) max7;
+            codes7[0] = min7;
+            codes7[1] = max7;
             for (var i = 1; i < 7; ++i)
                 codes7[i + 1] = (byte) (((7 - i) * min7 + i * max7) / 7);
 

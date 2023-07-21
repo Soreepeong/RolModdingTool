@@ -6,9 +6,13 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BCnEncoder.Shared.ImageFiles;
+using SixLabors.ImageSharp;
 using SynergyLib.FileFormat;
 using SynergyLib.FileFormat.CryEngine;
+using SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 using SynergyLib.FileFormat.DirectDrawSurface;
+using SynergyLib.FileFormat.DotSquish;
 using SynergyLib.FileFormat.GltfInterop;
 using SynergyLib.Util;
 
@@ -61,6 +65,22 @@ public class TestDevProgramCommand : RootProgramCommand {
         CryCharacter.FromCryEngineFiles(ReaderFunc, "objects/characters/5_minibosses/metal_sonic/metal_sonic", default);
 
     public async Task<int> Handle() {
+        // var inf = new DdsFile(
+        //     "",
+        //     File.OpenRead(
+        //         @"Z:\ROL\0005000010175B00\content\Sonic_Crytek\heroes\art\characters\1_heroes\sonic\textures\sonic_head_d.dds"));
+        // var testb = inf.ToImageBgra32(0, 0, 0).ToDdsFile2D(
+        //     "asdf",
+        //     new() {Method = SquishMethod.Dxt1},
+        //     "CExtCEnd"u8.ToArray(),
+        //     0).Data.ToArray();
+        // unsafe {
+        //     fixed (byte* p = testb) 
+        //         ((DdsHeaderLegacy*) p)->Header.SetCryFlags(CryDdsFlags.DontResize);
+        // }
+        // File.WriteAllBytes("Z:/ROL3D/test.dds", testb);
+        // return -1;
+        //
         var level = await _reader.GetPackfile(TestLevelName);
         var sonic = await ReadSonic();
         
@@ -89,10 +109,6 @@ public class TestDevProgramCommand : RootProgramCommand {
         //     sonic.CryAnimationDatabase.Animations[k] = recr;
         // }
 
-        // var tt1 = char2.Model.Material!.SubMaterials!.ElementAt(2)!.Textures;
-        // var tt2 = sonic.Model.Material!.SubMaterials!.ElementAt(2)!.Textures;
-        // tt1.Clear();
-        // tt1.AddRange(tt2);
         char2.Model.Material!.SubMaterialsAndRefs!.AddRange(sonic.Model.Material!.SubMaterialsAndRefs!);
         char2.Model.PseudoMaterials.First().Name = char2.Model.Nodes.First().MaterialName = sonic.Model.Nodes.First().MaterialName!;
         
