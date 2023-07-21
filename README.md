@@ -16,3 +16,5 @@ GPLv3
 * Criware de/serialization from [blueskythlikesclouds/SonicAudioLib](https://github.com/blueskythlikesclouds/SonicAudioTools)
 * More Criware stuff from [LazyBone152/XV2-Tools](https://github.com/LazyBone152/XV2-Tools)
 * CryEngine stuff from [Markemp/Cryengine-Converter](https://github.com/Markemp/Cryengine-Converter)
+* Squish for DXT1/3/5 De/compression
+

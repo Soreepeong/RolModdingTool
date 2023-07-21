@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Diagnostics;
@@ -15,6 +16,7 @@ using SynergyLib.FileFormat.DirectDrawSurface;
 using SynergyLib.FileFormat.DotSquish;
 using SynergyLib.FileFormat.GltfInterop;
 using SynergyLib.Util;
+using DdsFile = SynergyLib.FileFormat.DirectDrawSurface.DdsFile;
 
 namespace SynergyTools.ProgramCommands;
 
@@ -65,33 +67,16 @@ public class TestDevProgramCommand : RootProgramCommand {
         CryCharacter.FromCryEngineFiles(ReaderFunc, "objects/characters/5_minibosses/metal_sonic/metal_sonic", default);
 
     public async Task<int> Handle() {
-        // var inf = new DdsFile(
-        //     "",
-        //     File.OpenRead(
-        //         @"Z:\ROL\0005000010175B00\content\Sonic_Crytek\heroes\art\characters\1_heroes\sonic\textures\sonic_head_d.dds"));
-        // var testb = inf.ToImageBgra32(0, 0, 0).ToDdsFile2D(
-        //     "asdf",
-        //     new() {Method = SquishMethod.Dxt1},
-        //     "CExtCEnd"u8.ToArray(),
-        //     0).Data.ToArray();
-        // unsafe {
-        //     fixed (byte* p = testb) 
-        //         ((DdsHeaderLegacy*) p)->Header.SetCryFlags(CryDdsFlags.DontResize);
-        // }
-        // File.WriteAllBytes("Z:/ROL3D/test.dds", testb);
-        // return -1;
-        //
         var level = await _reader.GetPackfile(TestLevelName);
         var sonic = await ReadSonic();
         
-        // var gltf = GltfTuple.FromFile("Z:/m0361b0001.glb");
-        var gltf = await sonic.ToGltf(ReaderFunc, false, true, default);
-        foreach (var m in gltf.Root.Materials) {
-            m.Name = null;
-            m.Extensions!.SynergyToolsCryMaterial = null;
-        }
+        var gltf = GltfTuple.FromFile("Z:/m0361b0001.glb");
+        // var gltf = await sonic.ToGltf(ReaderFunc, false, true, default);
+        // foreach (var m in gltf.Root.Materials) {
+        //     m.Name = null;
+        //     m.Extensions!.SynergyToolsCryMaterial = null;
+        // }
 
-        gltf.CompileSingleBufferToFile("Z:/Rol3d/sonic_r.glb");
         var char2 = CryCharacter.FromGltf(gltf, "m0361b0001", default);
         foreach (var (k, v) in char2.Model.ExtraTextures) {
             using var asdf = File.Create(Path.Join("Z:/rol3d", "asdf_" + Path.GetFileName(k)));
@@ -99,8 +84,7 @@ public class TestDevProgramCommand : RootProgramCommand {
             v.CopyTo(asdf);
         }
         
-        Debugger.Break();
-        // char2.ApplyScaleTransformation(5 * sonic.Model.CalculateBoundingBox().Radius / char2.Model.CalculateBoundingBox().Radius);
+        char2.ApplyScaleTransformation(5 * sonic.Model.CalculateBoundingBox().Radius / char2.Model.CalculateBoundingBox().Radius);
         
         // foreach (var k in sonic.CryAnimationDatabase.Animations.Keys.ToArray()) {
         //     // var orig = sonic.CryAnimationDatabase.Animations[k];
@@ -117,11 +101,12 @@ public class TestDevProgramCommand : RootProgramCommand {
         PbxmlFile.SaveObjectToTextFile("Z:/ROL3D/test.xml", char2.Model.Material);
         level.GetEntry(sonic.Definition!.Model!.File!, false).Source = new(char2.Model.GetGeometryBytes());
         level.GetEntry(sonic.Definition!.Model!.Material!, false).Source = new(char2.Model.GetMaterialBytes());
+
+        foreach (var (a, b) in SonicToCcAnimationMap) {
+            var key = sonic.CryAnimationDatabase!.Animations.Keys.Single(x => x.EndsWith("/" + a + ".caf"));
+            sonic.CryAnimationDatabase!.Animations[key] = char2.CryAnimationDatabase!.Animations[b];
+        }
         
-        // sonic.CryAnimationDatabase!.Animations["animations/characters/1_heroes/sonic/final/combat_idle.caf"] =
-        //     sonic.CryAnimationDatabase.Animations["animations/characters/1_heroes/sonic/final/idle.caf"] =
-        //         char2.CryAnimationDatabase!.Animations[
-        //             "/chara/monster/m0361/animation/a0001/bt_common/resident/monster.pap:cbbm_id0"];
         level.GetEntry(sonic.CharacterParameters!.TracksDatabasePath!, false).Source =
             new(sonic.CryAnimationDatabase!.GetBytes());
         var targetPath = _reader.GetPackfilePath(TestLevelName);
@@ -130,4 +115,25 @@ public class TestDevProgramCommand : RootProgramCommand {
         await CompressProgramCommand.WriteAndPrintProgress(targetPath, level, default, default);
         return 0;
     }
+
+    private static readonly Dictionary<string, string> SonicToCcAnimationMap = new() {
+        ["idle"] = "/chara/monster/m0361/animation/a0001/bt_common/resident/monster.pap:cbbm_id0",
+        ["combat_idle"] = "/chara/monster/m0361/animation/a0001/bt_common/resident/monster.pap:cbbm_id0",
+        
+        ["walk"] = "/chara/monster/m0361/animation/a0001/bt_common/resident/monster.pap:cbbm_02f_lp0",
+        ["walk_notran"] = "/chara/monster/m0361/animation/a0001/bt_common/resident/monster.pap:cbbm_02f_lp0",
+        // ["walk_left"] = "/chara/monster/m0361/animation/a0001/bt_common/resident/monster.pap:cbbm_trn_l_lp",
+        // ["walk_right"] = "/chara/monster/m0361/animation/a0001/bt_common/resident/monster.pap:cbbm_trn_r_lp",
+        ["run_5"] = "/chara/monster/m0361/animation/a0001/bt_common/resident/monster.pap:cbbm_02f_lp0",
+        ["run_8"] = "/chara/monster/m0361/animation/a0001/bt_common/resident/monster.pap:cbbm_02f_lp0",
+        ["run_8_notran"] = "/chara/monster/m0361/animation/a0001/bt_common/resident/monster.pap:cbbm_02f_lp0",
+        ["run_fast"] = "/chara/monster/m0361/animation/a0001/bt_common/resident/monster.pap:cbbm_02f_lp0",
+        ["run_16"] = "/chara/monster/m0361/animation/a0001/bt_common/resident/monster.pap:cbbm_02f_lp0",
+        ["run_30"] = "/chara/monster/m0361/animation/a0001/bt_common/resident/monster.pap:cbbm_02f_lp0",
+        
+        ["atk_pri_01"] = "/chara/monster/m0361/animation/a0001/bt_common/resident/monster.pap:cbbm_atk1",
+        ["atk_pri_02"] = "/chara/monster/m0361/animation/a0001/bt_common/mon_sp/m0361/mon_sp003.pap:cbbm_sp01",
+        ["atk_pri_03"] = "/chara/monster/m0361/animation/a0001/bt_common/mon_sp/m0361/mon_sp004.pap:cbbm_sp02",
+        ["atk_pri_04"] = "/chara/monster/m0361/animation/a0001/bt_common/mon_sp/m0361/mon_sp008.pap:cbbm_sp06",
+    };
 }
