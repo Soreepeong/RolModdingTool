@@ -615,7 +615,11 @@ public class QuickModProgramCommand : RootProgramCommand {
         var referenceMaterials = reference.Model.Material?.SubMaterialsAndRefs ?? throw new InvalidDataException();
         sonicMaterials.RemoveAll(
             x => x is Material xm && referenceMaterials.Any(y => y is Material ym && ym.Name == xm.Name));
+        sonic.Model.PseudoMaterials[0].Children
+            .RemoveAll(x => reference.Model.PseudoMaterials[0].Children.Any(y => y.Name == x.Name));
         sonicMaterials.AddRange(referenceMaterials);
+        sonic.Model.PseudoMaterials[0].Children.AddRange(reference.Model.PseudoMaterials[0].Children);
+        sonic.Model.PseudoMaterials[0].Name = reference.Model.PseudoMaterials[0].Name;
 
         sonic.Model.Nodes.Clear();
         sonic.Model.Nodes.AddRange(reference.Model.Nodes.Select(x => x.Clone()));
