@@ -50,7 +50,7 @@ public class TestGltfCommand : ImportFromGltfProgramCommand {
         MetadataPathOption.AddAlias("-m");
         Command.AddOption(MetadataPathOption);
 
-        LevelNameOption.AddAlias("-l");
+        LevelNameOption.AddAlias("-n");
         Command.AddOption(LevelNameOption);
 
         GamePathOption.AddAlias("-g");
