@@ -1,0 +1,2365 @@
+{
+	"Name": "Sonic",
+	"TargetPath": "objects/characters/1_heroes/sonic/sonic.cdf",
+	"HeightScaleRelativeToTarget": 1.0,
+	"Materials": [
+		{
+			"EmissiveColor": "rgb(0, 0, 0)",
+			"GenMask": [
+				"EYE_OVERLAY"
+			],
+			"Name": "eyeL_m",
+			"Shader": "Brb_Illum",
+			"PublicParams": {
+				"SilhouetteColor": "rgb(4, 17, 59)",
+				"IrisColor": "rgb(19, 52, 3)",
+				"IndirectColor": "rgb(64, 64, 64)",
+				"IrisAspectRatio": 0.39999998,
+				"IrisRotate": 0.0,
+				"IrisSize": 0.29999998,
+				"EyeSadFactor": 0.0,
+				"PupilScale": 0.55,
+				"SilhouetteIntensity": 1.0,
+				"FresnelPower": 4.0,
+				"FresnelScale": 1.0,
+				"FresnelBias": 0.02,
+				"IrisParallaxOffset": 0.0,
+				"EyeRotateVertical": 0.0,
+				"EyeRotateHorizontal": 0.0,
+				"EyeRotationMultiplier": 1.0
+			},
+			"Textures": [
+				{
+					"Map": "Diffuse",
+					"File": "extras/Sclera.png"
+				}
+			]
+		},
+		{
+			"EmissiveColor": "rgb(0, 0, 0)",
+			"GenMask": [
+				"EYE_OVERLAY"
+			],
+			"Name": "eyeR_m",
+			"Shader": "Brb_Illum",
+			"PublicParams": {
+				"SilhouetteColor": "rgb(4, 17, 59)",
+				"IrisColor": "rgb(19, 52, 3)",
+				"IndirectColor": "rgb(64, 64, 64)",
+				"IrisAspectRatio": 0.39999998,
+				"IrisRotate": 0.0,
+				"IrisSize": 0.29999998,
+				"EyeSadFactor": 0.0,
+				"PupilScale": 0.55,
+				"SilhouetteIntensity": 1.0,
+				"FresnelPower": 4.0,
+				"FresnelScale": 1.0,
+				"FresnelBias": 0.02,
+				"IrisParallaxOffset": 0.0,
+				"EyeRotateVertical": 0.0,
+				"EyeRotateHorizontal": 0.0,
+				"EyeRotationMultiplier": 1.0
+			},
+			"Textures": [
+				{
+					"Map": "Diffuse",
+					"File": "extras/Sclera.png"
+				}
+			]
+		},
+		{
+			"EmissiveColor": "rgb(0, 0, 0)",
+			"GenMask": [
+				"BUMP_MAP",
+				"GLOSS_MAP",
+				"SPECULARPOW_GLOSSALPHA",
+				"TEMP_SKIN"
+			],
+			"Name": "SonicHead_M",
+			"Shader": "Brb_Illum",
+			"PublicParams": {
+				"SilhouetteColor": "rgb(4, 17, 59)",
+				"IndirectColor": "rgb(64, 64, 64)",
+				"WrapColor": "rgb(107, 12, 0)",
+				"SilhouetteIntensity": 1.0,
+				"FresnelPower": 5.0,
+				"FresnelScale": 1.0,
+				"FresnelBias": 0.5,
+				"WrapDiffuse": 1.0
+			},
+			"Textures": [
+				{
+					"Map": "Diffuse",
+					"File": "Sonic_Head_D.png"
+				},
+				{
+					"Map": "Specular",
+					"File": "Sonic_Head_S.png"
+				},
+				{
+					"Map": "Normals",
+					"File": "extras/Sonic_Head_bsg.png"
+				}
+			]
+		},
+		{
+			"EmissiveColor": "rgb(0, 0, 0)",
+			"GenMask": [],
+			"Name": "Shadow_M",
+			"Shader": "Brb_Illum",
+			"PublicParams": {
+				"SilhouetteColor": "rgb(0, 0, 0)",
+				"IndirectColor": "rgb(64, 64, 64)",
+				"SilhouetteIntensity": 1.0,
+				"FresnelPower": 4.0,
+				"FresnelScale": 1.0,
+				"FresnelBias": 1.0
+			},
+			"Textures": [
+				{
+					"Map": "Diffuse",
+					"File": "Art/Textures/Black.tif"
+				}
+			]
+		},
+		{
+			"EmissiveColor": "rgb(0, 0, 0)",
+			"GenMask": [
+				"BUMP_MAP",
+				"GLOSS_MAP",
+				"SPECULARPOW_GLOSSALPHA",
+				"TEMP_SKIN"
+			],
+			"Name": "SonicBody_M1",
+			"Shader": "Brb_Illum",
+			"PublicParams": {
+				"SilhouetteColor": "rgb(4, 17, 59)",
+				"IndirectColor": "rgb(64, 64, 64)",
+				"WrapColor": "rgb(107, 12, 0)",
+				"SilhouetteIntensity": 1.0,
+				"FresnelPower": 5.0,
+				"FresnelScale": 1.0,
+				"FresnelBias": 0.5,
+				"WrapDiffuse": 1.0
+			},
+			"Textures": [
+				{
+					"Map": "Diffuse",
+					"File": "extras/Sonic_Body_D.png"
+				},
+				{
+					"Map": "Specular",
+					"File": "Sonic_Body_S.png"
+				},
+				{
+					"Map": "Normals",
+					"File": "extras/Sonic_Body_bsg.png"
+				}
+			]
+		},
+		{
+			"EmissiveColor": "rgb(0, 0, 0)",
+			"GenMask": [
+				"BUMP_MAP",
+				"GLOSS_MAP",
+				"SPECULARPOW_GLOSSALPHA"
+			],
+			"Name": "ShackleM",
+			"Shader": "Brb_Illum",
+			"PublicParams": {
+				"SilhouetteColor": "rgb(0, 0, 0)",
+				"IndirectColor": "rgb(64, 64, 64)",
+				"SilhouetteIntensity": 1.0,
+				"FresnelPower": 4.0,
+				"FresnelScale": 1.0,
+				"FresnelBias": 1.0
+			},
+			"Textures": [
+				{
+					"Map": "Diffuse",
+					"File": "Art/Characters/18_Cinematic_Props/Sonic_Wristband/Texture/Shackle_D.tif"
+				},
+				{
+					"Map": "Specular",
+					"File": "Art/Characters/18_Cinematic_Props/Sonic_Wristband/Texture/Shackle_S.tif"
+				},
+				{
+					"Map": "Normals",
+					"File": "Art/Characters/18_Cinematic_Props/Sonic_Wristband/Texture/Shackle_N.tif"
+				}
+			]
+		}
+	],
+	"Animations": [
+		{
+			"TargetName": "activate",
+			"SourceName": null
+		},
+		{
+			"TargetName": "add_rec",
+			"SourceName": null
+		},
+		{
+			"TargetName": "air_vent_stand_add",
+			"SourceName": null
+		},
+		{
+			"TargetName": "atk_air_pri_buttstomp_land",
+			"SourceName": null,
+			"MoveSpeed": 2.0197823,
+			"Distance": 1.8851303,
+			"StartLocationV": [
+				0.0,
+				0.0,
+				-8.0
+			],
+			"EndLocationV": [
+				0.0,
+				0.0,
+				-7.9998193
+			]
+		},
+		{
+			"TargetName": "atk_air_pri_buttstomp_rebound",
+			"SourceName": null,
+			"MoveSpeed": 7.068881,
+			"Distance": 4.948219,
+			"StartLocationV": [
+				0.0,
+				0.0,
+				-8.0
+			],
+			"EndLocationV": [
+				0.0,
+				0.0,
+				-8.0
+			]
+		},
+		{
+			"TargetName": "atk_air_pri_buttstomp_start",
+			"SourceName": null,
+			"MoveSpeed": 23.999985,
+			"Distance": 7.9999957,
+			"EndLocationV": [
+				0.0,
+				0.0,
+				-8.0
+			]
+		},
+		{
+			"TargetName": "atk_air_pri_enter",
+			"SourceName": null
+		},
+		{
+			"TargetName": "atk_air_sig_rebound01",
+			"SourceName": null,
+			"MoveSpeed": 2.793429,
+			"Distance": 2.141629,
+			"StartLocationV": [
+				0.0,
+				0.0,
+				0.25396788
+			],
+			"EndLocationV": [
+				0.0,
+				0.0,
+				2.3476462
+			]
+		},
+		{
+			"TargetName": "atk_air_sig_rebound02",
+			"SourceName": null,
+			"MoveSpeed": 2.7817066,
+			"Distance": 2.1326418,
+			"StartLocationV": [
+				0.0,
+				0.0,
+				0.25144422
+			],
+			"EndLocationV": [
+				0.0,
+				0.0,
+				2.368046
+			]
+		},
+		{
+			"TargetName": "atk_air_sig_rebound03",
+			"SourceName": null,
+			"MoveSpeed": 2.822571,
+			"Distance": 2.1639712,
+			"StartLocationV": [
+				0.0,
+				0.0,
+				0.25396788
+			],
+			"EndLocationV": [
+				0.0,
+				0.0,
+				2.321164
+			]
+		},
+		{
+			"TargetName": "atk_bun_exit",
+			"SourceName": null
+		},
+		{
+			"TargetName": "atk_bun_notarget",
+			"SourceName": null
+		},
+		{
+			"TargetName": "atk_bun_reject",
+			"SourceName": null,
+			"StartLocationV": [
+				1.4566964,
+				0.0,
+				0.0
+			],
+			"EndLocationV": [
+				1.4566964,
+				0.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "atk_bun_start",
+			"SourceName": null
+		},
+		{
+			"TargetName": "atk_bun_struggle",
+			"SourceName": null
+		},
+		{
+			"TargetName": "atk_bun_toss",
+			"SourceName": null
+		},
+		{
+			"TargetName": "atk_bun_toss_loop",
+			"SourceName": null
+		},
+		{
+			"TargetName": "atk_bun_toss_start",
+			"SourceName": null
+		},
+		{
+			"TargetName": "atk_bun_turn",
+			"SourceName": null
+		},
+		{
+			"TargetName": "atk_dodge_roll",
+			"SourceName": null,
+			"MoveSpeed": 7.4999948,
+			"Distance": 4.749997,
+			"EndLocationV": [
+				0.0,
+				4.75,
+				0.0
+			]
+		},
+		{
+			"TargetName": "atk_pri_01",
+			"SourceName": null,
+			"MoveSpeed": 0.16562748,
+			"Distance": 0.4416733,
+			"EndLocationV": [
+				0.0,
+				-1.2476813E-05,
+				0.0
+			]
+		},
+		{
+			"TargetName": "atk_pri_02",
+			"SourceName": null,
+			"MoveSpeed": 0.39772296,
+			"Distance": 0.8749905,
+			"EndLocationV": [
+				0.0,
+				0.75637203,
+				0.0
+			]
+		},
+		{
+			"TargetName": "atk_pri_03",
+			"SourceName": null,
+			"MoveSpeed": 0.68605036,
+			"Distance": 1.2348907,
+			"StartLocationV": [
+				0.0,
+				0.0740558,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				1.3089465,
+				0.0
+			]
+		},
+		{
+			"TargetName": "atk_pri_04",
+			"SourceName": null,
+			"MoveSpeed": 0.3615184,
+			"Distance": 0.74713814,
+			"StartLocationV": [
+				0.0,
+				0.2679409,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				1.015079,
+				0.0
+			]
+		},
+		{
+			"TargetName": "atk_pri_05_start",
+			"SourceName": null,
+			"MoveSpeed": 0.87390774,
+			"Distance": 2.2138999,
+			"StartLocationV": [
+				-0.0001353055,
+				0.3977917,
+				0.0
+			],
+			"EndLocationV": [
+				-0.073273525,
+				2.6079898,
+				0.0
+			]
+		},
+		{
+			"TargetName": "atk_pri_chg_drill",
+			"SourceName": null,
+			"MoveSpeed": 0.67171806,
+			"Distance": 1.0075771,
+			"StartLocationV": [
+				0.0,
+				0.738423,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				1.746,
+				0.0
+			]
+		},
+		{
+			"TargetName": "atk_pri_chg_enter01",
+			"SourceName": null,
+			"StartLocationV": [
+				0.0,
+				0.738423,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				0.738423,
+				0.0
+			]
+		},
+		{
+			"TargetName": "atk_stun_finisher",
+			"SourceName": null,
+			"MoveSpeed": 0.22773182,
+			"Distance": 0.4175084,
+			"EndLocationV": [
+				0.0,
+				0.41750842,
+				0.0
+			]
+		},
+		{
+			"TargetName": "atk_stun_flurry",
+			"SourceName": null
+		},
+		{
+			"TargetName": "atk_stun_recover",
+			"SourceName": null
+		},
+		{
+			"TargetName": "boat_celebrate",
+			"SourceName": null
+		},
+		{
+			"TargetName": "boat_damage",
+			"SourceName": null
+		},
+		{
+			"TargetName": "boat_death",
+			"SourceName": null
+		},
+		{
+			"TargetName": "boat_idle",
+			"SourceName": null
+		},
+		{
+			"TargetName": "boat_shoot",
+			"SourceName": null
+		},
+		{
+			"TargetName": "bounce_pad",
+			"SourceName": null
+		},
+		{
+			"TargetName": "bounce_pad_falling_idle",
+			"SourceName": null
+		},
+		{
+			"TargetName": "bounce_pad_flip",
+			"SourceName": null
+		},
+		{
+			"TargetName": "bounce_pad_spring",
+			"SourceName": null,
+			"StartLocationV": [
+				0.0,
+				0.01,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				0.01,
+				0.0
+			]
+		},
+		{
+			"TargetName": "bounce_pad_spring_side",
+			"SourceName": null,
+			"StartLocationV": [
+				0.0,
+				0.01,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				0.01,
+				0.0
+			]
+		},
+		{
+			"TargetName": "bungee_rail_dodge_left",
+			"SourceName": null
+		},
+		{
+			"TargetName": "bungee_rail_dodge_right",
+			"SourceName": null
+		},
+		{
+			"TargetName": "bungee_rail_hit",
+			"SourceName": null
+		},
+		{
+			"TargetName": "bungee_rail_jump_left",
+			"SourceName": null
+		},
+		{
+			"TargetName": "bungee_rail_jump_right",
+			"SourceName": null
+		},
+		{
+			"TargetName": "bungee_rail_suspend",
+			"SourceName": null
+		},
+		{
+			"TargetName": "bungee_strafe_bkwd",
+			"SourceName": null,
+			"MoveSpeed": 4.2857094,
+			"Distance": 2.0,
+			"EndLocationV": [
+				0.0,
+				-2.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "bungee_strafe_bkwd_l",
+			"SourceName": null,
+			"MoveSpeed": 4.2857094,
+			"Distance": 2.0,
+			"EndLocationV": [
+				-2.0,
+				0.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "bungee_strafe_bkwd_r",
+			"SourceName": null,
+			"MoveSpeed": 4.2857094,
+			"Distance": 2.0,
+			"EndLocationV": [
+				2.0,
+				0.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "bungee_strafe_fwd",
+			"SourceName": null,
+			"MoveSpeed": 4.2857094,
+			"Distance": 2.0,
+			"EndLocationV": [
+				0.0,
+				2.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "bungee_strafe_fwd_l",
+			"SourceName": null,
+			"MoveSpeed": 4.2857094,
+			"Distance": 2.0,
+			"EndLocationV": [
+				-2.0,
+				0.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "bungee_strafe_fwd_r",
+			"SourceName": null,
+			"MoveSpeed": 4.2857094,
+			"Distance": 2.0,
+			"EndLocationV": [
+				2.0,
+				0.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "bungee_strafe_idle",
+			"SourceName": null
+		},
+		{
+			"TargetName": "bungee_strafe_slow_bkwd",
+			"SourceName": null,
+			"MoveSpeed": 1.071428,
+			"Distance": 0.99999946,
+			"EndLocationV": [
+				0.0,
+				-1.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "bungee_strafe_slow_bkwd_l",
+			"SourceName": null,
+			"MoveSpeed": 1.0714273,
+			"Distance": 0.9999989,
+			"EndLocationV": [
+				-1.0,
+				0.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "bungee_strafe_slow_bkwd_r",
+			"SourceName": null,
+			"MoveSpeed": 1.0714273,
+			"Distance": 0.9999989,
+			"EndLocationV": [
+				1.0,
+				0.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "bungee_strafe_slow_fwd",
+			"SourceName": null,
+			"MoveSpeed": 1.0317789,
+			"Distance": 0.41271317,
+			"StartLocationV": [
+				0.0,
+				-0.44686913,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				-0.034150083,
+				0.0
+			]
+		},
+		{
+			"TargetName": "bungee_throw",
+			"SourceName": null
+		},
+		{
+			"TargetName": "bungee_throw_vert",
+			"SourceName": null
+		},
+		{
+			"TargetName": "bungee_yank",
+			"SourceName": null
+		},
+		{
+			"TargetName": "bungee_zip_end",
+			"SourceName": null,
+			"MoveSpeed": 2.1794405,
+			"Distance": 1.2350141,
+			"StartLocationV": [
+				0.0,
+				1.8837037,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				3.11872,
+				0.0
+			]
+		},
+		{
+			"TargetName": "bungee_zip_follow_through",
+			"SourceName": null,
+			"MoveSpeed": 4.4311957,
+			"Distance": 16.247723,
+			"Slope": 0.4169736,
+			"StartLocationV": [
+				0.001680455,
+				0.5854652,
+				-0.1549219
+			],
+			"EndLocationV": [
+				-0.0034799804,
+				0.04669297,
+				0.083747804
+			]
+		},
+		{
+			"TargetName": "bungee_zip_follow_through_vert",
+			"SourceName": null
+		},
+		{
+			"TargetName": "bungee_zip_hang",
+			"SourceName": null,
+			"MoveSpeed": 0.12191141,
+			"Distance": 0.5933022,
+			"StartLocationV": [
+				-0.0034802158,
+				0.04670243,
+				0.083748035
+			],
+			"EndLocationV": [
+				-0.0034802158,
+				0.046702404,
+				0.083748035
+			]
+		},
+		{
+			"TargetName": "bungee_zip_pulled",
+			"SourceName": null,
+			"StartLocationV": [
+				0.0,
+				-0.56332266,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				-0.56332266,
+				0.0
+			]
+		},
+		{
+			"TargetName": "bungee_zip_pulled_start",
+			"SourceName": null,
+			"StartLocationV": [
+				0.0,
+				-0.56332266,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				-0.56332266,
+				0.0
+			]
+		},
+		{
+			"TargetName": "bungee_zip_pulled_start_vert",
+			"SourceName": null,
+			"StartLocationV": [
+				0.0,
+				0.107559,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				0.107559,
+				0.0
+			]
+		},
+		{
+			"TargetName": "bungee_zip_pulled_vert",
+			"SourceName": null,
+			"StartLocationV": [
+				0.0,
+				0.107559,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				0.107559,
+				0.0
+			]
+		},
+		{
+			"TargetName": "bungee_zip_throw",
+			"SourceName": null,
+			"MoveSpeed": 2.1633692,
+			"Distance": 0.5768979,
+			"StartLocationV": [
+				0.0,
+				0.654422,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				1.231324,
+				0.0
+			]
+		},
+		{
+			"TargetName": "bungee_zipwire_throw_left",
+			"SourceName": null,
+			"MoveSpeed": 0.78397363,
+			"Distance": 0.6533114,
+			"StartLocationV": [
+				0.0,
+				0.58256245,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				1.2176679,
+				0.0
+			]
+		},
+		{
+			"TargetName": "bungee_zipwire_throw_right",
+			"SourceName": null,
+			"MoveSpeed": 0.7938613,
+			"Distance": 0.6615511,
+			"StartLocationV": [
+				0.0,
+				0.58256245,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				1.2176679,
+				0.0
+			]
+		},
+		{
+			"TargetName": "combat_divekick_falling",
+			"SourceName": null,
+			"StartLocationV": [
+				0.0,
+				-1.3280901,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				-1.3280901,
+				0.0
+			]
+		},
+		{
+			"TargetName": "combat_divekick_land",
+			"SourceName": null,
+			"MoveSpeed": 0.06519894,
+			"Distance": 0.09127855,
+			"StartLocationV": [
+				0.0,
+				-1.4108999,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				-1.5021784,
+				0.0
+			]
+		},
+		{
+			"TargetName": "combat_glide",
+			"SourceName": null
+		},
+		{
+			"TargetName": "combat_idle",
+			"SourceName": null,
+			"StartLocationV": [
+				0.0,
+				0.738423,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				0.738423,
+				0.0
+			]
+		},
+		{
+			"TargetName": "combat_pinball_dash",
+			"SourceName": null
+		},
+		{
+			"TargetName": "combat_sonic_chargeloop",
+			"SourceName": null
+		},
+		{
+			"TargetName": "combat_sonic_exit",
+			"SourceName": null,
+			"MoveSpeed": 0.6635562,
+			"Distance": 1.3934681,
+			"StartLocationV": [
+				0.0,
+				9.832099,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				11.052609,
+				0.0
+			]
+		},
+		{
+			"TargetName": "combat_sonicbomb_dive",
+			"SourceName": null,
+			"MoveSpeed": 145.04044,
+			"Distance": 38.67745,
+			"Slope": 0.9260856,
+			"StartLocationV": [
+				5.9631034E-21,
+				-0.0022971728,
+				0.02668622
+			],
+			"EndLocationV": [
+				1.81899E-14,
+				23.241598,
+				-30.8872
+			]
+		},
+		{
+			"TargetName": "combat_sonicbomb_land",
+			"SourceName": null,
+			"StartLocationV": [
+				0.0,
+				0.0147779,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				0.0147779,
+				0.0
+			]
+		},
+		{
+			"TargetName": "combat_sonicbomb_loop",
+			"SourceName": null,
+			"MoveSpeed": 0.017904721,
+			"Distance": 0.028647557,
+			"Slope": 0.99094766,
+			"StartLocationV": [
+				0.0,
+				-1.6158159,
+				1.129444
+			],
+			"EndLocationV": [
+				0.0,
+				-1.60012,
+				1.105479
+			]
+		},
+		{
+			"TargetName": "combat_sonicbomb_start",
+			"SourceName": null,
+			"MoveSpeed": 0.049052067,
+			"Distance": 0.11936003,
+			"Slope": 0.21820696,
+			"StartLocationV": [
+				0.0,
+				-1.7095237,
+				1.1297363
+			],
+			"EndLocationV": [
+				0.0,
+				-1.6001159,
+				1.1054765
+			]
+		},
+		{
+			"TargetName": "combat_sonicwarp",
+			"SourceName": null,
+			"MoveSpeed": 69.99971,
+			"Distance": 6.999964,
+			"StartLocationV": [
+				0.0,
+				2.7288778,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				9.72886,
+				0.0
+			]
+		},
+		{
+			"TargetName": "combat_spinbounce_finale",
+			"SourceName": null,
+			"MoveSpeed": 0.5330656,
+			"Distance": 0.817367,
+			"StartLocationV": [
+				0.0,
+				3.923779E-05,
+				6.7651365E-07
+			],
+			"EndLocationV": [
+				-8.895071E-06,
+				0.81716573,
+				0.0
+			]
+		},
+		{
+			"TargetName": "combat_spinbounce_roll",
+			"SourceName": null
+		},
+		{
+			"TargetName": "combat_spinbounce_start",
+			"SourceName": null
+		},
+		{
+			"TargetName": "combat_spincharge_contact",
+			"SourceName": null,
+			"MoveSpeed": 0.5216709,
+			"Distance": 1.2867882,
+			"EndLocationV": [
+				0.0,
+				-0.639605,
+				0.0
+			]
+		},
+		{
+			"TargetName": "combat_spincharge_dash",
+			"SourceName": null,
+			"MoveSpeed": 0.2075584,
+			"Distance": 0.069186114,
+			"StartLocationV": [
+				0.0,
+				-0.16228175,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				-0.23146793,
+				0.0
+			]
+		},
+		{
+			"TargetName": "combat_spincharge_exit",
+			"SourceName": null
+		},
+		{
+			"TargetName": "combat_spindash_dash",
+			"SourceName": null,
+			"StartLocationV": [
+				-2.3423397E-06,
+				0.0,
+				0.0
+			],
+			"EndLocationV": [
+				-2.3423397E-06,
+				0.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "combat_spindash_groundexit",
+			"SourceName": null,
+			"MoveSpeed": 4.6845144E-06,
+			"Distance": 2.3422572E-06,
+			"StartLocationV": [
+				-2.342276E-06,
+				0.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "combat_spindash_rebound",
+			"SourceName": null,
+			"MoveSpeed": 1.8137865,
+			"Distance": 1.9951624,
+			"StartLocationV": [
+				-0.0008677292,
+				-0.09478538,
+				0.0
+			],
+			"EndLocationV": [
+				-0.0008677292,
+				-2.0899515,
+				0.0
+			]
+		},
+		{
+			"TargetName": "combat_spindash_recovery",
+			"SourceName": null,
+			"MoveSpeed": 0.59859425,
+			"Distance": 1.0375636,
+			"Slope": -1.123413,
+			"StartLocationV": [
+				0.0,
+				-2.4698758,
+				0.32178006
+			],
+			"EndLocationV": [
+				0.0,
+				-2.6242762,
+				0.0
+			]
+		},
+		{
+			"TargetName": "combat_spindash_skid",
+			"SourceName": null,
+			"StartLocationV": [
+				0.0,
+				0.738423,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				0.738423,
+				0.0
+			]
+		},
+		{
+			"TargetName": "combat_spindash_start",
+			"SourceName": null
+		},
+		{
+			"TargetName": "coop_ready",
+			"SourceName": null
+		},
+		{
+			"TargetName": "crystal_get",
+			"SourceName": null
+		},
+		{
+			"TargetName": "det_air",
+			"SourceName": null
+		},
+		{
+			"TargetName": "det_fall",
+			"SourceName": null
+		},
+		{
+			"TargetName": "det_hazard",
+			"SourceName": null
+		},
+		{
+			"TargetName": "det_pool",
+			"SourceName": null
+		},
+		{
+			"TargetName": "det_road",
+			"SourceName": null
+		},
+		{
+			"TargetName": "det_stand_02",
+			"SourceName": null,
+			"MoveSpeed": 0.37449315,
+			"Distance": 0.8863005,
+			"StartLocationV": [
+				0.0,
+				0.738423,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				-0.14787751,
+				0.0
+			]
+		},
+		{
+			"TargetName": "det_tunnelbot",
+			"SourceName": null,
+			"MoveSpeed": 4.0449433,
+			"Distance": 12.0,
+			"EndLocationV": [
+				0.0,
+				12.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "det/death",
+			"SourceName": null,
+			"MoveSpeed": 0.8834852,
+			"Distance": 2.2381628,
+			"EndLocationV": [
+				0.0,
+				-2.2381628,
+				0.0
+			]
+		},
+		{
+			"TargetName": "doublejump_start",
+			"SourceName": null
+		},
+		{
+			"TargetName": "doublejump_test",
+			"SourceName": null
+		},
+		{
+			"TargetName": "emotive_397_intros7warthogsonicacon3",
+			"SourceName": null
+		},
+		{
+			"TargetName": "fall_start",
+			"SourceName": null
+		},
+		{
+			"TargetName": "final/death",
+			"SourceName": null,
+			"MoveSpeed": 0.8834852,
+			"Distance": 2.2381628,
+			"EndLocationV": [
+				0.0,
+				-2.2381628,
+				0.0
+			]
+		},
+		{
+			"TargetName": "final/ledge_grab",
+			"SourceName": null,
+			"MoveSpeed": 1.1847743,
+			"Distance": 2.724981,
+			"Slope": -0.4179944,
+			"StartLocationV": [
+				0.0,
+				-0.25790367,
+				-0.7079629
+			],
+			"EndLocationV": [
+				0.0,
+				1.3360001,
+				0.0
+			]
+		},
+		{
+			"TargetName": "h1_scn11_2",
+			"SourceName": null
+		},
+		{
+			"TargetName": "h1_scn11_3",
+			"SourceName": null
+		},
+		{
+			"TargetName": "idle",
+			"SourceName": null
+		},
+		{
+			"TargetName": "idle_conversation",
+			"SourceName": null
+		},
+		{
+			"TargetName": "idle_personality_lookaround",
+			"SourceName": null
+		},
+		{
+			"TargetName": "idle_personality1",
+			"SourceName": null
+		},
+		{
+			"TargetName": "idle_personality2",
+			"SourceName": null
+		},
+		{
+			"TargetName": "idle_personality3",
+			"SourceName": null
+		},
+		{
+			"TargetName": "idle_personality4",
+			"SourceName": null
+		},
+		{
+			"TargetName": "idle_personality5",
+			"SourceName": null
+		},
+		{
+			"TargetName": "jump_idle",
+			"SourceName": null,
+			"StartLocationV": [
+				0.0,
+				0.0,
+				0.01
+			],
+			"EndLocationV": [
+				0.0,
+				0.0,
+				0.01
+			]
+		},
+		{
+			"TargetName": "jump_land",
+			"SourceName": null,
+			"MoveSpeed": 8.276981,
+			"Distance": 1.9312959,
+			"Slope": 0.005177884,
+			"StartLocationV": [
+				0.0,
+				0.5517265,
+				0.01
+			],
+			"EndLocationV": [
+				0.0,
+				2.483,
+				0.0
+			]
+		},
+		{
+			"TargetName": "jump_land_hard",
+			"SourceName": null
+		},
+		{
+			"TargetName": "jump_peak_celebrate",
+			"SourceName": null
+		},
+		{
+			"TargetName": "jump_stand_idle",
+			"SourceName": null
+		},
+		{
+			"TargetName": "jump_stand_land",
+			"SourceName": null
+		},
+		{
+			"TargetName": "jump_stand_land_hard",
+			"SourceName": null
+		},
+		{
+			"TargetName": "jump_stand_start",
+			"SourceName": null
+		},
+		{
+			"TargetName": "jump_start",
+			"SourceName": null
+		},
+		{
+			"TargetName": "l05_scn01_4",
+			"SourceName": null
+		},
+		{
+			"TargetName": "l09_scn01_1",
+			"SourceName": null
+		},
+		{
+			"TargetName": "l09_scn01_10",
+			"SourceName": null
+		},
+		{
+			"TargetName": "l09_scn01_11",
+			"SourceName": null
+		},
+		{
+			"TargetName": "l09_scn01_12",
+			"SourceName": null
+		},
+		{
+			"TargetName": "l09_scn01_13",
+			"SourceName": null
+		},
+		{
+			"TargetName": "l09_scn01_2",
+			"SourceName": null
+		},
+		{
+			"TargetName": "l09_scn01_3",
+			"SourceName": null
+		},
+		{
+			"TargetName": "l09_scn01_4",
+			"SourceName": null
+		},
+		{
+			"TargetName": "l09_scn01_5",
+			"SourceName": null
+		},
+		{
+			"TargetName": "l09_scn01_6",
+			"SourceName": null,
+			"MoveSpeed": 0.0007742758,
+			"Distance": 0.0051876483,
+			"EndLocationV": [
+				0.0,
+				-0.0051876516,
+				0.0
+			]
+		},
+		{
+			"TargetName": "l09_scn01_7",
+			"SourceName": null,
+			"MoveSpeed": 0.0006148436,
+			"Distance": 0.00239789,
+			"StartLocationV": [
+				0.0,
+				-0.005289174,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				-0.007687066,
+				0.0
+			]
+		},
+		{
+			"TargetName": "l09_scn01_8",
+			"SourceName": null,
+			"MoveSpeed": 0.0018018648,
+			"Distance": 0.007687956,
+			"StartLocationV": [
+				0.0,
+				-0.007687963,
+				0.0
+			]
+		},
+		{
+			"TargetName": "l09_scn01_9",
+			"SourceName": null
+		},
+		{
+			"TargetName": "l10_section14_emo_stage4_1",
+			"SourceName": null
+		},
+		{
+			"TargetName": "l4_05b_2_tunnel_mixdown",
+			"SourceName": null
+		},
+		{
+			"TargetName": "metalsonicboss_death_emo_1",
+			"SourceName": null
+		},
+		{
+			"TargetName": "metalsonicboss_intro_emo_1",
+			"SourceName": null
+		},
+		{
+			"TargetName": "metalsonicboss_transition_emo_1",
+			"SourceName": null
+		},
+		{
+			"TargetName": "metalsonicboss_transition_emo2_1",
+			"SourceName": null
+		},
+		{
+			"TargetName": "msc_taunt",
+			"SourceName": null,
+			"StartLocationV": [
+				0.0,
+				1.175183,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				1.175183,
+				0.0
+			]
+		},
+		{
+			"TargetName": "nav_celebrate",
+			"SourceName": null
+		},
+		{
+			"TargetName": "nav/ledge_grab",
+			"SourceName": null,
+			"MoveSpeed": 1.1847743,
+			"Distance": 2.724981,
+			"Slope": -0.4179944,
+			"StartLocationV": [
+				0.0,
+				-0.25790367,
+				-0.7079629
+			],
+			"EndLocationV": [
+				0.0,
+				1.3360001,
+				0.0
+			]
+		},
+		{
+			"TargetName": "proto_swing_followthrough",
+			"SourceName": null,
+			"MoveSpeed": 6.2613854,
+			"Distance": 9.392078,
+			"Slope": 0.89577264,
+			"StartLocationV": [
+				0.0,
+				-0.56332266,
+				0.0
+			],
+			"EndLocationV": [
+				0.048872948,
+				-1.8844719,
+				1.652738
+			]
+		},
+		{
+			"TargetName": "proto_swing_followthrough_down",
+			"SourceName": null,
+			"MoveSpeed": 6.235391,
+			"Distance": 9.353086,
+			"Slope": 0.89577264,
+			"StartLocationV": [
+				0.0,
+				-0.56332266,
+				0.0
+			],
+			"EndLocationV": [
+				0.048872948,
+				-1.8844719,
+				1.652738
+			]
+		},
+		{
+			"TargetName": "proto_swing_followthrough_up",
+			"SourceName": null,
+			"MoveSpeed": 6.5241237,
+			"Distance": 9.786185,
+			"Slope": 1.0274738,
+			"StartLocationV": [
+				-7.4970995E-07,
+				-0.36984044,
+				-0.85772824
+			],
+			"EndLocationV": [
+				0.048872948,
+				-1.8844719,
+				1.652738
+			]
+		},
+		{
+			"TargetName": "proto_swing_loop",
+			"SourceName": null,
+			"MoveSpeed": 5.870877,
+			"Distance": 10.958971,
+			"StartLocationV": [
+				0.04784026,
+				-1.8979641,
+				1.7360752
+			],
+			"EndLocationV": [
+				0.04730194,
+				-1.8979725,
+				1.7360377
+			]
+		},
+		{
+			"TargetName": "proto_swing_start",
+			"SourceName": null,
+			"MoveSpeed": 4.1481485,
+			"Distance": 7.6049414,
+			"Slope": 0.70396036,
+			"StartLocationV": [
+				-0.003479966,
+				0.046692874,
+				0.08375193
+			],
+			"EndLocationV": [
+				0.047840312,
+				-1.8979597,
+				1.7360698
+			]
+		},
+		{
+			"TargetName": "proto_swing_stop_back",
+			"SourceName": null,
+			"MoveSpeed": 1.9105327,
+			"Distance": 3.3115904,
+			"Slope": -0.011311602,
+			"StartLocationV": [
+				0.0076792114,
+				0.00016858304,
+				0.08319124
+			],
+			"EndLocationV": [
+				-0.0034799804,
+				0.04669297,
+				0.083747804
+			]
+		},
+		{
+			"TargetName": "proto_swing_stop_forward",
+			"SourceName": null,
+			"MoveSpeed": 2.7261133,
+			"Distance": 4.6343894,
+			"Slope": -0.012018679,
+			"StartLocationV": [
+				0.0025059339,
+				6.6754714E-05,
+				0.08317816
+			],
+			"EndLocationV": [
+				-0.0034799804,
+				0.04669297,
+				0.083747804
+			]
+		},
+		{
+			"TargetName": "proto_swing_stop_small",
+			"SourceName": null,
+			"MoveSpeed": 2.74774,
+			"Distance": 2.2897851,
+			"Slope": -0.012101101,
+			"StartLocationV": [
+				0.0015818299,
+				3.419418E-05,
+				0.08317651
+			],
+			"EndLocationV": [
+				-0.0034799804,
+				0.04669297,
+				0.083747804
+			]
+		},
+		{
+			"TargetName": "push_ball",
+			"SourceName": null
+		},
+		{
+			"TargetName": "push_ball_fast",
+			"SourceName": null,
+			"MoveSpeed": 1.0003521,
+			"Distance": 1.0003521,
+			"EndLocationV": [
+				0.0,
+				1.0003529,
+				0.0
+			]
+		},
+		{
+			"TargetName": "push_heavyobject",
+			"SourceName": null
+		},
+		{
+			"TargetName": "push_heavyobject_start",
+			"SourceName": null
+		},
+		{
+			"TargetName": "push_start",
+			"SourceName": null
+		},
+		{
+			"TargetName": "push_wall",
+			"SourceName": null
+		},
+		{
+			"TargetName": "rec_add",
+			"SourceName": null
+		},
+		{
+			"TargetName": "rec_air",
+			"SourceName": null,
+			"MoveSpeed": 1.4905363,
+			"Distance": 0.9440065,
+			"EndLocationV": [
+				0.0,
+				-0.9440065,
+				0.0
+			]
+		},
+		{
+			"TargetName": "rec_blocked",
+			"SourceName": null,
+			"MoveSpeed": 2.402243,
+			"Distance": 1.5214208,
+			"StartLocationV": [
+				0.0,
+				0.52142084,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				-1.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "rec_buttsit",
+			"SourceName": null,
+			"MoveSpeed": 1.7807955,
+			"Distance": 3.5022316,
+			"EndLocationV": [
+				0.0,
+				-3.5022316,
+				0.0
+			]
+		},
+		{
+			"TargetName": "rec_drag_worm",
+			"SourceName": null
+		},
+		{
+			"TargetName": "rec_flyback",
+			"SourceName": null,
+			"MoveSpeed": 6.31244,
+			"Distance": 3.9978778,
+			"StartLocationV": [
+				0.0,
+				3.997881,
+				0.0
+			]
+		},
+		{
+			"TargetName": "rec_frozen",
+			"SourceName": null
+		},
+		{
+			"TargetName": "rec_hazard",
+			"SourceName": null
+		},
+		{
+			"TargetName": "rec_high",
+			"SourceName": null,
+			"MoveSpeed": 1.5789471,
+			"Distance": 1.0,
+			"EndLocationV": [
+				0.0,
+				-1.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "rec_left",
+			"SourceName": null,
+			"MoveSpeed": 1.5789471,
+			"Distance": 1.0,
+			"EndLocationV": [
+				0.0,
+				-1.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "rec_mid",
+			"SourceName": null,
+			"MoveSpeed": 1.5789471,
+			"Distance": 1.0,
+			"EndLocationV": [
+				0.0,
+				-1.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "rec_ricochet",
+			"SourceName": null,
+			"MoveSpeed": 2.2679074,
+			"Distance": 2.5702953,
+			"Slope": 0.4494634,
+			"StartLocationV": [
+				0.0,
+				0.0,
+				0.8097762
+			],
+			"EndLocationV": [
+				0.0,
+				1.6786635,
+				0.0
+			]
+		},
+		{
+			"TargetName": "rec_right",
+			"SourceName": null,
+			"MoveSpeed": 1.5789471,
+			"Distance": 1.0,
+			"EndLocationV": [
+				0.0,
+				-1.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "rec_slide_to_buttsit",
+			"SourceName": null,
+			"MoveSpeed": 12.499997,
+			"Distance": 2.5,
+			"EndLocationV": [
+				0.0,
+				-2.5,
+				0.0
+			]
+		},
+		{
+			"TargetName": "rec_spawn",
+			"SourceName": null
+		},
+		{
+			"TargetName": "road_slow_attack",
+			"SourceName": null,
+			"MoveSpeed": 0.16562748,
+			"Distance": 0.4416733,
+			"EndLocationV": [
+				0.0,
+				-1.2476813E-05,
+				0.0
+			]
+		},
+		{
+			"TargetName": "run_16",
+			"SourceName": null,
+			"MoveSpeed": 15.989988,
+			"Distance": 5.329996,
+			"StartLocationV": [
+				0.0,
+				0.01,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				5.3399997,
+				0.0
+			]
+		},
+		{
+			"TargetName": "run_16_left",
+			"SourceName": null,
+			"MoveSpeed": 15.998992,
+			"Distance": 5.332998,
+			"StartLocationV": [
+				0.0,
+				0.01,
+				0.0
+			],
+			"EndLocationV": [
+				-5.3329997,
+				0.01,
+				0.0
+			]
+		},
+		{
+			"TargetName": "run_16_right",
+			"SourceName": null,
+			"MoveSpeed": 15.999991,
+			"Distance": 5.33333,
+			"EndLocationV": [
+				5.333333,
+				0.005263158,
+				0.0
+			]
+		},
+		{
+			"TargetName": "run_30",
+			"SourceName": null,
+			"MoveSpeed": 29.999979,
+			"Distance": 18.999989,
+			"EndLocationV": [
+				0.0,
+				19.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "run_30_left",
+			"SourceName": null,
+			"MoveSpeed": 32.142838,
+			"Distance": 20.357134,
+			"EndLocationV": [
+				-20.357141,
+				0.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "run_30_right",
+			"SourceName": null,
+			"MoveSpeed": 29.99998,
+			"Distance": 17.999992,
+			"EndLocationV": [
+				18.0,
+				0.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "run_5",
+			"SourceName": null
+		},
+		{
+			"TargetName": "run_8",
+			"SourceName": null,
+			"MoveSpeed": 8.275856,
+			"Distance": 4.41379,
+			"EndLocationV": [
+				0.0,
+				4.413793,
+				0.0
+			]
+		},
+		{
+			"TargetName": "run_8_notran",
+			"SourceName": null
+		},
+		{
+			"TargetName": "run_8_turn",
+			"SourceName": null,
+			"MoveSpeed": 4.0177336,
+			"TurnSpeed": -13.4639635,
+			"AssetTurn": -3.1415918,
+			"Distance": 0.9374712,
+			"EndLocationQ": [
+				0.0,
+				-0.0,
+				-1.0,
+				-4.371139E-08
+			],
+			"EndLocationV": [
+				0.0,
+				-0.93747175,
+				0.0
+			]
+		},
+		{
+			"TargetName": "run_end_celebrate",
+			"SourceName": null
+		},
+		{
+			"TargetName": "run_fast",
+			"SourceName": null
+		},
+		{
+			"TargetName": "run_fast_attack",
+			"SourceName": null,
+			"MoveSpeed": 1.1586012E-05,
+			"Distance": 9.65501E-06,
+			"EndLocationV": [
+				-6.397823E-08,
+				9.654805E-06,
+				0.0
+			]
+		},
+		{
+			"TargetName": "run_fast_dash_left",
+			"SourceName": null,
+			"MoveSpeed": 0.049999967,
+			"Distance": 0.009999994,
+			"EndLocationV": [
+				0.0,
+				0.01,
+				0.0
+			]
+		},
+		{
+			"TargetName": "run_fast_dash_right",
+			"SourceName": null,
+			"MoveSpeed": 0.05999997,
+			"Distance": 0.009999996,
+			"EndLocationV": [
+				0.0,
+				0.01,
+				0.0
+			]
+		},
+		{
+			"TargetName": "run_fast_jump",
+			"SourceName": null
+		},
+		{
+			"TargetName": "run_fast_skid",
+			"SourceName": null,
+			"MoveSpeed": 3.6206884,
+			"Distance": 3.499999,
+			"EndLocationV": [
+				0.0,
+				3.5,
+				0.0
+			]
+		},
+		{
+			"TargetName": "run_stumble",
+			"SourceName": null
+		},
+		{
+			"TargetName": "spawn",
+			"SourceName": null
+		},
+		{
+			"TargetName": "sub_celebrate",
+			"SourceName": null,
+			"MoveSpeed": 0.26109603,
+			"Distance": 0.78328806,
+			"StartLocationV": [
+				1.9297898E-08,
+				0.625417,
+				-0.39165598
+			],
+			"EndLocationV": [
+				1.9297898E-08,
+				0.625417,
+				-0.39165598
+			]
+		},
+		{
+			"TargetName": "sub_idle",
+			"SourceName": null,
+			"StartLocationV": [
+				1.9297898E-08,
+				0.625417,
+				-0.39165598
+			],
+			"EndLocationV": [
+				1.9297898E-08,
+				0.625417,
+				-0.39165598
+			]
+		},
+		{
+			"TargetName": "tumble",
+			"SourceName": null
+		},
+		{
+			"TargetName": "walk",
+			"SourceName": null
+		},
+		{
+			"TargetName": "walk_notran",
+			"SourceName": null
+		},
+		{
+			"TargetName": "wall_run_left",
+			"SourceName": null
+		},
+		{
+			"TargetName": "wall_run_right",
+			"SourceName": null
+		},
+		{
+			"TargetName": "warthog_dive_flat_start",
+			"SourceName": null
+		},
+		{
+			"TargetName": "warthog_doublejump",
+			"SourceName": null,
+			"StartLocationV": [
+				0.0,
+				0.01,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				0.01,
+				0.0
+			]
+		},
+		{
+			"TargetName": "warthog_idle",
+			"SourceName": null,
+			"StartLocationV": [
+				0.0,
+				0.0,
+				0.0056234994
+			],
+			"EndLocationV": [
+				0.0,
+				0.0,
+				0.0056234994
+			]
+		},
+		{
+			"TargetName": "warthog_jump_loop",
+			"SourceName": null,
+			"StartLocationV": [
+				0.0,
+				0.01,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				0.01,
+				0.0
+			]
+		},
+		{
+			"TargetName": "warthog_jump_run",
+			"SourceName": null,
+			"StartLocationV": [
+				0.0,
+				0.01,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				0.01,
+				0.0
+			]
+		},
+		{
+			"TargetName": "warthog_jump_start",
+			"SourceName": null,
+			"StartLocationV": [
+				0.0,
+				0.01,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				0.01,
+				0.0
+			]
+		},
+		{
+			"TargetName": "warthog_run",
+			"SourceName": null,
+			"MoveSpeed": 20.688934,
+			"Distance": 13.102993,
+			"EndLocationV": [
+				0.0,
+				13.103001,
+				0.0
+			]
+		},
+		{
+			"TargetName": "warthog_run_hit_left_add",
+			"SourceName": null
+		},
+		{
+			"TargetName": "warthog_run_hit_right_add",
+			"SourceName": null
+		},
+		{
+			"TargetName": "warthog_run_lean_left",
+			"SourceName": null,
+			"MoveSpeed": 20.68964,
+			"Distance": 13.103439,
+			"EndLocationV": [
+				-13.103447,
+				0.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "warthog_run_lean_right",
+			"SourceName": null,
+			"MoveSpeed": 20.68964,
+			"Distance": 13.103439,
+			"EndLocationV": [
+				13.103447,
+				0.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "warthog_skid",
+			"SourceName": null
+		},
+		{
+			"TargetName": "wpn_gun_atk_euphonium",
+			"SourceName": null
+		},
+		{
+			"TargetName": "wpn_gun_atk_glove",
+			"SourceName": null
+		},
+		{
+			"TargetName": "wpn_gun_atk_tornado",
+			"SourceName": null,
+			"MoveSpeed": 0.78937536,
+			"Distance": 0.52625024,
+			"EndLocationV": [
+				0.0,
+				-0.52625024,
+				0.0
+			]
+		},
+		{
+			"TargetName": "wpn_gun_drp",
+			"SourceName": null
+		},
+		{
+			"TargetName": "wpn_gun_idl",
+			"SourceName": null
+		},
+		{
+			"TargetName": "wpn_gun_pck",
+			"SourceName": null
+		},
+		{
+			"TargetName": "wpn_gun_rec",
+			"SourceName": null,
+			"MoveSpeed": 1.3767267,
+			"Distance": 0.87192696,
+			"StartLocationV": [
+				0.0,
+				-0.13160376,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				-1.0011157,
+				0.0
+			]
+		},
+		{
+			"TargetName": "wpn_gun_run",
+			"SourceName": null
+		},
+		{
+			"TargetName": "wpn_mel_atk_feather",
+			"SourceName": null,
+			"MoveSpeed": 0.48000014,
+			"Distance": 0.40000013
+		},
+		{
+			"TargetName": "wpn_mel_atk_sack_sonic",
+			"SourceName": null,
+			"MoveSpeed": 0.27982515,
+			"Distance": 0.27982515,
+			"EndLocationV": [
+				0.0,
+				0.173499,
+				0.0
+			]
+		},
+		{
+			"TargetName": "wpn_mel_atk_star",
+			"SourceName": null,
+			"MoveSpeed": 0.4267022,
+			"Distance": 0.3555852,
+			"EndLocationV": [
+				0.0,
+				0.173499,
+				0.0
+			]
+		},
+		{
+			"TargetName": "wpn_mel_drp",
+			"SourceName": null,
+			"MoveSpeed": 0.1305741,
+			"Distance": 0.108811766
+		},
+		{
+			"TargetName": "wpn_mel_idl",
+			"SourceName": null
+		},
+		{
+			"TargetName": "wpn_mel_pck",
+			"SourceName": null
+		},
+		{
+			"TargetName": "wpn_mel_rec",
+			"SourceName": null,
+			"MoveSpeed": 1.5789474,
+			"Distance": 1.0,
+			"EndLocationV": [
+				0.0,
+				-1.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "wpn_mel_rec_sack_sonic",
+			"SourceName": null,
+			"MoveSpeed": 1.5789474,
+			"Distance": 1.0,
+			"EndLocationV": [
+				0.0,
+				-1.0,
+				0.0
+			]
+		},
+		{
+			"TargetName": "wpn_mel_run",
+			"SourceName": null
+		},
+		{
+			"TargetName": "wpn_thw_atk_balloon",
+			"SourceName": null,
+			"MoveSpeed": 1.8577385,
+			"Distance": 2.1673617,
+			"StartLocationV": [
+				0.0,
+				0.28332,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				1.6982316,
+				0.0
+			]
+		},
+		{
+			"TargetName": "wpn_thw_atk_button",
+			"SourceName": null,
+			"MoveSpeed": 0.8683071,
+			"Distance": 1.7366142,
+			"StartLocationV": [
+				0.0,
+				0.28332,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				1.956,
+				0.0
+			]
+		},
+		{
+			"TargetName": "wpn_thw_drp",
+			"SourceName": null,
+			"MoveSpeed": 0.20118746,
+			"Distance": 0.16094998,
+			"StartLocationV": [
+				0.0,
+				0.28332,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				0.44426998,
+				0.0
+			]
+		},
+		{
+			"TargetName": "wpn_thw_idl",
+			"SourceName": null,
+			"StartLocationV": [
+				0.0,
+				0.28332,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				0.28332,
+				0.0
+			]
+		},
+		{
+			"TargetName": "wpn_thw_pck",
+			"SourceName": null,
+			"MoveSpeed": 0.35414997,
+			"Distance": 0.28332,
+			"EndLocationV": [
+				0.0,
+				0.28332,
+				0.0
+			]
+		},
+		{
+			"TargetName": "wpn_thw_rec",
+			"SourceName": null,
+			"MoveSpeed": 1.4995646,
+			"Distance": 0.9997098,
+			"StartLocationV": [
+				0.0,
+				0.28332,
+				0.0
+			],
+			"EndLocationV": [
+				0.0,
+				-0.7163898,
+				0.0
+			]
+		},
+		{
+			"TargetName": "wpn_thw_run",
+			"SourceName": null
+		},
+		{
+			"TargetName": "yank_release",
+			"SourceName": null
+		}
+	]
+}
