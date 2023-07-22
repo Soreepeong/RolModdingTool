@@ -4,11 +4,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 
-namespace SynergyLib.FileFormat.CryEngine.CryXml;
+namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
 [JsonConverter(typeof(ParsedGenMaskJsonConverter))]
-public class ParsedGenMask : IEnumerable<string> {
-    private readonly HashSet<string> _items;
+public class ParsedGenMask : IEnumerable<string>, ICloneable {
+    private HashSet<string> _items;
     public bool UseBumpMap;
     public bool UseSpecularMap;
     public bool UseScatterGlossInNormalMap;
@@ -74,6 +74,12 @@ public class ParsedGenMask : IEnumerable<string> {
     public override string ToString() {
         var r = string.Join('%', this);
         return r == "" ? "" : "%" + r;
+    }
+
+    public object Clone() {
+        var res = (ParsedGenMask) MemberwiseClone();
+        res._items = _items.ToHashSet();
+        return res;
     }
 
     public class ParsedGenMaskJsonConverter : JsonConverter {

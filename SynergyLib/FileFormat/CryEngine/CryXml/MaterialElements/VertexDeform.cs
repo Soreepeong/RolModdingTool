@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 using System.Xml.Serialization;
 using Newtonsoft.Json;
 using SynergyLib.Util.CustomJsonConverters;
@@ -6,7 +7,7 @@ using SynergyLib.Util.CustomJsonConverters;
 namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
 [XmlRoot("VertexDeform")]
-public class VertexDeform {
+public class VertexDeform : ICloneable{
     [JsonConverter(typeof(Vector3JsonConverter))]
     [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
     [XmlIgnore]
@@ -50,4 +51,12 @@ public class VertexDeform {
     [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
     [XmlElement("WaveZ")]
     public VertexDeformWaveAxis? WaveZ { get; set; }
+
+    public object Clone() {
+        var res = (VertexDeform) MemberwiseClone();
+        res.WaveX = (VertexDeformWaveAxis?) res.WaveX?.Clone();
+        res.WaveY = (VertexDeformWaveAxis?) res.WaveY?.Clone();
+        res.WaveZ = (VertexDeformWaveAxis?) res.WaveZ?.Clone();
+        return res;
+    }
 }

@@ -55,7 +55,7 @@ public class Material : MaterialOrRef {
     [DefaultValue(0f)]
     public float AlphaTest { get; set; }
 
-    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
     [XmlAttribute("vertModifType")]
     [DefaultValue(0)]
     public int VertModifType { get; set; }
@@ -67,9 +67,8 @@ public class Material : MaterialOrRef {
 
     [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
     [XmlAttribute("SpecularLevel")]
+    [DefaultValue(0f)]
     public float SpecularLevel { get; set; }
-
-    public bool ShouldSerializeSpecularLevel() => !Flags.HasFlag(MaterialFlags.MultiSubmtl);
 
     [JsonProperty]
     [XmlAttribute("Name")]
@@ -101,7 +100,8 @@ public class Material : MaterialOrRef {
 
     [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
     [XmlAttribute("SurfaceType")]
-    public string SurfaceType { get; set; } = string.Empty;
+    [DefaultValue(SurfaceType.Empty)]
+    public SurfaceType SurfaceType { get; set; } = SurfaceType.Empty;
 
     public bool ShouldSerializeSurfaceType() => !Flags.HasFlag(MaterialFlags.MultiSubmtl);
 
@@ -173,6 +173,16 @@ public class Material : MaterialOrRef {
     public override string ToString() =>
         $"Name: {Name}, Shader: {Shader}, Submaterials: {SubMaterialsAndRefs?.Count ?? 0}";
 
+    public override object Clone() {
+        var res = (Material) MemberwiseClone();
+        res.GenMask = (ParsedGenMask) res.GenMask.Clone();
+        res.SubMaterialsAndRefs = SubMaterialsAndRefs?.Select(x => x.Clone()).Cast<MaterialOrRef>().ToList();
+        res.PublicParams = (PublicParams?) res.PublicParams?.Clone();
+        res.VertexDeform = (VertexDeform?) res.VertexDeform?.Clone();
+        res.Textures = res.Textures?.Select(x => x.Clone()).Cast<Texture>().ToList();
+        return res;
+    }
+
     public IEnumerable<Material> EnumerateHierarchy() {
         yield return this;
         if (SubMaterials is { } sme)
@@ -181,4 +191,30 @@ public class Material : MaterialOrRef {
     }
 
     public Texture? FindTexture(TextureMapType mapType) => Textures?.SingleOrDefault(x => x.Map == mapType);
+
+    public void AddOrReplaceSubmaterialsOfSameName(IEnumerable<Material?>? submats) {
+        if (submats is null)
+            return;
+        
+        foreach (var m in submats) {
+            if (m is null)
+                continue;
+            
+            SubMaterialsAndRefs ??= new();
+            var found = false;
+            for (var i = 0; i < SubMaterialsAndRefs.Count; i++) {
+                if (SubMaterialsAndRefs[i] is not Material m2)
+                    continue;
+                if (m2.Name != m.Name)
+                    continue;
+
+                SubMaterialsAndRefs[i] = m;
+                found = true;
+                break;
+            }
+
+            if (!found)
+                SubMaterialsAndRefs.Add(m);
+        }
+    }
 }

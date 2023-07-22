@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using SynergyLib.FileFormat.CryEngine.CryXml;
 using SynergyLib.FileFormat.CryEngine.CryXml.CharacterDefinitionElements;
 using SynergyLib.FileFormat.GltfInterop;
+using SynergyLib.ModMetadata;
 
 namespace SynergyLib.FileFormat.CryEngine;
 
@@ -30,6 +31,13 @@ public partial class CryCharacter {
 
     public static CryCharacter FromGltf(GltfTuple gltf, string? name, CancellationToken cancellationToken) =>
         new GltfImporter(gltf, name, cancellationToken).Process();
+
+    public static CryCharacter FromGltfAndMetadata(
+        GltfTuple gltf,
+        CharacterMetadata metadata,
+        string externalBasePath,
+        CancellationToken cancellationToken) =>
+        new GltfImporter(gltf, metadata.Name, cancellationToken).WithMetadata(metadata, externalBasePath).Process();
 
     public static async Task<CryCharacter> FromCryEngineFiles(
         Func<string, CancellationToken, Task<Stream>> streamOpener,

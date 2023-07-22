@@ -11,10 +11,12 @@ using BCnEncoder.Shared.ImageFiles;
 using SixLabors.ImageSharp;
 using SynergyLib.FileFormat;
 using SynergyLib.FileFormat.CryEngine;
+using SynergyLib.FileFormat.CryEngine.CryXml;
 using SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 using SynergyLib.FileFormat.DirectDrawSurface;
 using SynergyLib.FileFormat.DotSquish;
 using SynergyLib.FileFormat.GltfInterop;
+using SynergyLib.ModMetadata;
 using SynergyLib.Util;
 using DdsFile = SynergyLib.FileFormat.DirectDrawSurface.DdsFile;
 
@@ -67,36 +69,65 @@ public class TestDevProgramCommand : RootProgramCommand {
         CryCharacter.FromCryEngineFiles(ReaderFunc, "objects/characters/5_minibosses/metal_sonic/metal_sonic", default);
 
     public async Task<int> Handle() {
+        var gltf = GltfTuple.FromFile("Z:/ROL3D/sonic/sonic.gltf");
+        var metadata = CharacterMetadata.FromJsonFile("Z:/ROL3D/sonic/sonic.json");
+        var character = CryCharacter.FromGltfAndMetadata(gltf, metadata, "Z:/ROL3D/sonic", default);
+
         var level = await _reader.GetPackfile(TestLevelName);
-        var sonic = await ReadSonic();
+        var sonic = await CryCharacter.FromCryEngineFiles(ReaderFunc, metadata.TargetPath, default);
 
-        var gltf2 = GltfTuple.FromFile("Z:/ROL3D/stixsonic/untitled.glb");
-        var char2 = CryCharacter.FromGltf(gltf2, gltf2.Root.Nodes[0].Name, default);
-        foreach (var (k, v) in char2.Model.ExtraTextures) {
-            using var asdf = File.Create(Path.Join("Z:/rol3d", "asdf_" + Path.GetFileName(k)));
-            v.Position = 0;
-            v.CopyTo(asdf);
-        }
-        var bb = char2.Model.CalculateBoundingBox();
-        char2.ApplyScaleTransformation(sonic.Model.CalculateBoundingBox().Radius / bb.Radius);
-        foreach (var m in char2.Model.Nodes.SelectMany(x => x.EnumerateHierarchy().SelectMany(y => y.Item1.Meshes))) {
-            for (var i = 0; i < m.Vertices.Length; i++)
-                m.Vertices[i].Position.Z += 1f;
-        }
-        char2.Model.RootController = sonic.Model.RootController;
+        var newMaterial = (Material) sonic.Model.Material!.Clone();
+        newMaterial.AddOrReplaceSubmaterialsOfSameName(character.Model.Material?.SubMaterials);
+        character.Model.Material = newMaterial;
 
-        char2.Model.Material!.SubMaterialsAndRefs!.AddRange(sonic.Model.Material!.SubMaterialsAndRefs!);
-        foreach (var (k, v) in char2.Model.ExtraTextures)
+        character.CryAnimationDatabase?.PasteFrom(sonic.CryAnimationDatabase, false);
+
+        foreach (var (k, v) in character.Model.ExtraTextures)
             level.PutEntry(0, k, new(v.ToArray()), SkinFlag.Sonic);
-        PbxmlFile.SaveObjectToTextFile("Z:/ROL3D/test.xml", char2.Model.Material);
-        level.GetEntry(sonic.Definition!.Model!.File!, false).Source = new(char2.Model.GetGeometryBytes());
-        level.GetEntry(sonic.Definition!.Model!.Material!, false).Source = new(char2.Model.GetMaterialBytes());
+        level.GetEntry(sonic.Definition!.Model!.File!, false).Source = new(character.Model.GetGeometryBytes());
+        level.GetEntry(sonic.Definition!.Model!.Material!, false).Source = new(character.Model.GetMaterialBytes());
+        if (sonic.CharacterParameters?.TracksDatabasePath is { } dbaPath &&
+            character.CryAnimationDatabase is { } newDba)
+            level.GetEntry(dbaPath, false).Source = new(newDba.GetBytes());
+        
         var targetPath = _reader.GetPackfilePath(TestLevelName);
         while (targetPath.EndsWith(".bak"))
             targetPath = targetPath[..^4];
         await CompressProgramCommand.WriteAndPrintProgress(targetPath, level, default, default);
         return 0;
     }
+
+    // public async Task<int> Handle() {
+    //     var level = await _reader.GetPackfile(TestLevelName);
+    //     var sonic = await ReadSonic();
+    //
+    //     var gltf2 = GltfTuple.FromFile("Z:/ROL3D/stixsonic/untitled.glb");
+    //     var char2 = CryCharacter.FromGltf(gltf2, gltf2.Root.Nodes[0].Name, default);
+    //     foreach (var (k, v) in char2.Model.ExtraTextures) {
+    //         using var asdf = File.Create(Path.Join("Z:/rol3d", "asdf_" + Path.GetFileName(k)));
+    //         v.Position = 0;
+    //         v.CopyTo(asdf);
+    //     }
+    //     var bb = char2.Model.CalculateBoundingBox();
+    //     char2.ApplyScaleTransformation(sonic.Model.CalculateBoundingBox().Radius / bb.Radius);
+    //     foreach (var m in char2.Model.Nodes.SelectMany(x => x.EnumerateHierarchy().SelectMany(y => y.Item1.Meshes))) {
+    //         for (var i = 0; i < m.Vertices.Length; i++)
+    //             m.Vertices[i].Position.Z += 1f;
+    //     }
+    //     char2.Model.RootController = sonic.Model.RootController;
+    //
+    //     char2.Model.Material!.SubMaterialsAndRefs!.AddRange(sonic.Model.Material!.SubMaterialsAndRefs!);
+    //     foreach (var (k, v) in char2.Model.ExtraTextures)
+    //         level.PutEntry(0, k, new(v.ToArray()), SkinFlag.Sonic);
+    //     PbxmlFile.SaveObjectToTextFile("Z:/ROL3D/test.xml", char2.Model.Material);
+    //     level.GetEntry(sonic.Definition!.Model!.File!, false).Source = new(char2.Model.GetGeometryBytes());
+    //     level.GetEntry(sonic.Definition!.Model!.Material!, false).Source = new(char2.Model.GetMaterialBytes());
+    //     var targetPath = _reader.GetPackfilePath(TestLevelName);
+    //     while (targetPath.EndsWith(".bak"))
+    //         targetPath = targetPath[..^4];
+    //     await CompressProgramCommand.WriteAndPrintProgress(targetPath, level, default, default);
+    //     return 0;
+    // }
 
     // public async Task<int> Handle() {
     //     var level = await _reader.GetPackfile(TestLevelName);

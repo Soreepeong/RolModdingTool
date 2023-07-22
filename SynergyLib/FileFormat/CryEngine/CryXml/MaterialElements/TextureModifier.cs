@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using System.Xml.Serialization;
 using Newtonsoft.Json;
 
@@ -6,7 +7,7 @@ namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
 /// <summary>The texture modifier</summary>
 [XmlRoot("TexMod")]
-public class TextureModifier {
+public class TextureModifier : ICloneable {
     [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
     [DefaultValue(ETexModMoveType.NoChange)]
     public ETexModMoveType UOscillatorType = ETexModMoveType.NoChange;
@@ -179,4 +180,6 @@ public class TextureModifier {
     [XmlAttribute("TexMod_VOscillatorAmplitude")]
     [DefaultValue(0)]
     public float VOscillatorAmplitude { get; set; }
+
+    public object Clone() => MemberwiseClone();
 }

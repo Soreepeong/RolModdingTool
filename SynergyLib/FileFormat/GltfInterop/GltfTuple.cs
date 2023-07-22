@@ -364,7 +364,7 @@ public class GltfTuple {
         var ddsName = $"dds/{Path.GetFileName(baseName)}.dds";
         return Root.Textures.AddAndGetIndex(
             new() {
-                Name = baseName,
+                Name = pngName,
                 Source = Root.Images.AddAndGetIndex(
                     new() {
                         Name = pngName,

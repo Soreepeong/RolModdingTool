@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using System.Xml.Serialization;
 using Newtonsoft.Json;
 using SynergyLib.FileFormat.GltfInterop.Models;
@@ -6,7 +7,7 @@ using SynergyLib.FileFormat.GltfInterop.Models;
 namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
 [XmlRoot("Texture")]
-public class Texture {
+public class Texture : ICloneable{
     [JsonIgnore]
     [XmlAttribute("Map")]
     public string? MapString { get; set; }
@@ -46,7 +47,7 @@ public class Texture {
     [XmlAttribute("File")]
     public string? File { get; set; }
 
-    [JsonProperty]
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
     [XmlAttribute("TexType")]
     [DefaultValue(TextureType.Default)]
     public TextureType TexType;
@@ -84,6 +85,7 @@ public class Texture {
 
     [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
     [XmlIgnore]
+    [DefaultValue(TextureFilter.None)]
     public TextureFilter Filter {
         get => (TextureFilter) FilterInt;
         set => FilterInt = (int) value;
@@ -96,4 +98,11 @@ public class Texture {
     [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
     [XmlIgnore]
     public GltfTextureInfo? GltfTextureInfo;
+
+    public object Clone() {
+        var res = (Texture) MemberwiseClone();
+        res.Modifier = (TextureModifier?) res.Modifier?.Clone();
+        res.GltfTextureInfo = (GltfTextureInfo?) res.GltfTextureInfo?.Clone();
+        return res;
+    }
 }

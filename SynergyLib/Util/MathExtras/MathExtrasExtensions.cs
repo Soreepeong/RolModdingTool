@@ -44,6 +44,18 @@ public static class MathExtrasExtensions {
     public static bool AnyLessThan(in this Vector4 l, in Vector4 r) =>
         l.X < r.X || l.Y < r.Y || l.Z < r.Z || l.W < r.W;
 
+    public static bool HasEquivalentValue(in this Vector3 l, in Vector3 r, float threshold) =>
+        (l - r).LengthSquared() < threshold * threshold;
+
+    public static bool HasEquivalentValue(in this Vector4 l, in Vector4 r, float threshold) =>
+        (l - r).LengthSquared() < threshold * threshold;
+
+    public static bool HasEquivalentValue(in this Quaternion l, in Quaternion r, float threshold) =>
+        MathF.Abs(l.X - l.Y) <= threshold
+        && MathF.Abs(l.Y - r.Y) <= threshold
+        && MathF.Abs(l.Z - r.Z) <= threshold
+        && MathF.Abs(l.W - r.W) <= threshold;
+
     public static bool IsIdentity(this Matrix4x4 m, double threshold) {
         if (MathF.Abs(m.M11 - 1) >= threshold) return false;
         if (MathF.Abs(m.M22 - 1) >= threshold) return false;

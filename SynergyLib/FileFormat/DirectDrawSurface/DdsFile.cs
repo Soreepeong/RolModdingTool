@@ -23,7 +23,7 @@ public class DdsFile {
         _data = data;
     }
 
-    public DdsFile(string name, Stream stream, bool closeAfter = true) {
+    public DdsFile(string name, Stream stream, bool leaveOpen = false) {
         Name = name;
         try {
             try {
@@ -47,7 +47,7 @@ public class DdsFile {
                 }
             }
         } finally {
-            if (closeAfter)
+            if (!leaveOpen)
                 stream.Dispose();
         }
     }

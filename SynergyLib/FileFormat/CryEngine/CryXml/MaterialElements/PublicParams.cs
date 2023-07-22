@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 using System.Xml.Serialization;
 using Newtonsoft.Json;
 using SynergyLib.Util.CustomJsonConverters;
@@ -6,7 +7,7 @@ using SynergyLib.Util.CustomJsonConverters;
 namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
 [XmlRoot("PublicParams")]
-public class PublicParams {
+public class PublicParams : ICloneable {
     [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
     [JsonConverter(typeof(Vector3JsonConverter))]
     [XmlIgnore]
@@ -724,7 +725,9 @@ public class PublicParams {
     [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
     [XmlIgnore]
     public float? BlendMaskTiling;
-
+    
+    public object Clone() => MemberwiseClone();
+    
     [JsonIgnore]
     [XmlAttribute("SilhouetteColor")]
     public string? SilhouetteColorString {

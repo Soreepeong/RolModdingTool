@@ -14,6 +14,18 @@ namespace SynergyLib.FileFormat.CryEngine;
 public class CryAnimationDatabase {
     public readonly Dictionary<string, Animation> Animations = new();
 
+    public void PasteFrom(Dictionary<string, Animation> animations, bool overwrite) {
+        foreach (var (k, v) in animations) {
+            if (overwrite || !Animations.ContainsKey(k))
+                Animations[k] = v;
+        }
+    }
+
+    public void PasteFrom(CryAnimationDatabase? adb, bool overwrite) {
+        if (adb is not null)
+            PasteFrom(adb.Animations, overwrite);
+    }
+
     public void ApplyScaleTransformation(float scale) {
         foreach (var t in Animations.Values.SelectMany(x => x.Tracks.Values.Select(y => y.Position)).Distinct()) {
             if (t is null)

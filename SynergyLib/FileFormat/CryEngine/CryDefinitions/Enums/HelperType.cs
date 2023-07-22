@@ -1,4 +1,4 @@
-namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Chunks;
+namespace SynergyLib.FileFormat.CryEngine.CryDefinitions.Enums;
 
 public enum HelperType {
     Point = 0,

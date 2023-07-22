@@ -1,9 +1,10 @@
-﻿using System.Xml.Serialization;
+﻿using System;
+using System.Xml.Serialization;
 using Newtonsoft.Json;
 
 namespace SynergyLib.FileFormat.CryEngine.CryXml.MaterialElements;
 
-public class VertexDeformWaveAxis {
+public class VertexDeformWaveAxis : ICloneable {
     [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
     [XmlAttribute("Type")]
     public int Type { get; set; }
@@ -23,4 +24,6 @@ public class VertexDeformWaveAxis {
     [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
     [XmlAttribute("Freq")]
     public float Freq { get; set; }
+
+    public object Clone() => MemberwiseClone();
 }

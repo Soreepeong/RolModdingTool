@@ -1,4 +1,5 @@
 using System.Numerics;
+using SynergyLib.FileFormat.CryEngine.CryDefinitions.Enums;
 using SynergyLib.Util.BinaryRW;
 using SynergyLib.Util.MathExtras;
 

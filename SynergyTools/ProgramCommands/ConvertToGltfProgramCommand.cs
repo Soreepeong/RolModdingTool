@@ -9,7 +9,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using SynergyLib.FileFormat;
 using SynergyLib.FileFormat.CryEngine;
+using SynergyLib.ModMetadata;
 using SynergyLib.Util;
+using SynergyLib.Util.CustomJsonConverters;
 
 namespace SynergyTools.ProgramCommands;
 
@@ -62,12 +64,23 @@ public class ConvertToGltfProgramCommand : RootProgramCommand {
         () => false,
         "Only export required textures.");
 
+    public static readonly Option<bool> ExportMetadataOption = new(
+        "--export-metadata",
+        () => false,
+        "Create metadata JSON file.");
+
     public static readonly Option<string?> BaseOutPathOption = new(
         "--out-path",
         () => null,
         "Specify output directory. Defaults to current directory.");
 
+    public static readonly Option<Vector3JsonConverter.Notation> ColorNotationOption = new(
+        "--color-notation",
+        () => Vector3JsonConverter.Notation.HexByteString,
+        "Specify text representation for color values in metadata file.");
+
     static ConvertToGltfProgramCommand() {
+        Command.AddAlias("export-gltf");
         Command.AddArgument(PathArgument);
         BaseOutPathOption.AddAlias("-o");
         Command.AddOption(BaseOutPathOption);
@@ -83,6 +96,10 @@ public class ConvertToGltfProgramCommand : RootProgramCommand {
         Command.AddOption(ExportOnlyRequiredTexturesOption);
         PreserveDirectoryStructureOption.AddAlias("-p");
         Command.AddOption(PreserveDirectoryStructureOption);
+        ExportMetadataOption.AddAlias("-m");
+        Command.AddOption(ExportMetadataOption);
+        ColorNotationOption.AddAlias("-c");
+        Command.AddOption(ColorNotationOption);
         Command.SetHandler(ic => new ConvertToGltfProgramCommand(ic.ParseResult).Handle(ic.GetCancellationToken()));
     }
 
@@ -94,6 +111,8 @@ public class ConvertToGltfProgramCommand : RootProgramCommand {
     public readonly bool UseSingleFile;
     public readonly bool ExportOnlyRequiredTextures;
     public readonly bool PreserveDirectoryStructure;
+    public readonly bool ExportMetadata;
+    public readonly Vector3JsonConverter.Notation ColorNotation;
 
     public ConvertToGltfProgramCommand(ParseResult parseResult) : base(parseResult) {
         InPathArray = parseResult.GetValueForArgument(PathArgument);
@@ -104,6 +123,8 @@ public class ConvertToGltfProgramCommand : RootProgramCommand {
         UseSingleFile = parseResult.GetValueForOption(UseSingleFileOption);
         ExportOnlyRequiredTextures = parseResult.GetValueForOption(ExportOnlyRequiredTexturesOption);
         PreserveDirectoryStructure = parseResult.GetValueForOption(PreserveDirectoryStructureOption);
+        ExportMetadata = parseResult.GetValueForOption(ExportMetadataOption);
+        ColorNotation = parseResult.GetValueForOption(ColorNotationOption);
     }
 
     public async Task<int> Handle(CancellationToken cancellationToken) {
@@ -155,7 +176,7 @@ public class ConvertToGltfProgramCommand : RootProgramCommand {
 
         for (var i = 0; i < pathList.Count; i++) {
             cancellationToken.ThrowIfCancellationRequested();
-            var path = pathList[i];
+            var path = pathList[i].Trim(' ', '/', '\\').Replace("\\", "/");
             var outputName = Path.ChangeExtension(
                 PreserveDirectoryStructure
                     ? path
@@ -189,6 +210,12 @@ public class ConvertToGltfProgramCommand : RootProgramCommand {
                 if (UseSingleFile) {
                     Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
                     gltf.CompileSingleBufferToFile(outPath);
+                    
+                    if (ExportMetadata)
+                        CharacterMetadata.FromCharacter(chr, path, gltf).ToJson(
+                            Path.ChangeExtension(outPath, ".json"),
+                            ColorNotation);
+                    
                     Console.WriteLine("=> File created at: {0}", outPath);
                 } else {
                     await gltf.CompileSingleBufferToFiles(
@@ -196,6 +223,11 @@ public class ConvertToGltfProgramCommand : RootProgramCommand {
                         Path.GetFileNameWithoutExtension(path),
                         cancellationToken);
 
+                    if (ExportMetadata)
+                        CharacterMetadata.FromCharacter(chr, path, gltf).ToJson(
+                            Path.Join(outPath, Path.GetFileName(outPath.TrimEnd('/', '\\')) + ".json"),
+                            ColorNotation);
+                    
                     Console.WriteLine("=> Directory created at: {0}", outPath);
                 }
             } catch (Exception e) {
