@@ -25,6 +25,8 @@ public struct AaBb : IEquatable<AaBb> {
 
     public Vector3 Center => (Min + Max) / 2;
 
+    public Vector3 SizeVector => Max - Min;
+
     public float Radius => ((Max - Min) / 2).Length();
 
     public void Expand(in Vector3 v) {

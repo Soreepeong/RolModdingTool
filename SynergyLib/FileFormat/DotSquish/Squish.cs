@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace SynergyLib.FileFormat.DotSquish {
     // From DotSquish
@@ -16,7 +18,7 @@ namespace SynergyLib.FileFormat.DotSquish {
                 _rangeFit = new(_colors, options);
                 _clusterFit = new(_colors, options);
             }
-            
+
             public void CompressMasked(ReadOnlySpan<byte> bgra, int mask, Span<byte> block) {
                 var colourBlock = _options.Method is SquishMethod.Dxt3 or SquishMethod.Dxt5 ? block[8..] : block;
 
@@ -48,7 +50,7 @@ namespace SynergyLib.FileFormat.DotSquish {
                 }
             }
         }
-        
+
         internal static void Decompress(Span<byte> bgra, ReadOnlySpan<byte> block, SquishOptions options) {
             var colorBlock = options.Method is SquishMethod.Dxt3 or SquishMethod.Dxt5 ? block[8..] : block;
 
@@ -120,6 +122,88 @@ namespace SynergyLib.FileFormat.DotSquish {
                     blocks = blocks[bytesPerBlock..];
                 }
             }
+        }
+
+        public static unsafe Task CompressImageAsync<T>(
+            ReadOnlyMemory<T> bgraMemory,
+            int stride,
+            int width,
+            int height,
+            Memory<byte> blocksMemory,
+            SquishOptions options) where T : unmanaged {
+            // initialise the block output
+            var bytesPerBlock = options.Method == SquishMethod.Dxt1 ? 8 : 16;
+
+            var horzBlockCount = (width + 3) / 4;
+            var vertBlockCount = (height + 3) / 4;
+            var totalBlockCount = horzBlockCount * vertBlockCount;
+            var threads = Math.Min(options.Threads < 1 ? Environment.ProcessorCount : options.Threads, totalBlockCount);
+
+            if (threads == 1) {
+                fixed (void* pBgraTyped = bgraMemory.Span)
+                    CompressImage(
+                        new(pBgraTyped, bgraMemory.Length * sizeof(T)),
+                        stride,
+                        width,
+                        height,
+                        blocksMemory.Span,
+                        options);
+
+                return Task.CompletedTask;
+            }
+
+            return Task.WhenAll(
+                Enumerable.Range(0, threads).Select(
+                    i => Task.Run(
+                        () => {
+                            var compresser = new BlockCompresser(options);
+                            var blockIndex = totalBlockCount * i / threads;
+                            var blockIndexTo = totalBlockCount * (i + 1) / threads;
+
+                            var bgraTyped = bgraMemory.Span;
+                            fixed (void* pBgraTyped = bgraTyped) {
+                                var bgra = new Span<byte>(pBgraTyped, bgraTyped.Length * sizeof(T));
+                                var blocks = blocksMemory.Span[(bytesPerBlock * blockIndex)..];
+
+                                // loop over blocks
+                                Span<byte> sourceBgra = stackalloc byte[16 * 4];
+                                for (; blockIndex < blockIndexTo; blockIndex++) {
+                                    var y = blockIndex / horzBlockCount * 4;
+                                    var x = blockIndex % horzBlockCount * 4;
+
+                                    options.CancellationToken.ThrowIfCancellationRequested();
+
+                                    // build the 4x4 block of pixels
+                                    var targetPixel = sourceBgra;
+                                    var mask = 0;
+                                    for (var py = 0; py < 4; ++py) {
+                                        for (var px = 0; px < 4; ++px) {
+                                            // get the source pixel in the image
+                                            var sx = x + px;
+                                            var sy = y + py;
+
+                                            // enable if we're in the image
+                                            if (sx < width && sy < height) {
+                                                // copy the bgra value
+                                                bgra.Slice(stride * sy + 4 * sx, 4).CopyTo(targetPixel);
+
+                                                // enable this pixel
+                                                mask |= (1 << (4 * py + px));
+                                            }
+
+                                            // advance
+                                            targetPixel = targetPixel[4..];
+                                        }
+                                    }
+
+                                    // compress it into the output
+                                    compresser.CompressMasked(sourceBgra, mask, blocks);
+
+                                    // advance
+                                    blocks = blocks[bytesPerBlock..];
+                                }
+                            }
+                        }, options.CancellationToken)));
         }
 
         public static void DecompressImage(

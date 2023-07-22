@@ -29,10 +29,10 @@ public partial class CryCharacter {
         CancellationToken cancellationToken) =>
         new GltfExporter(this, getStream, useAnimation, exportOnlyRequiredTextures, cancellationToken).Process();
 
-    public static CryCharacter FromGltf(GltfTuple gltf, string? name, CancellationToken cancellationToken) =>
+    public static Task<CryCharacter> FromGltf(GltfTuple gltf, string? name, CancellationToken cancellationToken) =>
         new GltfImporter(gltf, name, cancellationToken).Process();
 
-    public static CryCharacter FromGltfAndMetadata(
+    public static Task<CryCharacter> FromGltfAndMetadata(
         GltfTuple gltf,
         CharacterMetadata metadata,
         string externalBasePath,

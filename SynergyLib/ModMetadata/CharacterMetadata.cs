@@ -30,6 +30,9 @@ public class CharacterMetadata {
     [JsonProperty]
     public string TargetPath { get; set; }
 
+    [JsonProperty(NullValueHandling = NullValueHandling.Include)]
+    public float? HeightScaleRelativeToTarget { get; set; }
+
     [JsonProperty]
     public List<Material> Materials { get; set; } = new();
 
@@ -78,7 +81,9 @@ public class CharacterMetadata {
         if (character is null)
             return null;
 
-        var metadata = new CharacterMetadata(character.Model.Nodes.Single().Name, path);
+        var metadata = new CharacterMetadata(character.Model.Nodes.Single().Name, path) {
+            HeightScaleRelativeToTarget = 1,
+        };
         if (character.Model.Material is { } srcmat) {
             if (srcmat.SubMaterials?.Any() is true)
                 metadata.Materials.AddRange(
@@ -123,7 +128,7 @@ public class CharacterMetadata {
         }
 
         if (character.CryAnimationDatabase?.Animations is { } animations) {
-            var names = animations.Keys.StripCommonParentPaths();
+            var names = animations.Keys.Select(x => Path.ChangeExtension(x, null)).StripCommonParentPaths();
             foreach (var (name, data) in names.Zip(animations.Values).OrderBy(x => x.First.ToLowerInvariant()))
                 metadata.Animations.Add(new(name, data.MotionParams));
         }

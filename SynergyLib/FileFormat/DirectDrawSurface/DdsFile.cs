@@ -160,20 +160,10 @@ public class DdsFile {
         return DataOffset + size * imageIndex;
     }
 
-    public Span<byte> ImageData(int imageIndex) {
-        var offset = ImageDataOffset(imageIndex, out var size);
-        return new(_data, offset, size);
-    }
-
     public int FaceDataOffset(int imageIndex, int faceIndex, out int size) {
         var offset = ImageDataOffset(imageIndex, out _);
         size = FaceSize;
         return offset + size * faceIndex;
-    }
-
-    public Span<byte> FaceData(int imageIndex, int faceIndex) {
-        var offset = FaceDataOffset(imageIndex, faceIndex, out var size);
-        return new(_data, offset, size);
     }
 
     public int MipmapDataOffset(int imageIndex, int faceIndex, int mipmapIndex, out int size) {
@@ -183,29 +173,63 @@ public class DdsFile {
         return baseOffset + mipOffset;
     }
 
-    public Span<byte> MipmapData(int imageIndex, int faceIndex, int mipmapIndex) {
-        var offset = MipmapDataOffset(imageIndex, faceIndex, mipmapIndex, out var size);
-        return new(_data, offset, size);
-    }
-
     public int SliceDataOffset(int imageIndex, int faceIndex, int mipmapIndex, int sliceIndex, out int size) {
         var offset = MipmapDataOffset(imageIndex, faceIndex, mipmapIndex, out _);
         size = SliceSize(mipmapIndex);
         return offset + size * sliceIndex;
     }
 
-    public Span<byte> SliceData(int imageIndex, int faceIndex, int mipmapIndex, int sliceIndex) {
-        var offset = SliceDataOffset(imageIndex, faceIndex, mipmapIndex, sliceIndex, out var size);
-        return new(_data, offset, size);
-    }
-
     public int SliceOrFaceDataOffset(int imageIndex, int mipmapIndex, int sliceIndex, out int size) => IsCubeMap
         ? SliceDataOffset(imageIndex, sliceIndex, mipmapIndex, 0, out size)
         : SliceDataOffset(imageIndex, 0, mipmapIndex, sliceIndex, out size);
 
-    public Span<byte> SliceOrFaceData(int imageIndex, int mipmapIndex, int sliceIndex) => IsCubeMap
-        ? SliceData(imageIndex, sliceIndex, mipmapIndex, 0)
-        : SliceData(imageIndex, 0, mipmapIndex, sliceIndex);
+    public Span<byte> ImageSpan(int imageIndex) {
+        var offset = ImageDataOffset(imageIndex, out var size);
+        return new(_data, offset, size);
+    }
+
+    public Span<byte> FaceSpan(int imageIndex, int faceIndex) {
+        var offset = FaceDataOffset(imageIndex, faceIndex, out var size);
+        return new(_data, offset, size);
+    }
+
+    public Span<byte> MipmapSpan(int imageIndex, int faceIndex, int mipmapIndex) {
+        var offset = MipmapDataOffset(imageIndex, faceIndex, mipmapIndex, out var size);
+        return new(_data, offset, size);
+    }
+
+    public Span<byte> SliceSpan(int imageIndex, int faceIndex, int mipmapIndex, int sliceIndex) {
+        var offset = SliceDataOffset(imageIndex, faceIndex, mipmapIndex, sliceIndex, out var size);
+        return new(_data, offset, size);
+    }
+
+    public Span<byte> SliceOrFaceSpan(int imageIndex, int mipmapIndex, int sliceIndex) => IsCubeMap
+        ? SliceSpan(imageIndex, sliceIndex, mipmapIndex, 0)
+        : SliceSpan(imageIndex, 0, mipmapIndex, sliceIndex);
+
+    public Memory<byte> ImageMemory(int imageIndex) {
+        var offset = ImageDataOffset(imageIndex, out var size);
+        return new(_data, offset, size);
+    }
+
+    public Memory<byte> FaceMemory(int imageIndex, int faceIndex) {
+        var offset = FaceDataOffset(imageIndex, faceIndex, out var size);
+        return new(_data, offset, size);
+    }
+
+    public Memory<byte> MipmapMemory(int imageIndex, int faceIndex, int mipmapIndex) {
+        var offset = MipmapDataOffset(imageIndex, faceIndex, mipmapIndex, out var size);
+        return new(_data, offset, size);
+    }
+
+    public Memory<byte> SliceMemory(int imageIndex, int faceIndex, int mipmapIndex, int sliceIndex) {
+        var offset = SliceDataOffset(imageIndex, faceIndex, mipmapIndex, sliceIndex, out var size);
+        return new(_data, offset, size);
+    }
+
+    public Memory<byte> SliceOrFaceMemory(int imageIndex, int mipmapIndex, int sliceIndex) => IsCubeMap
+        ? SliceMemory(imageIndex, sliceIndex, mipmapIndex, 0)
+        : SliceMemory(imageIndex, 0, mipmapIndex, sliceIndex);
 
     public void SetBufferUnchecked(byte[] buffer) => _data = buffer;
 

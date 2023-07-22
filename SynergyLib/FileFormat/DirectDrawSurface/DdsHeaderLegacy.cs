@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 
 namespace SynergyLib.FileFormat.DirectDrawSurface;
 
@@ -8,4 +9,11 @@ public struct DdsHeaderLegacy {
 
     public uint Magic;
     public DdsHeader Header;
+
+    public readonly unsafe void WriteTo<T>(Span<T> target) where T : unmanaged {
+        fixed (void* pSource = &this)
+        fixed (void* pTarget = target)
+            new Span<byte>(pSource, sizeof(DdsHeaderLegacy)).CopyTo(
+                new(pTarget, target.Length * sizeof(T)));
+    }
 }

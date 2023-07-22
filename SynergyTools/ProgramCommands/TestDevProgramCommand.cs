@@ -71,7 +71,7 @@ public class TestDevProgramCommand : RootProgramCommand {
     public async Task<int> Handle() {
         var gltf = GltfTuple.FromFile("Z:/ROL3D/sonic/sonic.gltf");
         var metadata = CharacterMetadata.FromJsonFile("Z:/ROL3D/sonic/sonic.json");
-        var character = CryCharacter.FromGltfAndMetadata(gltf, metadata, "Z:/ROL3D/sonic", default);
+        var character = await CryCharacter.FromGltfAndMetadata(gltf, metadata, "Z:/ROL3D/sonic", default);
 
         var level = await _reader.GetPackfile(TestLevelName);
         var sonic = await CryCharacter.FromCryEngineFiles(ReaderFunc, metadata.TargetPath, default);

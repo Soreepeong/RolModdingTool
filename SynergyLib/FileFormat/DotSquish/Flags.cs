@@ -1,11 +1,14 @@
 using System.Numerics;
+using System.Threading;
 
 namespace SynergyLib.FileFormat.DotSquish {
     public class SquishOptions {
+        public CancellationToken CancellationToken;
         public Vector3? Weights = null;
         public SquishMethod Method = SquishMethod.Dxt1;
         public SquishFit Fit = SquishFit.ColorClusterFit;
         public bool WeightColorByAlpha = false;
+        public int Threads = 0;
     }
 
     public enum SquishMethod {

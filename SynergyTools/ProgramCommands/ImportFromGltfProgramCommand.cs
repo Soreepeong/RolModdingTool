@@ -12,6 +12,7 @@ public class ImportFromGltfProgramCommand : RootProgramCommand {
     static ImportFromGltfProgramCommand() {
         Command.AddAlias("import-gltf");
         Command.AddCommand(ExportMetadataCommand.Command);
+        Command.AddCommand(TestGltfCommand.Command);
     }
 
     public ImportFromGltfProgramCommand(ParseResult parseResult) : base(parseResult) { }

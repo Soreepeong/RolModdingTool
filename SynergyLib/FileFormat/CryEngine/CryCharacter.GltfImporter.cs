@@ -6,6 +6,7 @@ using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SynergyLib.FileFormat.CryEngine.CryAnimationDatabaseElements;
@@ -54,9 +55,9 @@ public partial class CryCharacter {
             return this;
         }
 
-        public CryCharacter Process() {
+        public async Task<CryCharacter> Process() {
             Step01ReadSkin();
-            Step02GenerateMaterials();
+            await Step02GenerateMaterials();
             Step03GenerateMesh();
             Step04ImportAnimations();
 
@@ -215,7 +216,7 @@ public partial class CryCharacter {
             return GetGltfTextureFromImage(_gltf.Root.Images[imageIndex], out image);
         }
 
-        private void AddCryTexture(
+        private async Task AddCryTexture(
             int materialIndex,
             Material material,
             TextureMapType map,
@@ -254,11 +255,13 @@ public partial class CryCharacter {
                 counter++;
             }
 
-            var dds = image.ToDdsFile2D(
+            var dds = await image.ToDdsFile2D(
                 baseName,
                 new() {
+                    Fit = SquishFit.ColorIterativeClusterFit,
                     Method = useAlpha ? SquishMethod.Dxt5 : SquishMethod.Dxt1,
                     Weights = Vector3.Normalize(new(0.3f, 0.3f, 1f)),
+                    CancellationToken = _cancellationToken,
                 },
                 "CExtCEnd"u8.ToArray(),
                 9);
@@ -278,7 +281,7 @@ public partial class CryCharacter {
             texture.File = $"{baseName}.tif";
         }
 
-        private void Step02GenerateMaterials() {
+        private async Task Step02GenerateMaterials() {
             _model.Material = new() {
                 Flags = MaterialFlags.ShaderGenMask64Bit | MaterialFlags.MultiSubmtl,
                 SubMaterialsAndRefs = new(),
@@ -382,7 +385,7 @@ public partial class CryCharacter {
                                 continue;
                             }
 
-                            AddCryTexture(
+                            await AddCryTexture(
                                 cryMaterialIndex,
                                 cryMaterial,
                                 c.Map,
@@ -413,8 +416,7 @@ public partial class CryCharacter {
                         gltfImage = _gltf.Root.Images.SingleOrDefault(x => x.Name == c.File);
                     if (gltfImage?.BufferView is not null) {
                         if (GetGltfTextureFromImage<Bgra32>(gltfImage, out var image)) {
-                            AddCryTexture(cryMaterialIndex, cryMaterial, c.Map, image, true);
-                            continue;
+                            await AddCryTexture(cryMaterialIndex, cryMaterial, c.Map, image, true);
                         }
                     }
                 }
@@ -437,8 +439,11 @@ public partial class CryCharacter {
                     material.Extensions?.KhrMaterialsPbrSpecularGlossiness?.SpecularGlossinessTexture,
                     out var specularGlossImage);
 
-                if (cryMaterial.Textures.All(x => x.Map != TextureMapType.Diffuse) && diffuseImage is not null) {
-                    AddCryTexture(
+                if (cryMaterial.Textures.All(
+                        x => x.Map != TextureMapType.Diffuse
+                            || x.File is null
+                            || !_model.ExtraTextures.ContainsKey(x.File)) && diffuseImage is not null) {
+                    await AddCryTexture(
                         cryMaterialIndex,
                         cryMaterial,
                         TextureMapType.Diffuse,
@@ -446,12 +451,19 @@ public partial class CryCharacter {
                         material.AlphaMode == GltfMaterialAlphaMode.Mask);
                 }
 
-                if (cryMaterial.Textures.Any(x => x.Map == TextureMapType.Specular))
+                if (cryMaterial.Textures.Any(
+                        x => x is {Map: TextureMapType.Specular, File: not null}
+                            && _model.ExtraTextures.ContainsKey(x.File))) {
                     cryMaterial.GenMask.UseSpecularMap = true;
-                else if (specularGlossImage is not null) {
+                } else if (specularGlossImage is not null) {
                     cryMaterial.GenMask.UseSpecularMap = true;
                     cryMaterial.GenMask.UseGlossInSpecularMap = true;
-                    AddCryTexture(cryMaterialIndex, cryMaterial, TextureMapType.Specular, specularGlossImage, true);
+                    await AddCryTexture(
+                        cryMaterialIndex,
+                        cryMaterial,
+                        TextureMapType.Specular,
+                        specularGlossImage,
+                        true);
                 } else if (specularImage is not null && metallicRoughnessImage is not null) {
                     cryMaterial.GenMask.UseSpecularMap = true;
                     cryMaterial.GenMask.UseGlossInSpecularMap = true;
@@ -466,19 +478,26 @@ public partial class CryCharacter {
                                     sgSpan[j].A = unchecked((byte) (255 - mrSpan[j * mr.Width / sg.Width].G));
                             }
                         });
-                    AddCryTexture(cryMaterialIndex, cryMaterial, TextureMapType.Specular, specularGlossImage, true);
+                    await AddCryTexture(
+                        cryMaterialIndex,
+                        cryMaterial,
+                        TextureMapType.Specular,
+                        specularGlossImage,
+                        true);
                 } else if (specularImage is not null) {
                     cryMaterial.GenMask.UseSpecularMap = true;
                     cryMaterial.GenMask.UseGlossInSpecularMap = false;
-                    AddCryTexture(cryMaterialIndex, cryMaterial, TextureMapType.Specular, specularImage, false);
+                    await AddCryTexture(cryMaterialIndex, cryMaterial, TextureMapType.Specular, specularImage, false);
                 } else {
                     cryMaterial.GenMask.UseSpecularMap = false;
                     cryMaterial.GenMask.UseGlossInSpecularMap = false;
                 }
 
-                if (cryMaterial.Textures.Any(x => x.Map == TextureMapType.Normals))
+                if (cryMaterial.Textures.Any(
+                        x => x is {Map: TextureMapType.Normals, File: not null}
+                            && _model.ExtraTextures.ContainsKey(x.File))) {
                     cryMaterial.GenMask.UseBumpMap = true;
-                else if (normalImage is not null && (specularGlossImage ?? metallicRoughnessImage) is not null) {
+                } else if (normalImage is not null && (specularGlossImage ?? metallicRoughnessImage) is not null) {
                     cryMaterial.GenMask.UseBumpMap = true;
                     cryMaterial.GenMask.UseScatterGlossInNormalMap = true;
                     var bsgImage = normalImage.Clone();
@@ -516,11 +535,11 @@ public partial class CryCharacter {
                     } else
                         throw new InvalidOperationException();
 
-                    AddCryTexture(cryMaterialIndex, cryMaterial, TextureMapType.Normals, bsgImage, true);
+                    await AddCryTexture(cryMaterialIndex, cryMaterial, TextureMapType.Normals, bsgImage, true);
                 } else if (normalImage is not null) {
                     cryMaterial.GenMask.UseBumpMap = true;
                     cryMaterial.GenMask.UseScatterGlossInNormalMap = false;
-                    AddCryTexture(cryMaterialIndex, cryMaterial, TextureMapType.Normals, normalImage, false);
+                    await AddCryTexture(cryMaterialIndex, cryMaterial, TextureMapType.Normals, normalImage, false);
                     // } else {
                     //     normalImage = new(8, 8);
                     //     for (var i = 0; i < 8; i++)
@@ -728,9 +747,31 @@ public partial class CryCharacter {
 
                 if (anim.Tracks.Any()) {
                     var referenceName = animation.Name ?? $"Animation_{_animations.Animations.Count}";
-                    if (_metadata?.Animations.SingleOrDefault(x => x.SourceName == referenceName) is { } rule)
-                        referenceName = rule.TargetName;
-                    _animations.Animations[referenceName] = anim;
+                    if (_metadata is null)
+                        _animations.Animations[referenceName] = anim;
+                    else
+                        foreach (var rule in _metadata.Animations.Where(x => x.SourceName == referenceName)) {
+                            _animations.Animations[rule.TargetName] = anim;
+                            anim.MotionParams = anim.MotionParams with {
+                                MoveSpeed = rule.MoveSpeed,
+                                TurnSpeed = rule.TurnSpeed,
+                                AssetTurn = rule.AssetTurn,
+                                Distance = rule.Distance,
+                                Slope = rule.Slope,
+                                StartLocationQ = rule.StartLocationQ,
+                                StartLocationV = rule.StartLocationV,
+                                EndLocationQ = rule.EndLocationQ,
+                                EndLocationV = rule.EndLocationV,
+                                LHeelStart = rule.LHeelStart,
+                                LHeelEnd = rule.LHeelEnd,
+                                LToe0Start = rule.LToe0Start,
+                                LToe0End = rule.LToe0End,
+                                RHeelStart = rule.RHeelStart,
+                                RHeelEnd = rule.RHeelEnd,
+                                RToe0Start = rule.RToe0Start,
+                                RToe0End = rule.RToe0End,
+                            };
+                        }
                 }
             }
         }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.CommandLine;
 using System.CommandLine.Parsing;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -86,6 +87,7 @@ public class ExportMetadataCommand : ImportFromGltfProgramCommand {
     }
 
     public async Task<int> Handle(CancellationToken cancellationToken) {
+        CryCharacter? referenceCharacter = null;
         CharacterMetadata? referenceMetadata = null;
         if (ReferenceModelSubPath is not null) {
             var path = ReferenceModelSubPath;
@@ -98,7 +100,7 @@ public class ExportMetadataCommand : ImportFromGltfProgramCommand {
                 }
             }
 
-            var referenceCharacter = await CryCharacter.FromCryEngineFiles(
+            referenceCharacter = await CryCharacter.FromCryEngineFiles(
                 reader.AsFunc(SkinFlag.LookupDefault),
                 path,
                 cancellationToken);
@@ -122,11 +124,16 @@ public class ExportMetadataCommand : ImportFromGltfProgramCommand {
                 }
 
                 var gltf = GltfTuple.FromFile(path);
-                var character = CryCharacter.FromGltf(gltf, gltf.Root.Nodes[0].Name, default);
+                var character = await CryCharacter.FromGltf(gltf, gltf.Root.Nodes[0].Name, default);
 
                 var metadata = CharacterMetadata.FromCharacter(character, referenceMetadata?.TargetPath ?? "", gltf);
-                if (referenceMetadata is not null)
+                if (referenceMetadata is not null) {
+                    Debug.Assert(referenceCharacter is not null);
                     metadata.Animations = referenceMetadata.Animations;
+                    metadata.HeightScaleRelativeToTarget =
+                        character.Model.CalculateBoundingBox().SizeVector.Z /
+                        referenceCharacter.Model.CalculateBoundingBox().SizeVector.Z;
+                }
 
                 Directory.CreateDirectory(outDir);
                 metadata.ToJson(metadataFilePath, ColorNotation);
