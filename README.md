@@ -5,7 +5,9 @@ Tool for dealing with and modding Sonic Boom: Rise of Lyric.
 * Compress and extract .wiiu.stream archives.
 * Repack files to play as Shadow or Metal Sonic.
 * Export models as glTF file.
-* Play the game with your glTF model. 
+* Play the game with your glTF model.
+* Convert your model into a shareable `.wiiu.stream` mod file.
+* Import `.wiiu.stream` mod files made by other people.
 
 | Metal Sonic                                                                                                                                                         | Cruise Chaser                                                                                                                                               | 
 |---------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------| 
