@@ -5,19 +5,18 @@ using SynergyLib.Util.MathExtras;
 namespace SynergyLib.FileFormat.DotSquish;
 
 internal partial class SingleColorFit : ColorFit {
-    private Vector4<byte> _colour; // only use 3 components
+    private Vector4<byte> _color; // XYZ for color; W for index 
     private Vector3 _start;
     private Vector3 _end;
-    private byte _index;
     private int _besterror;
 
     public SingleColorFit(ColorSet colors, SquishOptions options) : base(colors, options) {
     }
 
     protected override void Reset() {
-        _colour[0] = (byte) Alpha.FloatToInt(255f * Colors.Points[0].X, 255);
-        _colour[1] = (byte) Alpha.FloatToInt(255f * Colors.Points[0].Y, 255);
-        _colour[2] = (byte) Alpha.FloatToInt(255f * Colors.Points[0].Z, 255);
+        _color.X = (byte) Alpha.FloatToInt(255f * Colors.Points[0].X, 255);
+        _color.Y = (byte) Alpha.FloatToInt(255f * Colors.Points[0].Y, 255);
+        _color.Z = (byte) Alpha.FloatToInt(255f * Colors.Points[0].Z, 255);
         _besterror = int.MaxValue;
     }
 
@@ -29,7 +28,7 @@ internal partial class SingleColorFit : ColorFit {
         if (error < _besterror) {
             // remap the indices
             Span<byte> indices = stackalloc byte[16];
-            Colors.RemapIndices(_index, indices);
+            Colors.RemapIndices(_color.W, indices);
 
             // save the block
             ColorBlock.WriteColorBlock3(_start, _end, indices, block);
@@ -47,7 +46,7 @@ internal partial class SingleColorFit : ColorFit {
         if (error < _besterror) {
             // remap the indices
             Span<byte> indices = stackalloc byte[16];
-            Colors.RemapIndices(_index, indices);
+            Colors.RemapIndices(_color.W, indices);
 
             // save the block
             ColorBlock.WriteColorBlock4(_start, _end, indices, block);
@@ -67,7 +66,7 @@ internal partial class SingleColorFit : ColorFit {
             for (var channel = 0; channel < 3; ++channel) {
                 // grab the lookup table and index for this channel
                 var lookup = lookups[channel];
-                var target = _colour[channel];
+                var target = _color[channel];
 
                 // store a pointer to the source for this channel
                 sources[channel] = lookup[target, index];
@@ -89,7 +88,7 @@ internal partial class SingleColorFit : ColorFit {
                     sources[1].End / 63f,
                     sources[2].End / 31f
                 );
-                _index = (byte) index;
+                _color.W = (byte) index;
                 error = currentError;
             }
         }

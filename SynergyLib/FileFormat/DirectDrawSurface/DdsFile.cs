@@ -233,7 +233,7 @@ public class DdsFile {
 
     public void SetBufferUnchecked(byte[] buffer) => _data = buffer;
 
-    public IPixelFormat PixelFormat {
+    public PixelFormat PixelFormat {
         get {
             var pf = Header.PixelFormat;
 

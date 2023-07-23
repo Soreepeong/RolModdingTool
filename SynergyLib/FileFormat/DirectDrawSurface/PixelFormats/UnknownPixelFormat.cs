@@ -3,17 +3,23 @@ using SynergyLib.FileFormat.DirectDrawSurface.PixelFormats.Channels;
 
 namespace SynergyLib.FileFormat.DirectDrawSurface.PixelFormats;
 
-public class UnknownPixelFormat : IPixelFormat, IEquatable<UnknownPixelFormat> {
+public class UnknownPixelFormat : PixelFormat, IEquatable<UnknownPixelFormat> {
     public static readonly UnknownPixelFormat Instance = new();
 
-    private UnknownPixelFormat() { }
+    private UnknownPixelFormat() {
+        Alpha = AlphaType.None;
+        Bpp = 0;
+    }
 
-    public AlphaType Alpha => AlphaType.None;
-    public int Bpp => 0;
-    public DxgiFormat DxgiFormat => DxgiFormat.Unknown;
-    public DdsFourCc FourCc => DdsFourCc.Unknown;
+    public override DxgiFormat DxgiFormat => DxgiFormat.Unknown;
+    public override DdsFourCc FourCc => DdsFourCc.Unknown;
 
-    public void ToB8G8R8A8(Span<byte> target, int targetStride, ReadOnlySpan<byte> source, int sourceStride, int width,
+    public override void ToB8G8R8A8(
+        Span<byte> target,
+        int targetStride,
+        ReadOnlySpan<byte> source,
+        int sourceStride,
+        int width,
         int height) {
         throw new NotImplementedException();
     }

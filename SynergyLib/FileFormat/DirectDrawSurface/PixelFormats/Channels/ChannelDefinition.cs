@@ -5,7 +5,7 @@ namespace SynergyLib.FileFormat.DirectDrawSurface.PixelFormats.Channels;
 
 public class ChannelDefinition : IEquatable<ChannelDefinition> {
     public static readonly ChannelDefinition Empty = new();
-    
+
     public readonly ChannelType Type;
     public readonly byte Shift;
     public readonly byte Bits;
@@ -44,23 +44,23 @@ public class ChannelDefinition : IEquatable<ChannelDefinition> {
     public float DecodeValueAsFloat(ulong data) {
         if (Bits == 0)
             return -1f;
-        
+
         var v = (uint) (data >> Shift & Mask);
-        
+
         switch (Type) {
             // Do we even have to convert?
             case ChannelType.Float:
                 unsafe {
-                    return *(float*)&v;
+                    return *(float*) &v;
                 }
-                
+
             // Handle well-defined conversions first.
             case ChannelType.Snorm: {
                 // "-3" -3 -2 -1 0 1 2 3 => -1 -1 -2/3 -1/3 0 1/3 2/3 1
                 // Handle the case where the value is or above 0.
                 if (v >> (Bits - 1) == 0)
                     return 1f * v / (Mask >> 1);
-                
+
                 v = (~v & Mask) + 1;
                 // Handle the case where the value is the most negative value. 
                 if (v == 1 << Bits)
@@ -80,13 +80,13 @@ public class ChannelDefinition : IEquatable<ChannelDefinition> {
                     return c / srgbToFloatDenominator1;
                 return MathF.Pow((c + srgbToFloatOffset) / srgbToFloatDenominator2, srgbToFloatExponent);
             }
-            
+
             // Handle obvious cases.
             case ChannelType.Sf16:
-                return (float)BitConverter.UInt16BitsToHalf((ushort) v);
+                return (float) BitConverter.UInt16BitsToHalf((ushort) v);
             case ChannelType.Uf16: {
-                var exponent = (int)((v & 0xF800) >> 11);
-                var mantissa = (int)(v & 0x7FF);
+                var exponent = (int) ((v & 0xF800) >> 11);
+                var mantissa = (int) (v & 0x7FF);
                 return exponent switch {
                     0 => 1f * mantissa / (1 << 25),
                     > 15 => 1f * (1f + mantissa / 2048f) / (1 << (exponent - 15)),
@@ -94,7 +94,7 @@ public class ChannelDefinition : IEquatable<ChannelDefinition> {
                     < 15 => 1f * (1f + mantissa / 2048f) * (1 << (15 - exponent)),
                 };
             }
-            
+
             // Approximate it with Unorm case.
             default:
                 goto case ChannelType.Unorm;
@@ -104,7 +104,7 @@ public class ChannelDefinition : IEquatable<ChannelDefinition> {
     public int DecodeValueAsUnorm(ulong data, int outBits) {
         if (Bits == 0)
             return 0;
-        
+
         var v = (uint) (data >> Shift & Mask);
         switch (Type) {
             case ChannelType.Unorm:

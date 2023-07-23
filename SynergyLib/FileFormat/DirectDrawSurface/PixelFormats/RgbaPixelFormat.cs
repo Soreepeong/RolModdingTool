@@ -4,7 +4,7 @@ using SynergyLib.FileFormat.DirectDrawSurface.PixelFormats.Channels;
 
 namespace SynergyLib.FileFormat.DirectDrawSurface.PixelFormats;
 
-public class RgbaPixelFormat : IPixelFormat, IEquatable<RgbaPixelFormat> {
+public class RgbaPixelFormat : PixelFormat, IEquatable<RgbaPixelFormat> {
     public RgbaPixelFormat(
         AlphaType alphaType,
         ChannelDefinition? r = null,
@@ -37,10 +37,12 @@ public class RgbaPixelFormat : IPixelFormat, IEquatable<RgbaPixelFormat> {
     public ChannelDefinition X1 { get; }
     public ChannelDefinition X2 { get; }
 
-    public AlphaType Alpha { get; }
-    public int Bpp { get; }
-
-    public void ToB8G8R8A8(Span<byte> target, int targetStride, ReadOnlySpan<byte> source, int sourceStride, int width,
+    public override void ToB8G8R8A8(
+        Span<byte> target,
+        int targetStride,
+        ReadOnlySpan<byte> source,
+        int sourceStride,
+        int width,
         int height) {
         var bits = 0ul;
         var availBits = 0;

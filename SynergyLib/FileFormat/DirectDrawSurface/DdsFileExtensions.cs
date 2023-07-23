@@ -173,9 +173,9 @@ public static class DdsFileExtensions {
                 NextMipmap(mipHeight, mipWidth);
             }
 
-            await Squish.CompressImageAsync<Bgra32>(
+            await Squish.CompressImageAsync<Bgra32, byte>(
                 memory1,
-                4 * mipWidth,
+                mipWidth,
                 mipWidth,
                 mipHeight,
                 dds.SliceOrFaceMemory(0, mipIndex, 0),

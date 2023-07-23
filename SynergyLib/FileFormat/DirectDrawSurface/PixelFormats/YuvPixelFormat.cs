@@ -4,7 +4,7 @@ using SynergyLib.FileFormat.DirectDrawSurface.PixelFormats.Channels;
 
 namespace SynergyLib.FileFormat.DirectDrawSurface.PixelFormats;
 
-public class YuvPixelFormat : IPixelFormat, IEquatable<YuvPixelFormat> {
+public class YuvPixelFormat : PixelFormat, IEquatable<YuvPixelFormat> {
     public readonly ChannelDefinition Y;
     public readonly ChannelDefinition U;
     public readonly ChannelDefinition V;
@@ -33,11 +33,12 @@ public class YuvPixelFormat : IPixelFormat, IEquatable<YuvPixelFormat> {
         }.Max();
     }
 
-    public AlphaType Alpha { get; }
-
-    public int Bpp { get; }
-
-    public void ToB8G8R8A8(Span<byte> target, int targetStride, ReadOnlySpan<byte> source, int sourceStride, int width,
+    public override void ToB8G8R8A8(
+        Span<byte> target,
+        int targetStride,
+        ReadOnlySpan<byte> source,
+        int sourceStride,
+        int width,
         int height) {
         throw new NotImplementedException();
     }

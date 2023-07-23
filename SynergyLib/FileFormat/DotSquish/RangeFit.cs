@@ -8,19 +8,19 @@ internal class RangeFit : ColorFit {
     private static readonly Vector3 Half = new(0.5f);
     private static readonly Vector3 Grid = new(31f, 63f, 31f);
     private static readonly Vector3 GridRcp = new(1f / 31f, 1f / 63f, 1f / 31f);
-
-    private Vector3 m_metric;
-    private Vector3 m_start;
-    private Vector3 m_end;
-    private float m_besterror;
+    
+    private readonly Vector3 _metric;
+    private Vector3 _start;
+    private Vector3 _end;
+    private float _besterror;
 
     public RangeFit(ColorSet colors, SquishOptions options) : base(colors, options) {
-        m_metric = options.Weights ?? Vector3.One;
+        _metric = options.Weights ?? Vector3.One;
     }
 
     protected override void Reset() {
         // initialise the best error
-        m_besterror = float.MaxValue;
+        _besterror = float.MaxValue;
 
         // get the covariance matrix
         var covariance = Sym3x3.ComputeWeightedCovariance(Colors.Count, Colors.Points, Colors.Weights);
@@ -49,16 +49,16 @@ internal class RangeFit : ColorFit {
         }
 
         // clamp the output to [0, 1], clamp to the grid, and save
-        m_start = (Grid * start.ClampElements(Vector3.Zero, Vector3.One) + Half).TruncateElements() * GridRcp;
-        m_end = (Grid * end.ClampElements(Vector3.Zero, Vector3.One) + Half).TruncateElements() * GridRcp;
+        _start = (Grid * start.ClampElements(Vector3.Zero, Vector3.One) + Half).TruncateElements() * GridRcp;
+        _end = (Grid * end.ClampElements(Vector3.Zero, Vector3.One) + Half).TruncateElements() * GridRcp;
     }
 
     protected override void Compress3(Span<byte> block) {
         // create a codebook
         Span<Vector3> codes = stackalloc Vector3[3];
-        codes[0] = m_start;
-        codes[1] = m_end;
-        codes[2] = 0.5f * m_start + 0.5f * m_end;
+        codes[0] = _start;
+        codes[1] = _end;
+        codes[2] = 0.5f * _start + 0.5f * _end;
 
         // match each point to the closest code
         Span<byte> closest = stackalloc byte[16];
@@ -68,7 +68,7 @@ internal class RangeFit : ColorFit {
             var dist = float.MaxValue;
             var idx = 0;
             for (var j = 0; j < 3; ++j) {
-                var d = (m_metric * (Colors.Points[i] - codes[j])).LengthSquared();
+                var d = (_metric * (Colors.Points[i] - codes[j])).LengthSquared();
                 if (d < dist) {
                     dist = d;
                     idx = j;
@@ -83,26 +83,26 @@ internal class RangeFit : ColorFit {
         }
 
         // save this scheme if it wins
-        if (error < m_besterror) {
+        if (error < _besterror) {
             // remap the indices
             Span<byte> indices = stackalloc byte[16];
             Colors.RemapIndices(closest, indices);
 
             // save the block
-            ColorBlock.WriteColorBlock3(m_start, m_end, indices, block);
+            ColorBlock.WriteColorBlock3(_start, _end, indices, block);
 
             // save the error
-            m_besterror = error;
+            _besterror = error;
         }
     }
 
     protected override void Compress4(Span<byte> block) {
         // create a codebook
         Span<Vector3> codes = stackalloc Vector3[4];
-        codes[0] = m_start;
-        codes[1] = m_end;
-        codes[2] = 2f / 3f * m_start + 1f / 3f * m_end;
-        codes[3] = 1f / 3f * m_start + 2f / 3f * m_end;
+        codes[0] = _start;
+        codes[1] = _end;
+        codes[2] = 2f / 3f * _start + 1f / 3f * _end;
+        codes[3] = 1f / 3f * _start + 2f / 3f * _end;
 
         // match each point to the closest code
         Span<byte> closest = stackalloc byte[16];
@@ -112,7 +112,7 @@ internal class RangeFit : ColorFit {
             var dist = float.MaxValue;
             var idx = 0;
             for (var j = 0; j < 4; ++j) {
-                var d = (m_metric * (Colors.Points[i] - codes[j])).LengthSquared();
+                var d = (_metric * (Colors.Points[i] - codes[j])).LengthSquared();
                 if (d < dist) {
                     dist = d;
                     idx = j;
@@ -127,16 +127,16 @@ internal class RangeFit : ColorFit {
         }
 
         // save this scheme if it wins
-        if (error < m_besterror) {
+        if (error < _besterror) {
             // remap the indices
             Span<byte> indices = stackalloc byte[16];
             Colors.RemapIndices(closest, indices);
 
             // save the block
-            ColorBlock.WriteColorBlock4(m_start, m_end, indices, block);
+            ColorBlock.WriteColorBlock4(_start, _end, indices, block);
 
             // save the error
-            m_besterror = error;
+            _besterror = error;
         }
     }
 }
