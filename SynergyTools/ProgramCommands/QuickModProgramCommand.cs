@@ -41,7 +41,7 @@ public class QuickModProgramCommand : RootProgramCommand {
         () => CharacterVoices.Auto,
         "Specify which voice to replace Sonic's voice.");
 
-    private const string SonicBaseName = "objects/characters/1_heroes/sonic/sonic";
+    private const string SonicBaseName = "objects/characters/1_heroes/sonic/sonic.cdf";
 
     private static readonly Tuple<string, int>[] DesaturationTargetTextures = {
         Tuple.Create("art/textures/effects/playerfx/ball_blue.dds", 0),
@@ -185,9 +185,9 @@ public class QuickModProgramCommand : RootProgramCommand {
     }];
 
     private string ReferenceObjectBaseName => Mode switch {
-        Characters.Shadow => "objects/characters/5_minibosses/shadow/shadow",
-        Characters.MetalSonic => "objects/characters/5_minibosses/metal_sonic/metal_sonic",
-        Characters.Sticks => "objects/characters/9_majornpc/sticks/sticks",
+        Characters.Shadow => "objects/characters/5_minibosses/shadow/shadow.cdf",
+        Characters.MetalSonic => "objects/characters/5_minibosses/metal_sonic/metal_sonic.chr",
+        Characters.Sticks => "objects/characters/9_majornpc/sticks/sticks.chr",
         Characters.Sonic => throw new InvalidOperationException(),
         _ => throw new InvalidOperationException(),
     };
@@ -207,8 +207,7 @@ public class QuickModProgramCommand : RootProgramCommand {
         if (Mode == Characters.Sticks)
             using (ScopedConsoleColor.Foreground(ConsoleColor.Yellow))
                 Console.WriteLine(
-                    "Sticks does not have perfectly compatible bone structures with Sonic, and will " +
-                    "not look right.");
+                    "Sticks does not have perfectly compatible bone structures with Sonic, and will not look right.");
 
         var levelPaths = new Dictionary<string, string>();
 
