@@ -42,7 +42,7 @@ public class ConvertToGltfProgramCommand : RootProgramCommand {
     public static readonly Option<bool> UseAltSkinsOption = new(
         "--alt",
         () => false,
-        "Use alternative costume (luminous suits.)");
+        "Use alternative costumes (luminous suits.)");
 
     public static readonly Option<bool> DisableAnimationsOption = new(
         "--disable-animation",

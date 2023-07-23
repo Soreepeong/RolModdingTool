@@ -42,7 +42,7 @@ public class RootProgramCommand {
         Command.AddCommand(CompressProgramCommand.Command);
         Command.AddCommand(QuickModProgramCommand.Command);
         Command.AddCommand(ConvertToGltfProgramCommand.Command);
-        Command.AddCommand(ImportFromGltfProgramCommand.Command);
+        Command.AddCommand(ModProgramCommand.Command);
         Command.AddCommand(TestDevProgramCommand.Command);
     }
 

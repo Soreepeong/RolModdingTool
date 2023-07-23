@@ -28,7 +28,7 @@ public sealed class GameFileSystemReader : IAsyncDisposable, IDisposable {
     public GameFileSystemReader(IEnumerable<string> rootPaths) {
         foreach (var r in rootPaths)
             WithRootDirectory(r);
-    } 
+    }
 
     public void Dispose() {
         if (!_cancellationTokenSource.IsCancellationRequested) {

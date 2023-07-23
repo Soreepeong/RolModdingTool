@@ -43,33 +43,31 @@ public partial class CryCharacter {
         Func<string, CancellationToken, Task<Stream>> streamOpener,
         string baseName,
         CancellationToken cancellationToken) {
-        if (Path.GetExtension(baseName).ToLowerInvariant() is ".cdf" or ".cgf" or ".chr")
-            baseName = Path.ChangeExtension(baseName, null);
+        var extension = Path.GetExtension(baseName).ToLowerInvariant();
+        baseName = Path.ChangeExtension(baseName, null);
+
         CharacterDefinition? definition = null;
-
-        CryModel model;
-        try {
-            await using (var definitionStream = await streamOpener($"{baseName}.cdf", cancellationToken))
-                definition = PbxmlFile.FromStream(definitionStream).DeserializeAs<CharacterDefinition>();
-            if (definition.Model is null)
-                throw new InvalidDataException("Definition.Model should not be null");
-            if (definition.Model.File is null)
-                throw new InvalidDataException("Definition.Model.File should not be null");
-            if (definition.Model.Material is null)
-                throw new InvalidDataException("Definition.Model.Material should not be null");
-
-            model = await CryModel.FromCryEngineFiles(
-                streamOpener,
-                definition.Model.File,
-                definition.Model.Material,
-                cancellationToken);
-        } catch (FileNotFoundException) {
-            try {
-                model = await CryModel.FromCryEngineFiles(streamOpener, $"{baseName}.chr", null, cancellationToken);
-            } catch (FileNotFoundException) {
-                model = await CryModel.FromCryEngineFiles(streamOpener, $"{baseName}.cgf", null, cancellationToken);
-            }
+        string? modelPath;
+        string? materialPath;
+        switch (extension) {
+            case ".cdf":
+                await using (var definitionStream = await streamOpener($"{baseName}.cdf", cancellationToken))
+                    definition = PbxmlFile.FromStream(definitionStream).DeserializeAs<CharacterDefinition>();
+                modelPath = definition.Model?.File ??
+                    throw new InvalidDataException("Definition.Model.File should not be null");
+                materialPath = definition.Model?.Material ??
+                    throw new InvalidDataException("Definition.Model.Material should not be null");
+                break;
+            case ".chr":
+            case ".cgf":
+                modelPath = $"{baseName}{extension}";
+                materialPath = null;
+                break;
+            default:
+                throw new NotSupportedException($"{extension} is not a supported extension.");
         }
+
+        var model = await CryModel.FromCryEngineFiles(streamOpener, modelPath, materialPath, cancellationToken);
 
         var res = new CryCharacter(model) {Definition = definition};
         if (definition is not null) {

@@ -12,14 +12,14 @@ using SynergyLib.ModMetadata;
 using SynergyLib.Util;
 using SynergyLib.Util.CustomJsonConverters;
 
-namespace SynergyTools.ProgramCommands.ImportFromGltfSubCommands;
+namespace SynergyTools.ProgramCommands.ModSubCommands;
 
-public class ExportMetadataCommand : ImportFromGltfProgramCommand {
+public class ExportMetadataCommand : ModProgramCommand {
     public new static readonly Command Command = new(
         "metadata",
         "Export a metadata file for material configuration." +
         "Example usage:\n" +
-        $@"{ImportFromGltfProgramCommand.Command.Name} metadata -y " +
+        $@"{ModProgramCommand.Command.Name} metadata -y " +
         @"-b C:\mlc01\usr\title\0005000e\10175b00\content " +
         @"-b C:\mlc01\usr\title\00050000\10175b00\content " +
         "-c objects/characters/1_heroes/sonic/sonic.chr " +

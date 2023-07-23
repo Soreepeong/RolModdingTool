@@ -49,7 +49,7 @@ public class CompressProgramCommand : RootProgramCommand {
     }
 
     public async Task<int> Handle(CancellationToken cancellationToken) {
-        var saveConfig = new WiiuStreamFile.SaveConfig() {
+        var saveConfig = new WiiuStreamFile.SaveConfig {
             CompressionChunkSize = CompressionChunkSize,
             CompressionLevel = CompressionLevel,
             PreserveXml = PreserveXml,
@@ -96,7 +96,7 @@ public class CompressProgramCommand : RootProgramCommand {
         try {
             var printProgressAfter = Environment.TickCount64 + printProgressDelay.TotalMilliseconds;
             Console.WriteLine("Saving: {0}", outPath);
-            await using (var stream = new FileStream(tmpPath, FileMode.Create)) {
+            await using (var stream = File.Create(tmpPath)) {
                 await foreach (var (progress, max, entry, entryComplete) in strm.WriteTo(
                                    stream,
                                    saveConfig,

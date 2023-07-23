@@ -48,8 +48,10 @@ public class WiiuStreamFile {
         var entry = Entries.SingleOrDefault(
             x => string.Compare(x.Header.InnerPath, path, StringComparison.OrdinalIgnoreCase) == 0
                 && x.Header.SkinFlag == skinFlag);
-        if (entry is not null)
+        if (entry is not null) {
             entry.Source = source;
+            return;
+        }
 
         entry = new(
             new() {
@@ -117,7 +119,7 @@ public class WiiuStreamFile {
         Stream stream,
         SaveConfig saveConfig = default,
         [EnumeratorCancellation] CancellationToken cancellationToken = default) {
-        saveConfig.CompressionLevel = saveConfig.CompressionLevel == -1
+        saveConfig.CompressionLevel = saveConfig.CompressionLevel == SaveConfig.CompressionLevelAuto
             ? saveConfig.CompressionChunkSize == 0
                 ? SaveConfig.CompressionLevelIfAuto
                 : saveConfig.CompressionChunkSize
@@ -199,6 +201,9 @@ public class WiiuStreamFile {
         int level,
         int chunkSize,
         CancellationToken cancellationToken) {
+        if (level == SaveConfig.CompressionLevelAuto)
+            level = SaveConfig.CompressionLevelIfAuto;
+
         // Is chunking disabled, or is the file small enough that there is no point in multithreading?
         if (chunkSize <= 0 || raw.Length <= chunkSize) {
             CompressChunk(raw.Span, target, level, cancellationToken);
@@ -245,6 +250,9 @@ public class WiiuStreamFile {
     }
 
     public static void CompressChunk(Span<byte> source, Stream target, int level, CancellationToken cancellationToken) {
+        if (level == SaveConfig.CompressionLevelAuto)
+            level = SaveConfig.CompressionLevelIfAuto;
+
         var asisBegin = 0;
         var asisLen = 0;
 
@@ -421,6 +429,39 @@ public class WiiuStreamFile {
             Hash = Crc32.Brb.Get(data);
         }
 
+        public FileEntrySource(byte[] data, int length) {
+            if (length > data.Length)
+                throw new ArgumentOutOfRangeException(nameof(length), length, null);
+            SourceType = FileEntrySourceType.RawBytes;
+            Offset = 0;
+            RawLength = StoredLength = length;
+            Data = data;
+            Hash = Crc32.Brb.Get(data);
+        }
+
+        public readonly async Task<FileEntrySource> ToCompressed(
+            int level,
+            int chunkSize,
+            CancellationToken cancellationToken) {
+            var raw = SourceType == FileEntrySourceType.RawBytes
+                ? Data?.AsMemory(0, RawLength) ?? throw new InvalidOperationException()
+                : ReadRaw(cancellationToken).AsMemory();
+
+            using var compressedStream = new MemoryStream();
+            await CompressOne(raw, compressedStream, level, chunkSize, cancellationToken);
+            if (compressedStream.Length > StoredLength)
+                return this;
+
+            var compressedData = compressedStream.ToArray();
+            return new() {
+                SourceType = FileEntrySourceType.CompressedBytes,
+                RawLength = raw.Length,
+                StoredLength = compressedData.Length,
+                Hash = Crc32.Brb.Get(compressedData.AsSpan()),
+                Data = compressedData,
+            };
+        }
+
         public readonly Stream GetRawStream(CancellationToken cancellationToken) =>
             SourceType == FileEntrySourceType.RawFile
                 ? File.OpenRead(Path!)
@@ -450,9 +491,9 @@ public class WiiuStreamFile {
                     return;
                 }
                 case FileEntrySourceType.RawBytes:
-                    if (into.Length != Data!.Length)
+                    if (into.Length != RawLength)
                         throw new ArgumentException(null, nameof(into));
-                    into.Write(Data);
+                    into.Write(Data!, 0, RawLength);
                     return;
                 case FileEntrySourceType.CompressedBytes:
                     DecompressOne(new MemoryStream(Data!), into, RawLength, StoredLength, cancellationToken);
@@ -471,7 +512,7 @@ public class WiiuStreamFile {
         public readonly void ReadCompressedInto(Stream into) {
             switch (SourceType) {
                 case FileEntrySourceType.CompressedBytes:
-                    into.Write(Data!);
+                    into.Write(Data!, 0, StoredLength);
                     return;
                 case FileEntrySourceType.CompressedFile: {
                     using var f = File.OpenRead(Path!);
@@ -539,11 +580,12 @@ public class WiiuStreamFile {
     }
 
     public struct SaveConfig {
+        public const int CompressionLevelAuto = -1;
         public const int CompressionLevelIfAuto = 8;
 
         public bool SkipAlreadyCompressed = true;
         public bool PreserveXml = false;
-        public int CompressionLevel = -1;
+        public int CompressionLevel = CompressionLevelAuto;
         public int CompressionChunkSize = 24576;
 
         public SaveConfig() { }

@@ -23,6 +23,7 @@ Some of the following operations that modify the game files will make a copy of 
 * `<TargetModelPath>` stands for the inner path to model you want to replace, such as: `objects\characters\1_heroes\sonic\sonic.cdf`
 * `<WorkspaceDir>` stands for a random temporary directory, such as: `C:\Users\User\Desktop`
 * `<SourceModelPath>` stands for the path to your glTF model file, such as: `C:\Users\User\Desktop\sanic\sanic.glb`
+* `<ModpackPath>` stands for the path to the packaged mod file, such as: `C:\Users\User\Desktop\sanic.wiiu.stream`
 
 ### Play as Shadow
 ```
@@ -64,7 +65,7 @@ Specify `-l 0` to disable compression.
 
 ### Play as your model: export metadata template for your model
 ```
-.\SynergyTools.exe from-gltf metadata -g <GameUpdatePath> -g <GameBasePath> -r <TargetModelPath> <SourceModelPath>
+.\SynergyTools.exe mod metadata -g <GameUpdatePath> -g <GameBasePath> -r <TargetModelPath> <SourceModelPath>
 ```
 * Use `-r` or `--reference-model` to specify a model you're intending to replace.
 
@@ -73,17 +74,23 @@ For example, if you specify `Z:/m0361b0001.glb`, then the command will produce `
 
 Scroll down to check the requirements for the model.
 
-### Play as your model: test your model and metadata
+### Play as your model: export your model as a shareable file
 ```
-.\SynergyTools.exe from-gltf test -g <GameUpdatePath> -g <GameBasePath> -n hub01_excavationsite -n hub02_seasidevillage <SourceModelPath>
+.\SynergyTools.exe mod export -g <GameUpdatePath> -g <GameBasePath> <SourceModelPath> -o test.wiiu.stream
+.\SynergyTools.exe mod export -g <GameUpdatePath> -g <GameBasePath> <SourceModelPath> -n hub01_excavationsite -n hub02_seasidevillage
 ```
 * Use `-m` or `--metadata` to specify the location to your metadata file, if it's stored in non-default location.
-* Use `-n` or `--level-name` to specify the levels to test your model with.
+* Use `-n` or `--level-name` to specify the levels to test your model with. Omit this option to not modify game level files.
+* Use `-o` or `--out-path` to specify the output path. It will default to `<SourceModelPath>` but with `.wiiu.stream` extension.
 
 You can zone to other level (map) and zone back to check your modifications, after this command has successfully ended.
 
-### Play as your model: export as a shareable file
-TODO. Not yet supported.
+### Play as your model: import exported files
+```
+.\SynergyTools.exe mod import -g <GameUpdatePath> -g <GameBasePath> <ModpackPath>`
+.\SynergyTools.exe mod import -g <GameUpdatePath> -g <GameBasePath> <ModpackPath1> <ModpackPath2> <ModpackPath3>`
+```
+* Use `-n` or `--level-name` to specify the levels to test your model with. Omit this option to apply to all levels.
 
 ## Model import notes
 Currently, the supported glTF files are limited in its file structure.
