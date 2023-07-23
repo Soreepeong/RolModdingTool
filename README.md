@@ -9,12 +9,9 @@ Tool for dealing with and modding Sonic Boom: Rise of Lyric.
 * Convert your model into a shareable `.wiiu.stream` mod file.
 * Import `.wiiu.stream` mod files made by other people.
 
-| Metal Sonic                                                                                                                                                         | Cruise Chaser                                                                                                                                               | 
-|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------| 
-| ![Metal Sonic in place of Regular Sonic](https://github-production-user-asset-6210df.s3.amazonaws.com/3614868/253370854-7f236860-8449-4663-b658-391baa8fc262.png)   | ![Cruise Chaser in place of Sonic](https://github-production-user-asset-6210df.s3.amazonaws.com/3614868/255335915-243d7696-5209-4015-b3ef-11748d69d46d.png) |
-
-## License
-GPLv3
+| Metal Sonic                                                                                                                                                         | Cruise Chaser                                                                                                                                               | Giant Team Sonic                                                                                                    |
+|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| ![Metal Sonic in place of Regular Sonic](https://github-production-user-asset-6210df.s3.amazonaws.com/3614868/253370854-7f236860-8449-4663-b658-391baa8fc262.png)   | ![Cruise Chaser in place of Sonic](https://github-production-user-asset-6210df.s3.amazonaws.com/3614868/255335915-243d7696-5209-4015-b3ef-11748d69d46d.png) | ![Giant Team Sonic](https://github.com/Soreepeong/SynergyTools/assets/3614868/ec401621-addc-47b5-a4ba-765dba4a17db) |
 
 ## How to
 Some of the following operations that modify the game files will make a copy of target files with a `.bak` extension.
@@ -119,6 +116,83 @@ Currently, the supported glTF files are limited in its file structure.
 The model import has only been tested with Sonic exported with this application, and Cruise Chaser from Final Fantasy XIV: Heavensward.
 Your model may or may not work. If it doesn't, create an issue with the file, or with an example model that exhibits the same problem.
 
+## Example: Turn Team Sonic into giants
+Assuming that the game is installed in `C:\Tools\cemu\mlc01\usr\title\0005000e\10175b00\content` for the update and
+`C:\Tools\cemu\mlc01\usr\title\00050000\10175b00\content` for the base game.
+`Z:\ROL3D` will be our temporary working directory.
+
+Note: The `^` at end of line means that the line continues.
+
+### 1. Turn in-game models into glTF files with metadata.
+```batch
+.\SynergyTools.exe to-gltf ^
+    C:\Tools\cemu\mlc01\usr\title\0005000e\10175b00\content ^
+    C:\Tools\cemu\mlc01\usr\title\00050000\10175b00\content ^
+    -m -o Z:\ROL3D\ ^
+    -f objects\characters\1_heroes\sonic\sonic.cdf ^
+    -f objects\characters\1_heroes\amy\amy.cdf ^
+    -f objects\characters\1_heroes\knuckles\knuckles.cdf ^
+    -f objects\characters\1_heroes\tails\tails.cdf ^
+    -f objects\characters\14_props\amy_hammer\amy_hammer.chr
+```
+
+#### Using a model not from this game to replace Sonic instead
+```batch
+.\SynergyTools.exe mod metadata ^
+    -g C:\Tools\cemu\mlc01\usr\title\0005000e\10175b00\content ^
+    -g C:\Tools\cemu\mlc01\usr\title\00050000\10175b00\content ^
+    -r objects/characters/1_heroes/sonic/sonic.cdf ^
+    Z:\ROL3D\m0361b0001.glb
+```
+
+### 2. Edit metadata file
+Change the following:
+```json
+"HeightScaleRelativeToTarget": 1.0,
+```
+to
+```json
+"HeightScaleRelativeToTarget": 3.0,
+```
+or whatever value you desire, for all `.json` files in each directory.
+
+### 3. Convert files into modpacks
+```batch
+.\SynergyTools.exe mod export ^
+    -g C:\Tools\cemu\mlc01\usr\title\0005000e\10175b00\content ^
+    -g C:\Tools\cemu\mlc01\usr\title\00050000\10175b00\content ^
+    Z:\ROL3D\sonic\sonic.gltf
+.\SynergyTools.exe mod export ^
+    -g C:\Tools\cemu\mlc01\usr\title\0005000e\10175b00\content ^
+    -g C:\Tools\cemu\mlc01\usr\title\00050000\10175b00\content ^
+    Z:\ROL3D\amy\amy.gltf
+.\SynergyTools.exe mod export ^
+    -g C:\Tools\cemu\mlc01\usr\title\0005000e\10175b00\content ^
+    -g C:\Tools\cemu\mlc01\usr\title\00050000\10175b00\content ^
+    Z:\ROL3D\knuckles\knuckles.gltf
+.\SynergyTools.exe mod export ^
+    -g C:\Tools\cemu\mlc01\usr\title\0005000e\10175b00\content ^
+    -g C:\Tools\cemu\mlc01\usr\title\00050000\10175b00\content ^
+    Z:\ROL3D\tails\tails.gltf
+.\SynergyTools.exe mod export ^
+    -g C:\Tools\cemu\mlc01\usr\title\0005000e\10175b00\content ^
+    -g C:\Tools\cemu\mlc01\usr\title\00050000\10175b00\content ^
+    Z:\ROL3D\amy_hammer\amy_hammer.gltf
+```
+This will result in `.wiiu.stream` files in each directory.
+
+### 4. Apply to all levels
+```batch
+.\SynergyTools.exe mod import ^
+    -g C:\Tools\cemu\mlc01\usr\title\0005000e\10175b00\content ^
+    -g C:\Tools\cemu\mlc01\usr\title\00050000\10175b00\content ^
+    Z:\ROL3D\sonic\sonic.wiiu.stream Z:\ROL3D\tails\tails.wiiu.stream ^
+    Z:\ROL3D\amy\amy.wiiu.stream ^
+    Z:\ROL3D\amy_hammer\amy_hammer.wiiu.stream ^
+    Z:\ROL3D\knuckles\knuckles.wiiu.stream ^
+    Z:\ROL3D\tails\tails.wiiu.stream
+```
+
 ## Credits
 * Idea for this tool from [ik-01/WiiUStreamTool](https://github.com/ik-01/WiiUStreamTool)
 * .wiiu.stream format from [Paraxade's post](https://forums.sonicretro.org/index.php?posts/811201/)
@@ -128,3 +202,5 @@ Your model may or may not work. If it doesn't, create an issue with the file, or
 * CryEngine stuff from [Markemp/Cryengine-Converter](https://github.com/Markemp/Cryengine-Converter)
 * Squish for DXT1/3/5 De/compression
 
+## License
+GPLv3
